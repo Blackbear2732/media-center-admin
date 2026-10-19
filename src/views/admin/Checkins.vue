@@ -1,128 +1,110 @@
 <template>
-  <div v-loading="loading">
-    <div class="admin-tabs" style="margin-bottom:16px">
-      <span v-for="t in tabs" :key="t" class="pill" :class="{ active: active === t }" @click="active = t">{{ t }}</span>
+  <div>
+    <div class="flex-between" style="margin-bottom:16px;">
+      <div style="display:flex; gap:16px; align-items:center;">
+        <div>
+          <label class="muted" style="margin-right:8px;">日期</label>
+          <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" @change="loadData" />
+        </div>
+        <div>
+          <label class="muted" style="margin-right:8px;">部门</label>
+          <el-select v-model="dept" style="width:140px" @change="loadData">
+            <el-option label="全部部门" value="全部" />
+            <el-option v-for="d in depts" :key="d" :label="d" :value="d" />
+          </el-select>
+        </div>
+        <div>
+          <label class="muted" style="margin-right:8px;">状态</label>
+          <el-select v-model="statusFilter" style="width:120px">
+            <el-option label="全部状态" value="全部" />
+            <el-option label="已打卡" value="已打卡" />
+            <el-option label="未打卡" value="未打卡" />
+          </el-select>
+        </div>
+      </div>
+      <div class="muted">共 {{ filteredList.length }} 人</div>
     </div>
 
-    <!-- 打卡记录 -->
-    <template v-if="active === '打卡记录'">
-      <div class="surface-card" style="padding:16px;margin-bottom:14px">
-        <el-form inline>
-          <el-form-item label="日期">
-            <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:160px" @change="loadRecords" />
-          </el-form-item>
-          <el-form-item label="部门">
-            <el-select v-model="deptFilter" clearable placeholder="全部部门" style="width:150px" @change="loadRecords">
-              <el-option v-for="d in depts" :key="d.id" :label="d.name" :value="d.name" />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <button class="pill active" type="button" @click="loadRecords">查询</button>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <div class="surface-card" style="padding:8px 0">
-        <el-table :data="records" stripe>
-          <el-table-column prop="date" label="日期" width="120" />
-          <el-table-column prop="dept" label="部门" width="120" />
-          <el-table-column prop="member" label="成员" width="120" />
-          <el-table-column prop="status" label="状态" width="120">
-            <template #default="{ row }">
-              <el-tag :type="row.status === '已转发' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="140">
-            <template #default="{ row }">
-              <el-button link type="primary" @click="mark(row, '已转发')">标记已转发</el-button>
-              <el-button link type="danger" @click="mark(row, '未转发')">标记未转发</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-    </template>
-
-    <!-- 申诉审批 -->
-    <template v-else-if="active === '申诉审批'">
-      <div class="surface-card" style="padding:8px 0">
-        <el-table :data="appeals" stripe>
-          <el-table-column prop="member" label="成员" width="100" />
-          <el-table-column prop="dept" label="部门" width="110" />
-          <el-table-column prop="date" label="日期" width="120" />
-          <el-table-column prop="reason" label="申诉原因" min-width="200" />
-          <el-table-column prop="status" label="状态" width="100" />
-          <el-table-column label="操作" width="160">
-            <template #default="{ row }">
-              <el-button link type="success" :disabled="row.status !== '待审批'" @click="review(row, '已通过')">通过</el-button>
-              <el-button link type="danger" :disabled="row.status !== '待审批'" @click="review(row, '已拒绝')">拒绝</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-    </template>
-
-    <!-- 统计 -->
-    <template v-else>
-      <div class="surface-card" style="padding:8px 0">
-        <el-table :data="stats" stripe>
-          <el-table-column prop="dept" label="部门" width="130" />
-          <el-table-column prop="rate" label="出勤率" width="120">
-            <template #default="{ row }">
-              <el-progress :percentage="row.rate" :stroke-width="10" :color="row.rate >= 90 ? '#4a9d6e' : '#e8833a'" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="total" label="应出勤" width="100" />
-          <el-table-column prop="normal" label="正常" width="100" />
-          <el-table-column prop="absent" label="缺勤" width="100" />
-        </el-table>
-      </div>
-      <div style="margin-top:14px;text-align:right">
-        <button class="pill active" @click="exportExcel">导出 Excel</button>
-      </div>
-    </template>
+    <div class="surface-card" style="padding: 0;">
+      <el-table :data="filteredList" v-loading="loading" stripe style="width: 100%">
+        <el-table-column prop="date" label="日期" width="120" />
+        <el-table-column prop="dept" label="部门" width="120">
+          <template #default="{ row }">
+            <el-tag size="small" type="info" effect="plain">{{ row.dept }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="studentNo" label="学号" width="140" />
+        <el-table-column prop="member" label="姓名" width="120" />
+        <el-table-column prop="status" label="打卡状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.status === '已打卡' ? 'success' : 'danger'" size="small" effect="dark" round>
+              {{ row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" min-width="160">
+          <template #default="{ row }">
+            <el-button
+                v-if="row.status === '未打卡'"
+                type="primary"
+                size="small"
+                plain
+                @click="mark(row, '已打卡')"
+            >标记打卡</el-button>
+            <el-button
+                v-else
+                type="danger"
+                size="small"
+                plain
+                @click="mark(row, '未打卡')"
+            >取消打卡</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
-import { departments } from '@/api/mock'
 
-const tabs = ['打卡记录', '申诉审批', '统计']
-const active = ref('打卡记录')
+const date = ref(new Date().toISOString().split('T')[0])
+const dept = ref('全部')
+const statusFilter = ref('全部')
+const list = ref([])
 const loading = ref(false)
-const records = ref([]), appeals = ref([]), stats = ref([])
-const date = ref('2024-11-05'), deptFilter = ref('')
-const depts = departments
+const depts = ['综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
 
-async function loadRecords() {
+const filteredList = computed(() => {
+  if (statusFilter.value === '全部') return list.value
+  return list.value.filter(item => item.status === statusFilter.value)
+})
+
+async function loadData() {
   loading.value = true
   try {
-    records.value = await adminApi.checkins({ date: date.value, dept: deptFilter.value })
-  } finally { loading.value = false }
+    const res = await adminApi.checkins({ date: date.value, dept: dept.value })
+    list.value = res || []
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
 }
-async function loadAppeals() {
-  appeals.value = await adminApi.checkinAppeals()
-}
-async function loadStats() {
-  stats.value = await adminApi.checkinStats()
-}
+
 async function mark(row, status) {
-  await adminApi.markCheckin(row.id, status)
-  row.status = status
-  ElMessage.success('已标记')
+  try {
+    await adminApi.markCheckin(row.id, status, row)
+    row.status = status
+    ElMessage.success(`已标记为${status}`)
+  } catch (e) {
+    console.error(e)
+  }
 }
-async function review(row, status) {
-  await adminApi.reviewAppeal(row.id, status)
-  row.status = status
-  ElMessage.success(`已${status === '已通过' ? '通过' : '拒绝'}申诉`)
-}
-function exportExcel() {
-  // TODO: GET /api/admin/checkins/export
-  ElMessage.info('导出接口待对接')
-}
+
 onMounted(() => {
-  loadRecords(); loadAppeals(); loadStats()
+  loadData()
 })
 </script>
