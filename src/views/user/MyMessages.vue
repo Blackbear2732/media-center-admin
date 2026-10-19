@@ -48,23 +48,3 @@ async function markAll() {
 }
 onMounted(load)
 </script>
-
-<style scoped>
-.list-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 18px; }
-.list-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; }
-.list-head p { margin: 6px 0 0; }
-.msg-list { overflow: hidden; }
-.msg-row {
-  display: flex; gap: 12px; padding: 16px 20px; cursor: pointer;
-  border-bottom: 1px solid var(--border); transition: background .18s;
-}
-.msg-row:last-child { border-bottom: none; }
-.msg-row:hover { background: #fafbfc; }
-.msg-row.unread { background: #f6f9fc; }
-.msg-dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; margin-top: 7px; flex-shrink: 0; }
-.msg-row.unread .msg-dot { background: var(--accent); }
-.msg-body { flex: 1; min-width: 0; }
-.msg-top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 4px; }
-.msg-top b { font-weight: 600; font-size: 14px; }
-.msg-text { color: var(--text-sub); font-size: 13px; line-height: 1.7; }
-</style>

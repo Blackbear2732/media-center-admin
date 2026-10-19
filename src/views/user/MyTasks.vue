@@ -35,9 +35,3 @@ onMounted(async () => {
   try { list.value = await userApi.myTasks() } finally { loading.value = false }
 })
 </script>
-
-<style scoped>
-.list-head { margin-bottom: 18px; }
-.list-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; }
-.list-head p { margin: 6px 0 0; }
-</style>
