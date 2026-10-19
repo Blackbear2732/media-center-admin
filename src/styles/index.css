@@ -55,18 +55,25 @@ body {
 /* 任务卡片 (通用) */
 .task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
 .task-card {
-    padding: 20px; cursor: pointer; transition: all .2s;
-    display: flex; flex-direction: column; gap: 10px;
+    padding: 20px 24px; /* 增加左右内边距，不那么拥挤 */
+    cursor: pointer; transition: all .2s;
+    display: flex; flex-direction: column; gap: 14px; /* 拉开卡片内各区块的垂直间距 */
 }
 .task-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: #cfe0ee; }
-.task-card-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); }
-.task-card h3 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.4; }
+.task-card-head { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-sub); }
+.task-card h3 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.4; }
 .task-card-meta { color: var(--text-sub); font-size: 13px; }
-.task-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.task-card-tags { display: flex; flex-wrap: wrap; gap: 8px; } /* 增加标签之间的间距 */
 .task-card-foot {
     display: flex; align-items: center; justify-content: space-between;
-    margin-top: 4px; padding-top: 12px; border-top: 1px dashed var(--border);
+    margin-top: 4px; padding-top: 16px; border-top: 1px dashed var(--border);
 }
+
+/* 首页任务行：让标签和箭头不再贴着 */
+.task-row .tag-soft { margin: 0 12px; }
+
+/* Element Plus 标签在表格内的间距 */
+.el-table .el-tag { margin-right: 6px; margin-bottom: 4px; }
 
 /* 状态圆点 */
 .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -313,4 +320,155 @@ body {
     transform: translateY(-4px);
     box-shadow: var(--shadow-md);
     border-color: #cfe0ee;
+}
+
+
+/* ========================================================
+   素材库专属样式 (MaterialList)
+   ======================================================== */
+.list-head { margin-bottom: 18px; }
+.list-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; color: var(--text); }
+.list-head p { margin: 6px 0 0; }
+
+.search-card { padding: 18px 18px 0; margin-bottom: 22px; }
+.search-form .el-form-item { margin-bottom: 18px; }
+
+.material-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+}
+
+.material-card {
+    padding: 20px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.material-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: #cfe0ee;
+}
+
+.material-type {
+    align-self: flex-start;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: var(--brand-soft);
+    color: var(--brand);
+}
+
+.material-card h3 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--text);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.material-excerpt {
+    margin: 0;
+    color: var(--text-sub);
+    font-size: 13px;
+    line-height: 1.7;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.material-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    color: var(--text-sub);
+    font-size: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+}
+
+
+/* --- 任务列表页布局 --- */
+.list-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.list-head h2 {
+    margin: 0;
+    font-size: 26px;
+    letter-spacing: .5px;
+    color: var(--text);
+}
+.filter-pills {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* --- 任务卡片内部呼吸感 --- */
+.task-card {
+    padding: 24px; /* 加大卡片内边距 */
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* 加大模块间的垂直间距 */
+}
+
+/* 状态栏：点+文字+时间 */
+.task-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-sub);
+}
+
+/* 任务标题 */
+.task-card h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+/* 标签容器的间距 */
+.task-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+/* 扩大标签(如新闻部)的内边距，告别拥挤 */
+.tag-soft {
+    display: inline-block;
+    padding: 5px 14px; /* 从 2px 9px 加大 */
+    border-radius: 999px;
+    font-size: 12px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    font-weight: 500;
+}
+
+/* 卡片底部 */
+.task-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--border);
 }

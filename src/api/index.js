@@ -86,8 +86,26 @@ export const messageApi = {
 }
 
 /* ================= 任务 F-08 ~ F-10 ================= */
+/* 任务 F-08 ~ F-10 */
 export const taskApi = {
-    list:        pick(p => request.get('/tasks', { params: p }),     p => delay(mock.filterTasks(p))),
+    // 接收 status 和 dept 两个参数
+    list: pick(
+        p => request.get('/tasks', { params: p }),
+        p => {
+            let result = mock.tasks
+            // 1. 按部门过滤（如果传了 dept）
+            if (p?.dept) {
+                result = result.filter(t =>
+                    t.departments.includes(p.dept) || t.relatedDepts?.includes(p.dept)
+                )
+            }
+            // 2. 按状态过滤（如果传了 status 且不是“全部”）
+            if (p?.status && p.status !== '全部') {
+                result = result.filter(t => t.status === p.status)
+            }
+            return delay(result)
+        }
+    ),
     detail:      pick(id => request.get(`/tasks/${id}`),            id => delay(mock.tasks.find(t => String(t.id) === String(id)) || mock.tasks[0])),
     create:      pick(d => request.post('/tasks', d),               () => delay({ success: true, id: 99 })),
     materials:   pick(id => request.get(`/tasks/${id}/materials`),  id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),

@@ -48,20 +48,23 @@ const baseMenus = [
   { path: 'evaluations', label: '考评管理' },
   { path: 'materials', label: '本部门素材' },
   { path: 'announcements', label: '公告管理' },
-  { path: 'dept-profile', label: '部门介绍' },
-  { path: 'dashboard', label: '数据看板' }
+  { path: 'dept-profile', label: '部门介绍' }
 ]
 
 const menus = computed(() => {
   const list = [...baseMenus]
-  // 如果是综合部 或 主任看全部，显示打卡管理
+
+  // 综合部专属：打卡管理 + 数据看板
   if (dept.value === '综合部' || dept.value === '') {
     list.push({ path: 'checkins', label: '打卡管理' })
+    list.push({ path: 'dashboard', label: '数据看板' })
   }
-  // 如果是摄制部 或 主任看全部，显示设备管理
+
+  // 摄制部专属：设备管理
   if (dept.value === '摄制部' || dept.value === '') {
     list.push({ path: 'devices', label: '设备管理' })
   }
+
   return list
 })
 
