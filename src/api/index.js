@@ -218,18 +218,31 @@ export const adminApi = {
         return request.post('/admin/dashboard/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     })(),
 
-    // D-14 打卡记录（根据日期+部门，动态拼装所有在岗成员的默认打卡状态）
+    // D-14 打卡记录（过滤掉部长和主任，动态拼装部员的打卡状态）
     checkins: (params) => USE_MOCK
         ? delay((() => {
             const { date, dept } = params || {}
+            // 1. 获取在岗成员
             let targetMembers = (mock.members || []).filter(m => m.status === '在岗')
+
+            // 2. 过滤掉部长和主任（他们的 title 包含“部长”或等于“中心主任”）
+            targetMembers = targetMembers.filter(m =>
+                !m.title.includes('部长') && m.title !== '中心主任'
+            )
+
+            // 3. 按部门过滤
             if (dept && dept !== '全部') {
                 targetMembers = targetMembers.filter(m => m.dept === dept)
             }
-            return targetMembers.map((m, index) => {
-                const record = (mock.checkinRecords || []).find(r => r.date === date && r.dept === m.dept && r.member === m.name)
+
+            // 4. 拼装记录
+            return targetMembers.map((m) => {
+                // 从历史打卡记录里找是否已有这个人的记录
+                const record = (mock.checkinRecords || []).find(r =>
+                    r.date === date && r.dept === m.dept && r.member === m.name
+                )
                 return {
-                    id: record ? record.id : `temp-${m.id}-${date}`, // 如果没有记录，使用临时id
+                    id: record ? record.id : `temp-${m.id}-${date}`, // 如果是新记录，给个临时ID
                     date,
                     dept: m.dept,
                     member: m.name,
@@ -240,13 +253,15 @@ export const adminApi = {
         })())
         : request.get('/admin/checkins', { params }),
 
-    // 标记打卡状态（支持处理临时新增的记录）
+    // 标记打卡状态（真实环境下发送 PUT 请求，Mock 环境下修改数组）
     markCheckin: (id, status, record) => USE_MOCK
-        ? delay(() => {
+        ? delay((() => {
             const target = (mock.checkinRecords || []).find(r => r.id === id)
             if (target) {
+                // 已有记录，直接修改状态
                 target.status = status
             } else if (record) {
+                // 没有记录，且状态为已打卡，则新增一条
                 mock.checkinRecords.push({
                     id: Date.now(),
                     date: record.date,
@@ -256,7 +271,7 @@ export const adminApi = {
                 })
             }
             return { success: true }
-        })()
+        })())
         : request.put(`/admin/checkins/${id}`, { status }),
     // D-15 综合部：打卡申诉审批
     checkinAppeals: () => USE_MOCK ? delay(mock.checkinAppeals) : request.get('/admin/checkins/appeals'),
