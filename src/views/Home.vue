@@ -49,6 +49,70 @@
         </div>
       </div>
     </div>
+    <!-- 数据面板 -->
+    <div class="data-panels">
+      <!-- 网宣数据 -->
+      <div class="data-panel surface-card">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="dot" style="background:#3d7aab"></span>
+            网宣数据看板
+          </div>
+          <span class="muted">公众号推文概览</span>
+        </div>
+        <div class="panel-body">
+          <div class="summary-stats">
+            <div><b>{{ formatNumber(dashboard?.wx?.summary?.totalViews || 0) }}</b><span>总阅读量</span></div>
+            <div><b>{{ formatNumber(dashboard?.wx?.summary?.totalLikes || 0) }}</b><span>总点赞量</span></div>
+            <div><b>{{ dashboard?.wx?.summary?.totalOriginal || 0 }}</b><span>原创推文</span></div>
+          </div>
+          <div class="top-list">
+            <div v-for="(item, idx) in (dashboard?.wx?.top || [])" :key="idx" class="top-item">
+              <div class="top-rank" :class="'rank-' + (idx + 1)">{{ idx + 1 }}</div>
+              <div class="top-content">
+                <div class="top-title" :title="item.title">{{ item.title }}</div>
+                <div class="top-meta">
+                  <span>{{ item.type }}</span>
+                  <span>{{ formatNumber(item.views) }} 阅</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 影音数据 -->
+      <div class="data-panel surface-card">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="dot" style="background:#e8833a"></span>
+            影音数据看板
+          </div>
+          <span class="muted">视频号播放概览</span>
+        </div>
+        <div class="panel-body">
+          <div class="summary-stats">
+            <div><b>{{ formatNumber(dashboard?.yy?.summary?.totalViews || 0) }}</b><span>总播放量</span></div>
+            <div><b>{{ formatNumber(dashboard?.yy?.summary?.totalLikes || 0) }}</b><span>总喜欢量</span></div>
+            <div><b>{{ dashboard?.yy?.summary?.totalVideos || 0 }}</b><span>发布视频数</span></div>
+          </div>
+          <div class="top-list">
+            <div v-for="(item, idx) in (dashboard?.yy?.top || [])" :key="idx" class="top-item">
+              <div class="top-rank" :class="'rank-' + (idx + 1)">{{ idx + 1 }}</div>
+              <div class="top-content">
+                <div class="top-title" :title="item.title">{{ item.title }}</div>
+                <div class="top-meta">
+                  <span>{{ item.type }}</span>
+                  <span>{{ formatNumber(item.views) }} 播</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
 
     <div class="split">
       <div class="split-main">
@@ -89,7 +153,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { homeApi } from '@/api'
+import { homeApi ,adminApi} from '@/api'
 
 const router = useRouter()
 const loading = ref(false)
@@ -98,6 +162,12 @@ const departments = ref([])
 const tasks = ref([])
 const videos = ref([])
 const isLogin = computed(() => !!localStorage.getItem('token'))
+const dashboard = ref(null)
+const formatNumber = (num) => {
+  if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
+  return num
+}
+
 
 const deptGradients = [
   'linear-gradient(135deg,#3d7aab,#6fa8d4)',
@@ -126,19 +196,16 @@ function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({ beh
 onMounted(async () => {
   loading.value = true
   try {
-    const [c, d, t, v] = await Promise.all([
-      homeApi.centerInfo(),
-      homeApi.departments(),
-      homeApi.latestTasks(),
-      homeApi.latestVideos()
+    const [c, d, t, v, dash] = await Promise.all([
+      homeApi.centerInfo(), homeApi.departments(), homeApi.latestTasks(), homeApi.latestVideos(), adminApi.dashboard()
     ])
-    // 增加容错赋值，防止 undefined 导致模板渲染崩溃
-    center.value = c || {}
-    departments.value = d || []
-    tasks.value = t || []
-    videos.value = v || []
+    center.value = c
+    departments.value = d
+    tasks.value = t
+    videos.value = v
+    dashboard.value = dash
   } catch (e) {
-    console.error('首页数据加载失败:', e)
+    console.error('首页数据加载失败', e)
   } finally {
     loading.value = false
   }

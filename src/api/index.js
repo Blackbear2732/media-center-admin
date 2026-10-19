@@ -207,20 +207,57 @@ export const adminApi = {
     deptProfile: (dept) => USE_MOCK ? delay(mock.deptProfiles[dept]) : request.get('/admin/dept-profile', { params: { dept } }),
     saveDeptProfile: (dept, data) => USE_MOCK ? delay({ success: true }) : request.put('/admin/dept-profile', { dept, ...data }),
 
-    // D-13/D-17 数据看板
+    // D-13/D-17 数据看板（返回 wx 和 yy 两块数据）
     dashboard: () => USE_MOCK ? delay(mock.dashboardData) : request.get('/admin/dashboard'),
-    uploadCsv: (file) => USE_MOCK ? delay({ success: true, rows: 128 }) : (() => {
-        const fd = new FormData(); fd.append('file', file)
+
+    // 上传 CSV（增加 type 参数区分 wx / yy）
+    uploadCsv: (type, file) => USE_MOCK ? delay({ success: true, rows: 128 }) : (() => {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('type', type)
         return request.post('/admin/dashboard/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     })(),
 
-    // D-14 综合部：打卡记录管理
+    // D-14 打卡记录（根据日期+部门，动态拼装所有在岗成员的默认打卡状态）
     checkins: (params) => USE_MOCK
-        ? delay(mock.checkinRecords.filter(r =>
-            (!params?.date || r.date === params.date) && (!params?.dept || r.dept === params.dept)))
+        ? delay((() => {
+            const { date, dept } = params || {}
+            let targetMembers = (mock.members || []).filter(m => m.status === '在岗')
+            if (dept && dept !== '全部') {
+                targetMembers = targetMembers.filter(m => m.dept === dept)
+            }
+            return targetMembers.map((m, index) => {
+                const record = (mock.checkinRecords || []).find(r => r.date === date && r.dept === m.dept && r.member === m.name)
+                return {
+                    id: record ? record.id : `temp-${m.id}-${date}`, // 如果没有记录，使用临时id
+                    date,
+                    dept: m.dept,
+                    member: m.name,
+                    studentNo: m.studentNo,
+                    status: record ? record.status : '未打卡'
+                }
+            })
+        })())
         : request.get('/admin/checkins', { params }),
-    markCheckin: (id, status) => USE_MOCK ? delay({ success: true }) : request.put(`/admin/checkins/${id}`, { status }),
 
+    // 标记打卡状态（支持处理临时新增的记录）
+    markCheckin: (id, status, record) => USE_MOCK
+        ? delay(() => {
+            const target = (mock.checkinRecords || []).find(r => r.id === id)
+            if (target) {
+                target.status = status
+            } else if (record) {
+                mock.checkinRecords.push({
+                    id: Date.now(),
+                    date: record.date,
+                    dept: record.dept,
+                    member: record.member,
+                    status
+                })
+            }
+            return { success: true }
+        })()
+        : request.put(`/admin/checkins/${id}`, { status }),
     // D-15 综合部：打卡申诉审批
     checkinAppeals: () => USE_MOCK ? delay(mock.checkinAppeals) : request.get('/admin/checkins/appeals'),
     reviewAppeal: (id, status) => USE_MOCK
