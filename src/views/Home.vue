@@ -2,7 +2,12 @@
   <div class="page" v-loading="loading">
     <section class="hero">
       <div class="hero-content">
-        <div class="hero-eyebrow">XX UNIVERSITY · MEDIA CENTER</div>
+        <div class="hero-logos">
+          <img src="/image/logo/school.png" alt="校徽" />
+          <img src="/image/logo/league.png" alt="团徽" />
+          <img src="/image/logo/media.png" alt="融媒Logo" />
+        </div>
+        <div class="hero-eyebrow">SHANXI AGRICULTURAL UNIVERSITY · YOUTH MEDIA CENTER</div>
         <h1>{{ center.name || '融媒体中心' }}</h1>
         <p>{{ center.desc }}</p>
         <div class="hero-actions">
@@ -186,5 +191,9 @@ onMounted(async () => {
 .video-cover { height: 92px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.92); position: relative; }
 .video-duration { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: rgba(0,0,0,.55); padding: 1px 6px; border-radius: 3px; }
 .video-title { padding: 10px 12px 12px; font-size: 13px; line-height: 1.4; }
+.hero-logos { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.hero-logos img { height: 44px; width: auto; background: rgba(255,255,255,0.1); padding: 6px; border-radius: 8px; backdrop-filter: blur(4px); }
 @media (max-width: 900px) { .hero { grid-template-columns: 1fr; padding: 36px; } .hero-art { display: none; } .dept-grid { grid-template-columns: 1fr 1fr; } .split { grid-template-columns: 1fr; } }
+
+
 </style>

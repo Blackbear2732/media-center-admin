@@ -2,9 +2,15 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="topbar-inner">
+
         <div class="brand" @click="router.push('/')">
-          <div class="brand-mark">融</div>
-          <div>
+          <div class="brand-logos">
+            <img src="/image/logo/school.png" alt="校徽" class="brand-icon" />
+            <img src="/image/logo/league.png" alt="团徽" class="brand-icon" />
+            <div class="divider"></div>
+            <img src="/image/logo/media.png" alt="融媒Logo" class="brand-icon media-icon" />
+          </div>
+          <div class="brand-text">
             <span class="brand-name">山西农业大学青年融媒体中心</span>
             <span class="brand-sub">YOUTH MEDIA CENTER · SXAU</span>
           </div>
@@ -60,7 +66,14 @@
       <div class="main-inner"><router-view /></div>
     </main>
 
-    <footer class="footer">山西农业大学青年融媒体中心 · 一次采集 · 多元生成 · 多端发布</footer>
+    <footer class="footer">
+      <div class="footer-logos">
+        <img src="/image/logo/school.png" alt="校徽" />
+        <img src="/image/logo/league.png" alt="团徽" />
+        <img src="/image/logo/media.png" alt="融媒Logo" />
+      </div>
+      <div class="footer-text">山西农业大学青年融媒体中心 · 一次采集 · 多元生成 · 多端发布</div>
+    </footer>
   </div>
 </template>
 
@@ -151,12 +164,14 @@ async function onCommand(cmd) {
 <style scoped>
 .topbar { position: sticky; top: 0; z-index: 100; background: rgba(255, 255, 255, .86); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
 .topbar-inner { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 32px; }
-.brand { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.brand-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--brand), #4a86b8); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
-.brand-name { font-weight: 700; font-size: 16px; letter-spacing: .5px; display: block; line-height: 1.1; }
-.brand-sub { font-size: 10px; color: var(--text-sub); letter-spacing: 1px; }
-.nav { display: flex; gap: 6px; flex: 1; }
-.nav-item { padding: 8px 14px; border-radius: 8px; color: var(--text-sub); text-decoration: none; font-size: 14px; transition: all .18s; }
+.brand { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.brand-logos { display: flex; align-items: center; gap: 8px; }
+.brand-icon { height: 32px; width: auto; object-fit: contain; }
+.media-icon { height: 36px; } /* 融媒体Logo可以稍微大一点 */
+.brand-logos .divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+.brand-name { font-weight: 700; font-size: 16px; letter-spacing: .5px; color: var(--text); }
+.brand-sub { font-size: 10px; color: var(--text-sub); letter-spacing: 1px; }.nav-item { padding: 8px 14px; border-radius: 8px; color: var(--text-sub); text-decoration: none; font-size: 14px; transition: all .18s; }
 .nav-item:hover { color: var(--brand); background: var(--brand-soft); }
 .nav-item.active { color: var(--brand); font-weight: 600; background: var(--brand-soft); }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
@@ -174,5 +189,7 @@ async function onCommand(cmd) {
 .admin-link.active { background: #fdf1e6 !important; }
 .main-area { min-height: calc(100vh - 64px - 56px); }
 .main-inner { max-width: 1200px; margin: 0 auto; padding: 24px; }
-.footer { text-align: center; padding: 20px; color: var(--text-sub); font-size: 12px; border-top: 1px solid var(--border); background: #fff; }
+.footer { text-align: center; padding: 24px 20px; color: var(--text-sub); font-size: 12px; border-top: 1px solid var(--border); background: #fff; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.footer-logos { display: flex; gap: 16px; align-items: center; }
+.footer-logos img { height: 28px; width: auto; opacity: 0.8; }
 </style>

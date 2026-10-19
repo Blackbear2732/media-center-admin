@@ -2,7 +2,11 @@
   <div class="login-page">
     <div class="login-visual">
       <div class="visual-inner">
-        <div class="brand-mark large">融</div>
+        <div class="login-logos">
+          <img src="/image/logo/school.png" alt="校徽" />
+          <img src="/image/logo/league.png" alt="团徽" />
+          <img src="/image/logo/media.png" alt="融媒Logo" class="main-logo" />
+        </div>
         <h1>青年融媒体中心</h1>
         <p>山西农业大学 · 一次采集 · 多元生成 · 多端发布</p>
       </div>
@@ -116,5 +120,8 @@ async function quickLogin(role) {
 .role-name { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
 .role-desc { color: var(--text-sub); font-size: 12px; line-height: 1.5; }
 .role-arrow { color: var(--text-sub); }
+.login-logos { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.login-logos img { height: 52px; width: auto; background: rgba(255,255,255,0.15); padding: 8px; border-radius: 12px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.2); }
+.login-logos .main-logo { height: 64px; background: #fff; }
 @media (max-width: 900px) { .login-page { grid-template-columns: 1fr; } .login-visual { display: none; } }
 </style>
