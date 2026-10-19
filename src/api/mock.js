@@ -477,10 +477,8 @@ export const evaluations = [
 ]
 
 export const checkinRecords = [
-    { id: 1, date: '2024-11-05', dept: '新闻部', member: '徐钰婷', status: '已转发', markedBy: '综合部' },
-    { id: 2, date: '2024-11-05', dept: '新闻部', member: '李润琪', status: '未转发', markedBy: '综合部' },
-    { id: 3, date: '2024-11-05', dept: '网宣部', member: '刘钰珂', status: '已转发', markedBy: '综合部' },
-    { id: 4, date: '2024-11-04', dept: '新闻部', member: '陈存灿', status: '已转发', markedBy: '综合部' }
+    { id: 1, date: '2026-05-20', dept: '新闻部', member: '徐钰婷', status: '已打卡' },
+    { id: 2, date: '2026-05-20', dept: '新闻部', member: '李润琪', status: '已打卡' }
 ]
 export const checkinAppeals = [
     { id: 1, member: '李润琪', dept: '新闻部', date: '2024-11-05', reason: '当天已转发但系统未记录', status: '待审批', createdAt: '2024-11-06 09:00' },
@@ -496,18 +494,36 @@ export const checkinStats = [
 ]
 
 export const dashboardData = {
-    years: ['2024', '2023', '2022'],
-    top10: [
-        { title: '校运会开幕式推文', views: 12800, likes: 860, year: '2024' },
-        { title: '迎新晚会回顾', views: 11200, likes: 720, year: '2024' },
-        { title: '校庆 70 周年祝福', views: 9800, likes: 640, year: '2024' },
-        { title: '春季运动会集锦', views: 8600, likes: 520, year: '2024' },
-        { title: '实验室安全科普', views: 7200, likes: 410, year: '2024' }
-    ],
-    trend: [
-        { month: '2024-09', views: 12000 }, { month: '2024-10', views: 18600 },
-        { month: '2024-11', views: 23400 }, { month: '2024-12', views: 19800 }
-    ]
+    wx: {
+        summary: { totalViews: 245000, totalLikes: 8500, totalOriginal: 12 },
+        trend: [
+            { month: '2026-01', views: 12000, likes: 400 },
+            { month: '2026-02', views: 15000, likes: 500 },
+            { month: '2026-03', views: 80000, likes: 2500 },
+            { month: '2026-04', views: 100000, likes: 3500 },
+            { month: '2026-05', views: 38000, likes: 1600 }
+        ],
+        top: [
+            { title: '纳新｜你的热爱，值得一个舞台', views: 9261, likes: 227, type: '原创' },
+            { title: '丁香艺术团招新 丨 等你“艺” 起绽放', views: 6642, likes: 86, type: '社团活动' },
+            { title: '毕业不打烊 音浪正狂欢——毕业生草坪音乐会面向大家征集节目啦~', views: 6408, likes: 482, type: '新闻' }
+        ]
+    },
+    yy: {
+        summary: { totalViews: 856000, totalLikes: 25000, totalVideos: 33 },
+        trend: [
+            { month: '2026-01', views: 89000, likes: 1800 },
+            { month: '2026-02', views: 75000, likes: 2100 },
+            { month: '2026-03', views: 120000, likes: 4000 },
+            { month: '2026-04', views: 190000, likes: 5000 },
+            { month: '2026-05', views: 382000, likes: 12100 }
+        ],
+        top: [
+            { title: '不说再见', views: 27292, likes: 689, type: '毕业季' },
+            { title: '执笔书梦 青春诗行', views: 31381, likes: 801, type: '毕业季' },
+            { title: '光影绘绿水青山 青春书美丽中国', views: 22693, likes: 1484, type: '美丽中国' }
+        ]
+    }
 }
 
 export const announcements = [
