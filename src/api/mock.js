@@ -5,12 +5,66 @@ export const centerInfo = {
 }
 
 export const departments = [
-    { id: 1, name: '综合部', intro: '负责中心统筹协调、打卡监督、行政事务与数据统计。', modules: ['checkin', 'dashboardUpload'] },
-    { id: 2, name: '网宣部', intro: '负责公众号、微博、抖音等新媒体平台运营与推文发布。', modules: ['article'] },
-    { id: 3, name: '影音部', intro: '负责音视频剪辑、后期包装与成片交付。', modules: ['video'] },
-    { id: 4, name: '摄制部', intro: '负责活动现场拍摄、素材采集、设备管理与直播摄像。', modules: ['device', 'raw'] },
-    { id: 5, name: '新闻部', intro: '负责新闻采写、稿件编辑与会议新闻记录。', modules: ['news'] },
-    { id: 6, name: '设计部', intro: '负责海报、H5、视觉识别系统等平面与视觉设计。', modules: ['design'] }
+    {
+        id: 1, name: '综合部',
+        intro: '负责中心统筹协调、打卡监督、行政事务与数据统计，是融媒体中心的枢纽。',
+        modules: ['checkin', 'dashboardUpload'],
+        photos: [
+            'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&q=80',
+            'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&q=80',
+            'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=500&q=80'
+        ]
+    },
+    {
+        id: 2, name: '网宣部',
+        intro: '负责公众号、微博、抖音等新媒体平台运营与推文发布，传递校园正能量。',
+        modules: ['article'],
+        photos: [
+            'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&q=80',
+            'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500&q=80',
+            'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=500&q=80'
+        ]
+    },
+    {
+        id: 3, name: '影音部',
+        intro: '负责音视频剪辑、后期包装与成片交付，用影像记录农大故事。',
+        modules: ['video'],
+        photos: [
+            'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=500&q=80',
+            'https://images.unsplash.com/photo-1626544827763-d516dce335e2?w=500&q=80',
+            'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=500&q=80'
+        ]
+    },
+    {
+        id: 4, name: '摄制部',
+        intro: '负责活动现场拍摄、素材采集、设备管理与直播摄像，捕捉精彩瞬间。',
+        modules: ['device', 'raw'],
+        photos: [
+            'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80',
+            'https://images.unsplash.com/photo-1520390138845-fd2d229dd553?w=500&q=80',
+            'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?w=500&q=80'
+        ]
+    },
+    {
+        id: 5, name: '新闻部',
+        intro: '负责新闻采写、稿件编辑与会议新闻记录，做校园资讯的发现者。',
+        modules: ['news'],
+        photos: [
+            'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500&q=80',
+            'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=500&q=80',
+            'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=500&q=80'
+        ]
+    },
+    {
+        id: 6, name: '设计部',
+        intro: '负责海报、H5、视觉识别系统等平面与视觉设计，打造极致视觉体验。',
+        modules: ['design'],
+        photos: [
+            'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500&q=80',
+            'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=500&q=80',
+            'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=500&q=80'
+        ]
+    }
 ]
 
 export const accounts = {

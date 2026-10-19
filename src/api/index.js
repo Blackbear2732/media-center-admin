@@ -78,31 +78,31 @@ export const userApi = {
     myMeetings:     pick(() => request.get('/user/meetings'),         () => delay(mock.meetings)),
     myDevices:      pick(() => request.get('/user/devices'),          () => delay(mock.myDevices))
 }
+
+
 /* ================= 消息 F-07 ================= */
 export const messageApi = {
     list: pick(() => request.get('/messages'), () => {
         const role = localStorage.getItem('role') || 'member'
         const user = mock.currentUser()
 
-        // 根据角色返回不同的假消息
+        // 1. 先获取底层真实的、包含已读状态的数组
+        let msgs = mock.messages || []
+
+        // 2. 根据角色过滤（不改变原数据，只返回副本引用即可，因为后续只会修改 read 属性）
         if (role === 'minister') {
-            return delay([
-                { id: 1, title: '报名确认', content: '赵六 报名了「运动会」任务，请前往部门管理-任务参与确认。', time: '2024-11-04 10:20', read: false },
-                { id: 2, title: '系统提醒', content: '您负责的部门本月考评还未发起，请及时处理。', time: '2024-11-01 09:00', read: false }
-            ])
+            msgs = msgs.filter(m => m.id === 1 || m.id === 3) // 演示：部长看指定消息
         } else if (role === 'director') {
-            return delay([
-                { id: 1, title: '全局报告', content: '10月份全中心共发布推文 42 篇，视频 15 条，请查看数据看板。', time: '2024-11-01 09:00', read: false }
-            ])
+            msgs = msgs.filter(m => m.id === 2) // 演示：主任看指定消息
         }
 
-        // 普通部员
-        return delay(mock.messages.filter(m => m.content.includes(user.dept) || m.content.includes(user.name)))
+        return delay(JSON.parse(JSON.stringify(msgs))) // 深拷贝返回，防止视图直接篡改原数组
     }),
+
     markRead: pick(
         id => request.put(`/messages/${id}/read`),
         (id) => {
-            // 真正修改 Mock 数据里的 read 状态
+            // 真正去修改 mock.messages 里的 read 状态
             const msg = mock.messages.find(m => m.id === id)
             if (msg) msg.read = true
             return delay({ success: true })
@@ -112,7 +112,7 @@ export const messageApi = {
     markAllRead: pick(
         () => request.put('/messages/read-all'),
         () => {
-            // 把 Mock 数据里所有的 read 设为 true
+            // 真正把 mock.messages 里所有的 read 设为 true
             mock.messages.forEach(m => m.read = true)
             return delay({ success: true })
         }
