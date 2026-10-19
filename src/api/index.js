@@ -27,18 +27,40 @@ export const homeApi = {
 }
 
 /* ================= 登录认证 ================= */
+/* 登录 */
 export const authApi = {
     login: (payload = {}) => USE_MOCK
         ? delay((() => {
             const key = payload.role || 'member'
+
+            // 如果是部长登录，根据传入的部门动态查找对应的部长
+            if (key === 'minister' && payload.dept) {
+                const m = mock.members.find(m => m.dept === payload.dept && m.title.includes('部长'))
+                if (m) {
+                    return {
+                        token: 'mock-minister-' + Date.now(),
+                        role: 'minister',
+                        label: '部长',
+                        user: {
+                            studentNo: m.studentNo,
+                            name: m.name,
+                            nickname: m.nickname || m.name,
+                            dept: m.dept,
+                            college: m.college,
+                            className: m.className,
+                            grade: m.grade,
+                            phone: m.phone,
+                            email: m.email,
+                            title: m.title
+                        }
+                    }
+                }
+            }
+
+            // 否则回退到默认账号
             const acc = mock.accounts?.[key] || mock.accounts?.member
             if (!acc) return null
-            return {
-                token: acc.token + '-' + Date.now(),
-                role: acc.role,
-                label: acc.label,
-                user: acc.user
-            }
+            return { token: acc.token + '-' + Date.now(), role: acc.role, label: acc.label, user: acc.user }
         })())
         : request.post('/auth/login', payload),
     logout: pick(() => request.post('/auth/logout'), () => delay({ success: true }))

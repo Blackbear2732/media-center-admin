@@ -9,21 +9,48 @@
         </div>
         <h1>青年融媒体中心</h1>
         <p>山西农业大学 · 一次采集 · 多元生成 · 多端发布</p>
+        <div class="visual-tags">
+          <span>综合部</span><span>网宣部</span><span>影音部</span>
+          <span>摄制部</span><span>新闻部</span><span>设计部</span>
+        </div>
       </div>
     </div>
 
     <div class="login-panel">
       <div class="login-box">
         <h2>选择身份进入</h2>
-        <p class="muted" style="margin:0 0 22px">演示环境，无需密码，点击即可登录</p>
+        <p class="muted" style="margin:0 0 22px">点击下方角色即可登录，体验不同的部门管理功能</p>
 
-        <div class="role-cards">
-          <button v-for="r in roleList" :key="r.key" type="button" class="role-card" :class="r.key"
-                  :disabled="loading" @click.prevent="quickLogin(r.key)">
-            <div class="role-icon">{{ r.icon }}</div>
+        <div class="role-group">
+          <h3>中心主任</h3>
+          <button type="button" class="role-card director" :disabled="loading" @click.prevent="quickLogin('director')">
+            <div class="role-icon" style="background: linear-gradient(135deg,#5a8f7b,#8fc4a9);">主</div>
             <div class="role-info">
-              <div class="role-name">{{ r.label }}</div>
-              <div class="role-desc">{{ r.desc }}</div>
+              <div class="role-name">王主任</div>
+              <div class="role-desc">查看全中心数据、所有部门成员与设备</div>
+            </div>
+            <el-icon class="role-arrow"><ArrowRight /></el-icon>
+          </button>
+        </div>
+
+        <div class="role-group">
+          <h3>部门部长 (点击体验专属模块)</h3>
+          <div class="dept-cards">
+            <button v-for="d in depts" :key="d" type="button" class="dept-card" :disabled="loading" @click.prevent="quickLogin('minister', d)">
+              <div class="dept-icon">{{ d.slice(0,1) }}</div>
+              <div class="dept-name">{{ d }}</div>
+              <div class="dept-hint">{{ deptHints[d] }}</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="role-group">
+          <h3>普通部员</h3>
+          <button type="button" class="role-card member" :disabled="loading" @click.prevent="quickLogin('member')">
+            <div class="role-icon" style="background: linear-gradient(135deg,#3d7aab,#6fa8d4);">部</div>
+            <div class="role-info">
+              <div class="role-name">徐钰婷</div>
+              <div class="role-desc">新闻部 · 查看我的任务与个人记录</div>
             </div>
             <el-icon class="role-arrow"><ArrowRight /></el-icon>
           </button>
@@ -47,48 +74,43 @@ const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
 
-const roleList = [
-  { key: 'member', label: '部员', icon: '部', desc: '新闻部 · 张三 · 查看任务与个人记录' },
-  { key: 'minister', label: '部长', icon: '长', desc: '新闻部部长 · 李四 · 管理本部门' },
-  { key: 'director', label: '中心主任', icon: '主', desc: '王主任 · 查看全部部门与数据' }
-]
+const depts = ['综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
+const deptHints = {
+  '综合部': '打卡管理',
+  '网宣部': '推文数据',
+  '影音部': '成片上传',
+  '摄制部': '设备管理',
+  '新闻部': '新闻稿件',
+  '设计部': '设计图库'
+}
 
-async function quickLogin(role) {
+async function quickLogin(role, dept) {
   loading.value = true
   try {
-    // 安全清理特定的 key，避免把系统内部状态弄崩
     localStorage.removeItem('token')
     localStorage.removeItem('role')
     localStorage.removeItem('user')
     localStorage.removeItem('adminDept')
 
-    const res = await authApi.login({ role })
-    if (!res || !res.token) {
-      throw new Error('登录返回数据异常')
-    }
+    const res = await authApi.login({ role, dept })
+    if (!res || !res.token) throw new Error('登录返回数据异常')
 
-    // 写入本地存储
     localStorage.setItem('token', res.token)
     localStorage.setItem('role', res.role || 'member')
     localStorage.setItem('user', JSON.stringify(res.user || {}))
+
+    // 主任默认全部部门，部长锁定自己部门
     localStorage.setItem('adminDept', res.role === 'director' ? '' : (res.user?.dept || '新闻部'))
 
-    ElMessage.success(`已以「${res.label}」身份登录`)
+    ElMessage.success(`已以「${res.user?.name}」身份登录`)
 
-    // 计算跳转路径：优先走重定向，否则按角色跳转
     let redirect = route.query.redirect
     if (!redirect) {
       redirect = res.role === 'member' ? '/' : '/admin/overview'
     }
 
-    // 使用 replace 清空历史栈，并强制触发页面刷新
     await router.replace(redirect)
-
-    // 延迟重载，确保状态同步
-    setTimeout(() => {
-      window.location.reload()
-    }, 100)
-
+    setTimeout(() => { window.location.reload() }, 100)
   } catch (e) {
     console.error('登录失败:', e)
     ElMessage.error(e.message || '登录发生异常')
@@ -97,3 +119,26 @@ async function quickLogin(role) {
   }
 }
 </script>
+
+<style scoped>
+/* 登录页多部门卡片 */
+.login-box { width: 460px; }
+.role-group { margin-bottom: 24px; }
+.role-group h3 { font-size: 14px; font-weight: 600; color: var(--text-sub); margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; }
+.role-group h3::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.dept-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.dept-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 14px 10px; border-radius: 12px; border: 1px solid var(--border);
+  background: #fff; cursor: pointer; transition: all .2s;
+}
+.dept-card:hover { transform: translateY(-2px); border-color: #cfe0ee; box-shadow: var(--shadow-sm); background: #fafbfc; }
+.dept-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  color: #fff; font-weight: 600; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px; font-size: 15px;
+}
+.dept-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.dept-hint { font-size: 11px; color: var(--text-sub); }
+</style>
