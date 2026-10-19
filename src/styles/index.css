@@ -268,3 +268,38 @@ body {
     .login-visual { display: none; }
     .stat-grid { grid-template-columns: 1fr 1fr; }
 }
+
+
+/* 首页数据面板 */
+.data-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+.data-panel { overflow: hidden; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+.panel-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.panel-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+.panel-body { padding: 20px; }
+.summary-stats { display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px dashed var(--border); }
+.summary-stats div { text-align: center; }
+.summary-stats b { display: block; font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 4px; }
+.summary-stats span { font-size: 12px; color: var(--text-sub); }
+.top-list { display: flex; flex-direction: column; gap: 12px; }
+.top-item { display: flex; align-items: center; gap: 12px; }
+.top-rank { width: 22px; height: 22px; border-radius: 6px; background: #f0f2f5; color: var(--text-sub); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.top-rank.rank-1 { background: #fdf3d8; color: #b8860b; }
+.top-rank.rank-2 { background: #eef1f5; color: #7a8a9a; }
+.top-rank.rank-3 { background: #f8ecdf; color: #a0714a; }
+.top-content { flex: 1; min-width: 0; }
+.top-title { font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+@media (max-width: 900px) { .data-panels { grid-template-columns: 1fr; } }
+
+/* 综合部数据上传 */
+.data-upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.upload-card { display: flex; flex-direction: column; }
+.upload-head { padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+.upload-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.upload-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+.upload-body { padding: 20px; flex: 1; }
+.file-preview { margin-top: 16px; padding: 12px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; }
+.file-info { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+.file-info .el-icon { color: #3d7aab; }
+@media (max-width: 900px) { .data-upload-grid { grid-template-columns: 1fr; } }
