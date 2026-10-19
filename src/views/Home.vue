@@ -49,16 +49,21 @@
         </div>
       </div>
     </div>
-    <!-- 数据面板 -->
+
+
+
+    <!-- 数据面板 (点击跳转详情) -->
     <div class="data-panels">
       <!-- 网宣数据 -->
-      <div class="data-panel surface-card">
+      <div class="data-panel surface-card" @click="router.push('/data-panel/wx')">
         <div class="panel-head">
           <div class="panel-title">
             <span class="dot" style="background:#3d7aab"></span>
             网宣数据看板
           </div>
-          <span class="muted">公众号推文概览</span>
+          <span class="muted" style="display:flex;align-items:center;gap:4px;color:var(--brand)">
+            查看详情 <el-icon><ArrowRight /></el-icon>
+          </span>
         </div>
         <div class="panel-body">
           <div class="summary-stats">
@@ -67,7 +72,7 @@
             <div><b>{{ dashboard?.wx?.summary?.totalOriginal || 0 }}</b><span>原创推文</span></div>
           </div>
           <div class="top-list">
-            <div v-for="(item, idx) in (dashboard?.wx?.top || [])" :key="idx" class="top-item">
+            <div v-for="(item, idx) in (dashboard?.wx?.list || []).slice(0, 3)" :key="idx" class="top-item">
               <div class="top-rank" :class="'rank-' + (idx + 1)">{{ idx + 1 }}</div>
               <div class="top-content">
                 <div class="top-title" :title="item.title">{{ item.title }}</div>
@@ -82,13 +87,15 @@
       </div>
 
       <!-- 影音数据 -->
-      <div class="data-panel surface-card">
+      <div class="data-panel surface-card" @click="router.push('/data-panel/yy')">
         <div class="panel-head">
           <div class="panel-title">
             <span class="dot" style="background:#e8833a"></span>
             影音数据看板
           </div>
-          <span class="muted">视频号播放概览</span>
+          <span class="muted" style="display:flex;align-items:center;gap:4px;color:var(--accent)">
+            查看详情 <el-icon><ArrowRight /></el-icon>
+          </span>
         </div>
         <div class="panel-body">
           <div class="summary-stats">
@@ -97,7 +104,7 @@
             <div><b>{{ dashboard?.yy?.summary?.totalVideos || 0 }}</b><span>发布视频数</span></div>
           </div>
           <div class="top-list">
-            <div v-for="(item, idx) in (dashboard?.yy?.top || [])" :key="idx" class="top-item">
+            <div v-for="(item, idx) in (dashboard?.yy?.list || []).slice(0, 3)" :key="idx" class="top-item">
               <div class="top-rank" :class="'rank-' + (idx + 1)">{{ idx + 1 }}</div>
               <div class="top-content">
                 <div class="top-title" :title="item.title">{{ item.title }}</div>

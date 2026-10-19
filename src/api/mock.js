@@ -495,7 +495,7 @@ export const checkinStats = [
 
 export const dashboardData = {
     wx: {
-        summary: { totalViews: 245000, totalLikes: 8500, totalOriginal: 12 },
+        summary: { totalViews: 245000, totalLikes: 8500, totalOriginal: 12, totalCount: 142 },
         trend: [
             { month: '2026-01', views: 12000, likes: 400 },
             { month: '2026-02', views: 15000, likes: 500 },
@@ -503,14 +503,21 @@ export const dashboardData = {
             { month: '2026-04', views: 100000, likes: 3500 },
             { month: '2026-05', views: 38000, likes: 1600 }
         ],
-        top: [
-            { title: '纳新｜你的热爱，值得一个舞台', views: 9261, likes: 227, type: '原创' },
-            { title: '丁香艺术团招新 丨 等你“艺” 起绽放', views: 6642, likes: 86, type: '社团活动' },
-            { title: '毕业不打烊 音浪正狂欢——毕业生草坪音乐会面向大家征集节目啦~', views: 6408, likes: 482, type: '新闻' }
+        list: [
+            { id: 1, title: '纳新｜你的热爱，值得一个舞台', type: '原创', date: '2026-03-08', views: 9261, likes: 227, url: 'https://mp.weixin.qq.com/s/3pIMGijOnnvHwxhqkr5mww' },
+            { id: 2, title: '丁香艺术团招新 丨 等你“艺” 起绽放', type: '社团活动', date: '2026-03-01', views: 6642, likes: 86, url: 'https://mp.weixin.qq.com/s/86ata_IwkM85sy8sHDFlXA' },
+            { id: 3, title: '毕业不打烊 音浪正狂欢——毕业生草坪音乐会面向大家征集节目啦~', type: '新闻', date: '2026-04-26', views: 6408, likes: 482, url: 'https://mp.weixin.qq.com/s/sr710qNyJANGzbinIYhBjQ' },
+            { id: 4, title: '社团活动看这里！', type: '社团活动', date: '2026-03-12', views: 4404, likes: 77, url: 'https://mp.weixin.qq.com/s/eezrfANY2kl6c63h5g5fXA' },
+            { id: 5, title: '软件学院成功举办第九届运动会', type: '学院投稿', date: '2026-03-18', views: 4170, likes: 301, url: 'https://mp.weixin.qq.com/s/UE42DDGyXhYgjieHNPu2ew' },
+            { id: 6, title: '“镜头里的中国”摄影作品展征集开始啦，SXAUers快来投稿，一起晒出镜头里的祖国～', type: '新闻', date: '2026-01-22', views: 3496, likes: 19, url: 'https://mp.weixin.qq.com/s/RFNudJDsoW9aGMQqFgJNTg' },
+            { id: 7, title: '我校举办优秀社团展示评选活动', type: '新闻', date: '2026-01-05', views: 3373, likes: 69, url: 'https://mp.weixin.qq.com/s/vrJc9XCqUj3MbLVHzK0pHA' },
+            { id: 8, title: 'SXAUers的年夜饭来啦！', type: '原创', date: '2026-02-10', views: 3093, likes: 25, url: 'https://mp.weixin.qq.com/s/31LKMZ4ZuOL_cHX8hNklMg' },
+            { id: 9, title: '速存！2026年西部计划报名指南看这里🧐', type: '转发', date: '2026-03-10', views: 2910, likes: 29, url: 'https://mp.weixin.qq.com/s/syqpUl29S3_v8wk8YVx2LA' },
+            { id: 10, title: '一周回顾 丨 本周要闻合集来啦（3月15日——3月21日）', type: '一周回顾', date: '2026-03-21', views: 819, likes: 150, url: 'https://mp.weixin.qq.com/s/zESWaDalFxabx7hECVffnw' }
         ]
     },
     yy: {
-        summary: { totalViews: 856000, totalLikes: 25000, totalVideos: 33 },
+        summary: { totalViews: 856000, totalLikes: 25000, totalVideos: 33, totalCount: 179 },
         trend: [
             { month: '2026-01', views: 89000, likes: 1800 },
             { month: '2026-02', views: 75000, likes: 2100 },
@@ -518,14 +525,20 @@ export const dashboardData = {
             { month: '2026-04', views: 190000, likes: 5000 },
             { month: '2026-05', views: 382000, likes: 12100 }
         ],
-        top: [
-            { title: '不说再见', views: 27292, likes: 689, type: '毕业季' },
-            { title: '执笔书梦 青春诗行', views: 31381, likes: 801, type: '毕业季' },
-            { title: '光影绘绿水青山 青春书美丽中国', views: 22693, likes: 1484, type: '美丽中国' }
+        list: [
+            { id: 1, title: '你好，新同学！', type: '迎新', date: '2025-09-11', views: 34044, likes: 300, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 2, title: '执笔书梦 青春诗行', type: '毕业季', date: '2025-06-18', views: 31381, likes: 801, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 3, title: '世界赠予我的', type: '日常', date: '2025-02-16', views: 32285, likes: 1662, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 4, title: '不说再见', type: '毕业季', date: '2025-06-17', views: 27292, likes: 689, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 5, title: '山西农业大学软件学院赴夏县暑期“三下乡”社会实践纪实', type: '三下乡', date: '2025-07-26', views: 23952, likes: 604, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 6, title: '光影绘绿水青山 青春书美丽中国', type: '活动', date: '2025-03-17', views: 22693, likes: 1484, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 7, title: '2025年开学典礼合唱歌曲《歌唱祖国》', type: '典礼', date: '2025-09-14', views: 21913, likes: 372, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 8, title: '“舞出自信 健康相伴”广场舞活动', type: '活动', date: '2025-03-24', views: 15736, likes: 420, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 9, title: '山西农业大学生命科学学院赴上党区、陵川县暑期“三下乡”社会实践纪实', type: '三下乡', date: '2025-07-25', views: 15055, likes: 358, url: 'https://channels.weixin.qq.com/xxx' },
+            { id: 10, title: '世界赠予我的', type: '日常', date: '2025-04-22', views: 14935, likes: 309, url: 'https://channels.weixin.qq.com/xxx' }
         ]
     }
 }
-
 export const announcements = [
     { id: 1, title: '关于 2024 年秋季运动会宣传工作的通知', author: '王主任', scope: '全体', createdAt: '2024-11-01 09:00',
         content: '各相关部门：\n\n为做好秋季运动会宣传工作，请新闻部、摄制部提前做好人员安排与设备准备……' },

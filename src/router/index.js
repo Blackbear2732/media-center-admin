@@ -16,6 +16,7 @@ const routes = [
             { path: 'tasks/create', component: () => import('@/views/task/TaskCreate.vue'), meta: { title: '发布任务', roles: ['minister', 'director'] } },
             { path: 'tasks/:id', component: () => import('@/views/task/TaskDetail.vue'), meta: { title: '任务详情' } },
             { path: 'materials', component: () => import('@/views/material/MaterialList.vue'), meta: { title: '素材库' } },
+            { path: 'data-panel/:type', component: () => import('@/views/data/DataDetail.vue'), meta: { title: '数据详情' } },
             { path: 'materials/:id', component: () => import('@/views/material/MaterialDetail.vue'), meta: { title: '素材详情' } },
             { path: 'upload', component: () => import('@/views/material/Upload.vue'), meta: { title: '上传素材' } },
             { path: 'device-apply', component: () => import('@/views/device/DeviceApply.vue'), meta: { title: '设备申请' } }

@@ -303,3 +303,14 @@ body {
 .file-info { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
 .file-info .el-icon { color: #3d7aab; }
 @media (max-width: 900px) { .data-upload-grid { grid-template-columns: 1fr; } }
+
+
+/* 首页数据面板可点击的 Hover 效果 */
+.data-panel {
+    transition: all 0.2s ease;
+}
+.data-panel:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: #cfe0ee;
+}
