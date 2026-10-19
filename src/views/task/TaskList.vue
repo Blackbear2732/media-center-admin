@@ -55,10 +55,3 @@ async function load() {
 function changeTab(s) { active.value = s; load() }
 onMounted(load)
 </script>
-
-<style scoped>
-.list-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 18px; }
-.list-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; }
-.list-head p { margin: 6px 0 0; }
-.filter-pills { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
-</style>

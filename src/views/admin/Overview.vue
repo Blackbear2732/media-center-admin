@@ -105,15 +105,3 @@ onMounted(async () => {
   }
 })
 </script>
-
-<style scoped>
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-.stat-card { padding: 20px; }
-.stat-num { font-size: 28px; font-weight: 700; color: var(--brand); }
-.stat-label { color: var(--text-sub); font-size: 13px; margin-top: 4px; }
-.todo-list { padding: 6px 18px; }
-.todo-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--border); }
-.todo-row:last-child { border-bottom: none; }
-.todo-text { flex: 1; font-size: 13px; }
-@media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
-</style>

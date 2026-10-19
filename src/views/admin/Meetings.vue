@@ -96,7 +96,3 @@ async function saveRoll() {
 }
 onMounted(load)
 </script>
-
-<style scoped>
-.roll-row { padding: 10px 0; border-bottom: 1px dashed var(--border); }
-</style>

@@ -110,10 +110,5 @@ async function init() {
     loading.value = false
   }
 }
-
 onMounted(init)
 </script>
-
-<style scoped>
-.mb { margin-bottom: 20px; }
-</style>

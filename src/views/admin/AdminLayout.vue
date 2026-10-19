@@ -88,13 +88,3 @@ onMounted(() => {
   }
 })
 </script>
-
-<style scoped>
-.admin-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 18px; }
-.admin-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; }
-.admin-head p { margin: 6px 0 0; }
-.admin-actions { display: flex; align-items: center; gap: 10px; }
-.admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-.admin-tabs .pill { text-decoration: none; }
-.admin-body { min-height: 300px; }
-</style>

@@ -97,31 +97,3 @@ async function quickLogin(role) {
   }
 }
 </script>
-
-<style scoped>
-/* 样式保持不变 */
-.login-page { min-height: 100vh; display: grid; grid-template-columns: 1.05fr 1fr; }
-.login-visual { background: linear-gradient(135deg, #153a56 0%, #2b5f8e 60%, #3d7aab 100%); color: #fff; display: flex; align-items: center; justify-content: center; padding: 48px; }
-.visual-inner { max-width: 440px; }
-.brand-mark.large { width: 56px; height: 56px; border-radius: 16px; font-size: 26px; background: rgba(255,255,255,.16); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(255,255,255,.24); }
-.visual-inner h1 { font-size: 30px; margin: 22px 0 10px; letter-spacing: 1px; }
-.visual-inner p { color: rgba(255,255,255,.78); margin: 0 0 28px; line-height: 1.8; }
-.login-panel { display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 32px; }
-.login-box { width: 400px; }
-.login-box h2 { margin: 0 0 6px; font-size: 24px; }
-.role-cards { display: flex; flex-direction: column; gap: 12px; }
-.role-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); background: #fff; cursor: pointer; text-align: left; transition: all .18s; width: 100%; }
-.role-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #cfe0ee; }
-.role-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; color: #fff; }
-.role-card.member .role-icon { background: linear-gradient(135deg,#3d7aab,#6fa8d4); }
-.role-card.minister .role-icon { background: linear-gradient(135deg,#e8833a,#f2b279); }
-.role-card.director .role-icon { background: linear-gradient(135deg,#5a8f7b,#8fc4a9); }
-.role-info { flex: 1; min-width: 0; }
-.role-name { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
-.role-desc { color: var(--text-sub); font-size: 12px; line-height: 1.5; }
-.role-arrow { color: var(--text-sub); }
-.login-logos { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-.login-logos img { height: 52px; width: auto; background: rgba(255,255,255,0.15); padding: 8px; border-radius: 12px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.2); }
-.login-logos .main-logo { height: 64px; background: #fff; }
-@media (max-width: 900px) { .login-page { grid-template-columns: 1fr; } .login-visual { display: none; } }
-</style>

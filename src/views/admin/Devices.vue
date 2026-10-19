@@ -199,28 +199,3 @@ async function review(row, status) {
 
 onMounted(load)
 </script>
-
-<style scoped>
-/* 统计卡片布局 */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.stat-card {
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid transparent; /* 预留边框避免跳动 */
-}
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-/* 选中状态的高亮边框 */
-.stat-card.active-filter {
-  border-color: var(--brand);
-  background-color: var(--brand-soft);
-}
-.stat-num { font-size: 28px; font-weight: 700; color: var(--brand); }
-.stat-label { color: var(--text-sub); font-size: 13px; margin-top: 4px; }
-@media (max-width: 900px) {
-  .stat-grid { grid-template-columns: 1fr 1fr; }
-}
-</style>

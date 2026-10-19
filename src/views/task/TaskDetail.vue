@@ -126,9 +126,3 @@ onMounted(() => {
 })
 onUnmounted(() => timer && clearInterval(timer))
 </script>
-
-<style scoped>
-.mb { margin-bottom: 16px; }
-.article-content { white-space: pre-wrap; line-height: 1.9; color: var(--text); font-size: 14px; }
-.surface-card { background: #fff; border-radius: 14px; border: 1px solid #e6ebf1; }
-</style>

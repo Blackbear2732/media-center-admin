@@ -59,10 +59,3 @@ onMounted(async () => {
   try { Object.assign(form, await adminApi.deptProfile(dept)) } finally { loading.value = false }
 })
 </script>
-
-<style scoped>
-.photo-chip {
-  display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
-  background: var(--brand-soft); color: var(--brand); font-size: 12px;
-}
-</style>

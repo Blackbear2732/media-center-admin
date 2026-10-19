@@ -73,21 +73,3 @@ onMounted(async () => {
   try { data.value = await adminApi.dashboard() } finally { loading.value = false }
 })
 </script>
-
-<style scoped>
-.upload-card { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; margin-bottom: 8px; }
-.top-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
-.top-rank {
-  width: 24px; height: 24px; border-radius: 8px; background: #eef2f6; color: var(--text-sub);
-  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
-}
-.top-rank.gold { background: #fdf3d8; color: #b8860b; }
-.top-rank.silver { background: #eef1f5; color: #7a8a9a; }
-.top-rank.bronze { background: #f8ecdf; color: #a0714a; }
-.top-title { width: 220px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.top-bar-wrap { flex: 1; height: 8px; background: #f0f3f7; border-radius: 999px; overflow: hidden; }
-.top-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), #6fa8d4); }
-.trend-card { display: flex; align-items: flex-end; gap: 32px; padding: 24px; min-height: 180px; }
-.trend-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.trend-bar { width: 42px; border-radius: 8px 8px 0 0; background: linear-gradient(180deg, #6fa8d4, var(--brand)); }
-</style>
