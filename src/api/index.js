@@ -22,7 +22,16 @@ const pick = (real, mockFn) => (...args) => USE_MOCK ? mockFn(...args) : real(..
 export const homeApi = {
     centerInfo:   pick(() => request.get('/center'),              () => delay(mock.centerInfo)),
     departments:  pick(() => request.get('/departments'),         () => delay(mock.departments)),
-    latestTasks:  pick(() => request.get('/tasks/latest'),        () => delay(mock.tasks.slice(0, 4))),
+    // 首页最新任务，非主任只能看自己部门的
+    latestTasks:  pick(() => request.get('/tasks/latest'),        () => {
+        const user = mock.currentUser()
+        const role = localStorage.getItem('role') || 'member'
+        let tasks = mock.tasks
+        if (role !== 'director') {
+            tasks = tasks.filter(t => t.departments.includes(user.dept) || t.relatedDepts?.includes(user.dept))
+        }
+        return delay(tasks.slice(0, 4))
+    }),
     latestVideos: pick(() => request.get('/videos/latest'),       () => delay(mock.videos))
 }
 
@@ -69,29 +78,63 @@ export const userApi = {
     myMeetings:     pick(() => request.get('/user/meetings'),         () => delay(mock.meetings)),
     myDevices:      pick(() => request.get('/user/devices'),          () => delay(mock.myDevices))
 }
-
 /* ================= 消息 F-07 ================= */
 export const messageApi = {
-    list:        pick(() => request.get('/messages'),               () => delay(mock.messages)),
-    markRead:    pick(id => request.put(`/messages/${id}/read`),    () => delay({ success: true })),
-    markAllRead: pick(() => request.put('/messages/read-all'),      () => delay({ success: true }))
+    list: pick(() => request.get('/messages'), () => {
+        const role = localStorage.getItem('role') || 'member'
+        const user = mock.currentUser()
+
+        // 根据角色返回不同的假消息
+        if (role === 'minister') {
+            return delay([
+                { id: 1, title: '报名确认', content: '赵六 报名了「运动会」任务，请前往部门管理-任务参与确认。', time: '2024-11-04 10:20', read: false },
+                { id: 2, title: '系统提醒', content: '您负责的部门本月考评还未发起，请及时处理。', time: '2024-11-01 09:00', read: false }
+            ])
+        } else if (role === 'director') {
+            return delay([
+                { id: 1, title: '全局报告', content: '10月份全中心共发布推文 42 篇，视频 15 条，请查看数据看板。', time: '2024-11-01 09:00', read: false }
+            ])
+        }
+
+        // 普通部员
+        return delay(mock.messages.filter(m => m.content.includes(user.dept) || m.content.includes(user.name)))
+    }),
+    markRead: pick(
+        id => request.put(`/messages/${id}/read`),
+        (id) => {
+            // 真正修改 Mock 数据里的 read 状态
+            const msg = mock.messages.find(m => m.id === id)
+            if (msg) msg.read = true
+            return delay({ success: true })
+        }
+    ),
+
+    markAllRead: pick(
+        () => request.put('/messages/read-all'),
+        () => {
+            // 把 Mock 数据里所有的 read 设为 true
+            mock.messages.forEach(m => m.read = true)
+            return delay({ success: true })
+        }
+    )
 }
 
 /* ================= 任务 F-08 ~ F-10 ================= */
-/* 任务 F-08 ~ F-10 */
 export const taskApi = {
-    // 接收 status 和 dept 两个参数
     list: pick(
         p => request.get('/tasks', { params: p }),
         p => {
+            const user = mock.currentUser()
+            const role = localStorage.getItem('role') || 'member'
             let result = mock.tasks
-            // 1. 按部门过滤（如果传了 dept）
-            if (p?.dept) {
+
+            // 部员和部长只能看本部门的，主任看全部
+            if (role !== 'director') {
                 result = result.filter(t =>
-                    t.departments.includes(p.dept) || t.relatedDepts?.includes(p.dept)
+                    t.departments.includes(user.dept) || t.relatedDepts?.includes(user.dept)
                 )
             }
-            // 2. 按状态过滤（如果传了 status 且不是“全部”）
+
             if (p?.status && p.status !== '全部') {
                 result = result.filter(t => t.status === p.status)
             }
@@ -107,8 +150,35 @@ export const taskApi = {
 
 /* ================= 素材 F-11 ~ F-13 ================= */
 export const materialApi = {
-    search:        pick(p => request.get('/materials', { params: p }), p => delay(mock.filterMaterials(p))),
-    detail:        pick(id => request.get(`/materials/${id}`),        id => delay(mock.materials.find(m => String(m.id) === String(id)) || mock.materials[0])),
+    search: pick(
+        p => request.get('/materials', { params: p }),
+        p => {
+            const user = mock.currentUser()
+            const role = localStorage.getItem('role') || 'member'
+            let result = mock.filterMaterials(p)
+
+            // 素材权限隔离逻辑
+            if (role !== 'director') { // 主任看全部
+                if (role === 'minister') {
+                    // 部长看本部门的所有素材
+                    result = result.filter(m => m.department === user.dept)
+                } else {
+                    // 部员只能看：自己上传的 + 共享给自己部门的 + 自己参与的任务下的
+                    const myTasks = mock.tasks.filter(t =>
+                        t.participants?.some(part => part.name === user.name) ||
+                        t.departments.includes(user.dept)
+                    ).map(t => t.id)
+
+                    result = result.filter(m =>
+                        m.author === user.name ||
+                        m.sharedDepts?.includes(user.dept) ||
+                        myTasks.includes(m.taskId)
+                    )
+                }
+            }
+            return delay(result)
+        }
+    ),    detail:        pick(id => request.get(`/materials/${id}`),        id => delay(mock.materials.find(m => String(m.id) === String(id)) || mock.materials[0])),
     versions:      pick(id => request.get(`/materials/${id}/versions`), id => {
         const m = mock.materials.find(x => String(x.id) === String(id)) || mock.materials[0]
         return delay(m.versions)
@@ -129,22 +199,34 @@ export const deviceApi = {
 /* ================= 部门管理区 (部长/主任) ================= */
 export const adminApi = {
     // D-01 部门概览
-    // D-01 部门概览
     overview: (dept) => USE_MOCK
         ? delay((() => {
             const isAll = !dept || dept === '全部部门'
             const filteredMembers = isAll ? (mock.members || []) : (mock.members || []).filter(m => m.dept === dept)
             const activeCount = filteredMembers.filter(m => m.status === '在岗').length
 
+            // 动态生成各部门的待办
+            let todos = []
+            if (dept === '综合部') {
+                todos = [{ type: 'checkin', text: '今日打卡名单尚未核对，请及时处理', time: '2024-11-05 08:00' }]
+            } else if (dept === '摄制部') {
+                todos = [{ type: 'device', text: '张三 申请借用「佳能相机」，待审核', time: '2024-11-04 09:12' }]
+            } else {
+                todos = [{ type: 'signup', text: '陈存灿 报名「秋季运动会」任务，待确认', time: '2024-11-04 09:12' }]
+            }
+            if (isAll) todos.unshift({ type: 'global', text: '全中心 10 月份考评未发起', time: '2024-11-01' })
+
             return {
                 ...mock.deptOverview,
                 memberCount: filteredMembers.length,
                 activeCount: activeCount,
+                todos: todos,
                 taskCount: isAll ? mock.tasks.length : mock.tasks.filter(t => t.departments.includes(dept) || t.relatedDepts?.includes(dept)).length,
                 materialCount: isAll ? mock.materials.length : mock.materials.filter(m => m.department === dept).length
             }
         })())
         : request.get('/admin/overview', { params: { dept } }),
+    // ... 其他保持不变
 
     // D-02 成员管理
     // D-02 成员管理
