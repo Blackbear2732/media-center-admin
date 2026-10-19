@@ -653,12 +653,26 @@ export const filterMaterials = (p = {}) => materials.filter(m => {
     return true
 })
 
-/* ========== 部门模块配置 (用于动态渲染管理区菜单) ========== */
-export const deptModuleConfig = {
-    '综合部': ['checkin', 'dashboard'], // 综合部拥有：打卡管理、数据看板
-    '摄制部': ['device'],               // 摄制部拥有：设备管理
-    '网宣部': [],                       // 网宣部：暂无专属模块
-    '影音部': [],
-    '新闻部': [],
-    '设计部': []
+/* ========== 管理区菜单配置 ========== */
+// 基础菜单（所有人都有的）
+export const baseAdminMenus = [
+    { path: 'overview', label: '概览' },
+    { path: 'members', label: '成员管理' },
+    { path: 'tasks', label: '任务参与' },
+    { path: 'meetings', label: '会议管理' },
+    { path: 'evaluations', label: '考评管理' },
+    { path: 'materials', label: '本部门素材' },
+    { path: 'announcements', label: '公告管理' },
+    { path: 'dept-profile', label: '部门介绍' }
+]
+
+// 特殊菜单（按部门分配）
+export const specialAdminMenus = {
+    '综合部': [
+        { path: 'checkins', label: '打卡管理' },
+        { path: 'dashboard', label: '数据看板' }
+    ],
+    '摄制部': [
+        { path: 'devices', label: '设备管理' }
+    ]
 }

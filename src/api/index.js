@@ -387,7 +387,29 @@ export const adminApi = {
     // 获取部门专属模块配置 GET /api/admin/dept-modules
     getDeptModules: (dept) => USE_MOCK
         ? delay(mock.deptModuleConfig[dept] || [])
-        : request.get('/admin/dept-modules', { params: { dept } })
+        : request.get('/admin/dept-modules', { params: { dept } }),
+    // 获取管理区菜单 GET /api/admin/menus
+    getMenus: (dept, role) => USE_MOCK
+        ? delay((() => {
+            // 基础菜单所有人都有
+            let menus = [...mock.baseAdminMenus]
+
+            if (role === 'director') {
+                // 主任拥有所有特殊菜单
+                const allSpecial = Object.values(mock.specialAdminMenus).flat()
+                // 去重（如果某个菜单在多个部门有）
+                const uniqueSpecial = Array.from(new Set(allSpecial.map(m => m.path)))
+                    .map(path => allSpecial.find(m => m.path === path))
+                menus = [...menus, ...uniqueSpecial]
+            } else if (dept) {
+                // 部长只有本部门的特殊菜单
+                const deptSpecial = mock.specialAdminMenus[dept] || []
+                menus = [...menus, ...deptSpecial]
+            }
+
+            return menus
+        })())
+        : request.get('/admin/menus', { params: { dept, role } })
 }
 
 /* ================= 通用工具 ================= */
