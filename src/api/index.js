@@ -226,7 +226,6 @@ export const adminApi = {
             }
         })())
         : request.get('/admin/overview', { params: { dept } }),
-    // ... 其他保持不变
 
     // D-02 成员管理
     // D-02 成员管理
@@ -384,7 +383,11 @@ export const adminApi = {
     deviceApplications: () => USE_MOCK ? delay(mock.deviceApplications) : request.get('/admin/device-applications'),
     reviewDevice: (id, data) => USE_MOCK
         ? delay({ success: true })
-        : request.put(`/admin/device-applications/${id}`, data)
+        : request.put(`/admin/device-applications/${id}`, data),
+    // 获取部门专属模块配置 GET /api/admin/dept-modules
+    getDeptModules: (dept) => USE_MOCK
+        ? delay(mock.deptModuleConfig[dept] || [])
+        : request.get('/admin/dept-modules', { params: { dept } })
 }
 
 /* ================= 通用工具 ================= */

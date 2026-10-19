@@ -652,3 +652,13 @@ export const filterMaterials = (p = {}) => materials.filter(m => {
     if (p.endTime && m.createdAt > p.endTime) return false
     return true
 })
+
+/* ========== 部门模块配置 (用于动态渲染管理区菜单) ========== */
+export const deptModuleConfig = {
+    '综合部': ['checkin', 'dashboard'], // 综合部拥有：打卡管理、数据看板
+    '摄制部': ['device'],               // 摄制部拥有：设备管理
+    '网宣部': [],                       // 网宣部：暂无专属模块
+    '影音部': [],
+    '新闻部': [],
+    '设计部': []
+}
