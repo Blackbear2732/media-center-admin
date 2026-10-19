@@ -26,7 +26,7 @@
           <button type="button" class="role-card director" :disabled="loading" @click.prevent="quickLogin('director')">
             <div class="role-icon" style="background: linear-gradient(135deg,#5a8f7b,#8fc4a9);">主</div>
             <div class="role-info">
-              <div class="role-name">王主任</div>
+              <div class="role-name">张主任</div>
               <div class="role-desc">查看全中心数据、所有部门成员与设备</div>
             </div>
             <el-icon class="role-arrow"><ArrowRight /></el-icon>

@@ -13,7 +13,6 @@ export const departments = [
     { id: 6, name: '设计部', intro: '负责海报、H5、视觉识别系统等平面与视觉设计。', modules: ['design'] }
 ]
 
-/* ========== 账号体系 ========== */
 export const accounts = {
     member: {
         token: 'mock-member', role: 'member', label: '部员',
@@ -24,30 +23,61 @@ export const accounts = {
             gender: '女', politicalStatus: '共青团员'
         }
     },
-    minister: {
-        token: 'mock-minister', role: 'minister', label: '部长',
-        user: {
-            studentNo: '2024010005', name: '何文静', nickname: '文静', dept: '摄制部',
-            college: '园艺学院', className: '园艺2406z', grade: '2024级',
-            phone: '13800001005', email: 'hewenjing@example.com', title: '摄制部部长',
-            gender: '女', politicalStatus: '共青团员'
-        }
-    },
     director: {
         token: 'mock-director', role: 'director', label: '中心主任',
         user: {
             studentNo: '2023000001', name: '张钧益', nickname: '钧益', dept: '综合部',
-            college: '软件学院', className: '软件2305', grade: '2023级',
-            phone: '13800000003', email: 'zhangjunyi@example.com', title: '中心主任',
-            gender: '男', politicalStatus: '中共预备党员'
+            college: '—', className: '—', grade: '2023级',
+            phone: '13800000003', email: 'wang@example.com', title: '中心主任',
+            gender: '男', politicalStatus: '中共党员'
         }
+    },
+    // 👇 为每个部门单独定义一个部长账号
+    '综合部长': {
+        token: 'mock-zh', role: 'minister', label: '部长',
+        user: { studentNo: '2024010001', name: '赵景磊', dept: '综合部', title: '综合部部长', phone: '13800001001', gender: '男', college: '动物科学学院', className: '动科2403', grade: '2024级', email: 'zh@example.com' }
+    },
+    '网宣部长': {
+        token: 'mock-wx', role: 'minister', label: '部长',
+        user: { studentNo: '2024010008', name: '刘怡昕', dept: '网宣部', title: '网宣部部长', phone: '13800001008', gender: '女', college: '食品科学与工程学院', className: '营养2401', grade: '2024级', email: 'wx@example.com' }
+    },
+    '影音部长': {
+        token: 'mock-yy', role: 'minister', label: '部长',
+        user: { studentNo: '2024010003', name: '梁嘉怡', dept: '影音部', title: '影音部部长', phone: '13800001003', gender: '女', college: '软件学院', className: '软件2411', grade: '2024级', email: 'yy@example.com' }
+    },
+    '摄制部长': {
+        token: 'mock-sz', role: 'minister', label: '部长',
+        user: { studentNo: '2024010011', name: '何文静', dept: '摄制部', title: '摄制部部长', phone: '13800001011', gender: '女', college: '园艺学院', className: '园艺2406z', grade: '2024级', email: 'sz@example.com' }
+    },
+    '新闻部长': {
+        token: 'mock-xw', role: 'minister', label: '部长',
+        user: { studentNo: '2024010006', name: '张洋', dept: '新闻部', title: '新闻部部长', phone: '13800001006', gender: '男', college: '软件学院', className: '软件2406', grade: '2024级', email: 'xw@example.com' }
+    },
+    '设计部长': {
+        token: 'mock-sj', role: 'minister', label: '部长',
+        user: { studentNo: '2024010014', name: '李翔', dept: '设计部', title: '设计部部长', phone: '13800001014', gender: '男', college: '园艺学院', className: '视设2401', grade: '2024级', email: 'sj@example.com' }
     }
 }
 
+
+
+
+
 export function currentUser() {
+    // ✅ 优先从 localStorage 里取当前登录人的信息
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+        try {
+            return JSON.parse(userStr)
+        } catch (e) {}
+    }
+
+    // 如果本地没有，再根据 role 兜底
     const role = localStorage.getItem('role') || 'member'
     return accounts[role]?.user || accounts.member.user
 }
+
+
 export function currentRole() { return localStorage.getItem('role') || 'member' }
 
 /* ========== 完整成员名单 (198人) ========== */

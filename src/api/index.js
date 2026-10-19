@@ -31,34 +31,26 @@ export const homeApi = {
 export const authApi = {
     login: (payload = {}) => USE_MOCK
         ? delay((() => {
-            const key = payload.role || 'member'
+            const role = payload.role || 'member'
 
-            // 如果是部长登录，根据传入的部门动态查找对应的部长
-            if (key === 'minister' && payload.dept) {
-                const m = mock.members.find(m => m.dept === payload.dept && m.title.includes('部长'))
+            // 如果是部长登录，直接从成员列表中精准查找
+            if (role === 'minister' && payload.dept) {
+                const m = mock.members.find(x => x.dept === payload.dept && x.title.includes('部长'))
                 if (m) {
                     return {
                         token: 'mock-minister-' + Date.now(),
                         role: 'minister',
                         label: '部长',
                         user: {
-                            studentNo: m.studentNo,
-                            name: m.name,
-                            nickname: m.nickname || m.name,
-                            dept: m.dept,
-                            college: m.college,
-                            className: m.className,
-                            grade: m.grade,
-                            phone: m.phone,
-                            email: m.email,
-                            title: m.title
+                            ...m,
+                            nickname: m.name,
+                            email: `minister_${m.dept}@example.com`
                         }
                     }
                 }
             }
-
-            // 否则回退到默认账号
-            const acc = mock.accounts?.[key] || mock.accounts?.member
+            // 普通部员和主任走默认配置
+            const acc = mock.accounts?.[role] || mock.accounts?.member
             if (!acc) return null
             return { token: acc.token + '-' + Date.now(), role: acc.role, label: acc.label, user: acc.user }
         })())
