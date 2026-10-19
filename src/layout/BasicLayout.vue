@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted ,onUnmounted} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { userApi, authApi, messageApi } from '@/api'
@@ -125,9 +125,27 @@ async function loadTop() {
     router.push('/login')
   }
 }
+// 只拉取消息，更新红点数字
+async function updateMsgCount() {
+  try {
+    const msgs = await messageApi.list()
+    msgCount.value = Array.isArray(msgs) ? msgs.filter(m => !m.read).length : 0
+  } catch (e) {}
+}
 
-onMounted(loadTop)
+
+onMounted(() => {
+  loadTop()
+  window.addEventListener('update-unread-count', updateMsgCount)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('update-unread-count', updateMsgCount)
+})
+
+// 路由变化时照常刷新
 watch(() => route.path, loadTop)
+
 
 async function onCommand(cmd) {
   if (cmd === 'logout') {

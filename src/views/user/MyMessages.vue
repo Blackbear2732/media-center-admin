@@ -38,13 +38,18 @@ async function load() {
 }
 async function readOne(m) {
   if (m.read) return
-  await messageApi.markRead(m.id)
+  await messageApi.markRead(m.id) // PUT /api/messages/{id}/read
   m.read = true
+  // 通知顶部导航栏更新未读数
+  window.dispatchEvent(new Event('update-unread-count'))
 }
+
 async function markAll() {
-  await messageApi.markAllRead()
+  await messageApi.markAllRead() // PUT /api/messages/read-all
   list.value.forEach(m => (m.read = true))
   ElMessage.success('已全部标记为已读')
+  // 通知顶部导航栏更新未读数
+  window.dispatchEvent(new Event('update-unread-count'))
 }
 onMounted(load)
 </script>
