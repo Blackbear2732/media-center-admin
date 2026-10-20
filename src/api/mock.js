@@ -14,40 +14,49 @@ export const departments = [
     { id: 106, name: '设计部', intro: '在这里，你可以发挥你的创意天赋...', modules: ['design'], photos: [] }
 ]
 
-// 角色：0-部员, 1-部长, 2-主任
-export const accounts = {
-    member: {
-        token: 'mock-member', role: 0, label: '部员',
-        user: { studentNo: '20250404306', name: '徐钰婷', nickname: '钰婷', deptId: 105, college: '资源环境学院', className: '资环2503', grade: '2025级', phone: '18442808818', email: 'xuyuting@example.com', title: '部员', gender: '女', politicalStatus: '共青团员' }
+// 角色：0-部员, 1-部长, 2-主任；部门直接用 deptId
+export const accounts = [
+    {
+        role: 0, deptId: 105, token: 'mock-member', label: '部员',
+        user: { id: 1017, studentNo: '20250404306', name: '徐钰婷', nickname: '钰婷', deptId: 105, role: 0, college: '资源环境学院', className: '资环2503', grade: '2025级', phone: '18442808818', email: 'xuyuting@example.com', title: '部员', gender: '女', politicalStatus: '共青团员', status: 1 }
     },
-    director: {
-        token: 'mock-director', role: 2, label: '中心主任',
-        user: { studentNo: '2023000001', name: '张钧益', nickname: '钧益', deptId: 100, college: '—', className: '—', grade: '2023级', phone: '13800000003', email: 'wang@example.com', title: '中心主任', gender: '男', politicalStatus: '中共党员' }
+    {
+        role: 2, deptId: 100, token: 'mock-director', label: '中心主任',
+        user: { id: 1001, studentNo: '2023000001', name: '张钧益', nickname: '钧益', deptId: 100, role: 2, college: '—', className: '—', grade: '2023级', phone: '13800000003', email: 'wang@example.com', title: '中心主任', gender: '男', politicalStatus: '中共党员', status: 1 }
     },
-    '综合部长': {
-        token: 'mock-zh', role: 1, label: '部长',
-        user: { studentNo: '2024010001', name: '赵景磊', deptId: 101, title: '综合部部长', phone: '13800001001', gender: '男', college: '动物科学学院', className: '动科2403', grade: '2024级', email: 'zh@example.com' }
+    {
+        role: 1, deptId: 101, token: 'mock-zh', label: '部长',
+        user: { id: 1002, studentNo: '2024010001', name: '赵景磊', deptId: 101, role: 1, title: '综合部部长', phone: '13800001001', gender: '男', college: '动物科学学院', className: '动科2403', grade: '2024级', email: 'zh@example.com', status: 1 }
     },
-    '网宣部长': {
-        token: 'mock-wx', role: 1, label: '部长',
-        user: { studentNo: '2024010008', name: '刘怡昕', deptId: 102, title: '网宣部部长', phone: '13800001008', gender: '女', college: '食品科学与工程学院', className: '营养2401', grade: '2024级', email: 'wx@example.com' }
+    {
+        role: 1, deptId: 102, token: 'mock-wx', label: '部长',
+        user: { id: 1003, studentNo: '2024010008', name: '刘怡昕', deptId: 102, role: 1, title: '网宣部部长', phone: '13800001008', gender: '女', college: '食品科学与工程学院', className: '营养2401', grade: '2024级', email: 'wx@example.com', status: 1 }
     },
-    '影音部长': {
-        token: 'mock-yy', role: 1, label: '部长',
-        user: { studentNo: '2024010003', name: '梁嘉怡', deptId: 103, title: '影音部部长', phone: '13800001003', gender: '女', college: '软件学院', className: '软件2411', grade: '2024级', email: 'yy@example.com' }
+    {
+        role: 1, deptId: 103, token: 'mock-yy', label: '部长',
+        user: { id: 1004, studentNo: '2024010003', name: '梁嘉怡', deptId: 103, role: 1, title: '影音部部长', phone: '13800001003', gender: '女', college: '软件学院', className: '软件2411', grade: '2024级', email: 'yy@example.com', status: 1 }
     },
-    '摄制部长': {
-        token: 'mock-sz', role: 1, label: '部长',
-        user: { studentNo: '2024010011', name: '何文静', deptId: 104, title: '摄制部部长', phone: '13800001011', gender: '女', college: '园艺学院', className: '园艺2406z', grade: '2024级', email: 'sz@example.com' }
+    {
+        role: 1, deptId: 104, token: 'mock-sz', label: '部长',
+        user: { id: 1005, studentNo: '2024010011', name: '何文静', deptId: 104, role: 1, title: '摄制部部长', phone: '13800001011', gender: '女', college: '园艺学院', className: '园艺2406z', grade: '2024级', email: 'sz@example.com', status: 1 }
     },
-    '新闻部长': {
-        token: 'mock-xw', role: 1, label: '部长',
-        user: { studentNo: '2024010006', name: '张洋', deptId: 105, title: '新闻部部长', phone: '13800001006', gender: '男', college: '软件学院', className: '软件2406', grade: '2024级', email: 'xw@example.com' }
+    {
+        role: 1, deptId: 105, token: 'mock-xw', label: '部长',
+        user: { id: 1006, studentNo: '2024010006', name: '张洋', deptId: 105, role: 1, title: '新闻部部长', phone: '13800001006', gender: '男', college: '软件学院', className: '软件2406', grade: '2024级', email: 'xw@example.com', status: 1 }
     },
-    '设计部长': {
-        token: 'mock-sj', role: 1, label: '部长',
-        user: { studentNo: '2024010014', name: '李翔', deptId: 106, title: '设计部部长', phone: '13800001014', gender: '男', college: '园艺学院', className: '视设2401', grade: '2024级', email: 'sj@example.com' }
+    {
+        role: 1, deptId: 106, token: 'mock-sj', label: '部长',
+        user: { id: 1007, studentNo: '2024010014', name: '李翔', deptId: 106, role: 1, title: '设计部部长', phone: '13800001014', gender: '男', college: '园艺学院', className: '视设2401', grade: '2024级', email: 'sj@example.com', status: 1 }
     }
+]
+
+// 按 角色 + 部门 查找演示账号
+export function findAccount(role, deptId) {
+    const r = Number(role) || 0
+    if (r === 1) {
+        return accounts.find(a => a.role === 1 && a.deptId === Number(deptId)) || accounts.find(a => a.role === 1)
+    }
+    return accounts.find(a => a.role === r) || accounts[0]
 }
 
 export function currentUser() {
@@ -55,11 +64,17 @@ export function currentUser() {
     if (userStr) {
         try { return JSON.parse(userStr) } catch (e) {}
     }
-    const role = localStorage.getItem('role') || 'member'
-    return accounts[role]?.user || accounts.member.user
+    return findAccount(localStorage.getItem('role'), localStorage.getItem('adminDept'))?.user || accounts[0].user
 }
 
-export function currentRole() { return Number(localStorage.getItem('role')) || 0 }
+export function currentRole() { return Number(localStorage.getItem('role') || 0) }
+
+// 当前操作视角部门：主任默认全中心（100），部长/部员默认自己部门
+export function currentDeptId() {
+    const adminDept = localStorage.getItem('adminDept')
+    if (adminDept !== null && adminDept !== '') return Number(adminDept)
+    return Number(currentUser().deptId) || 100
+}
 
 /* ========== 完整成员名单 ========== */
 // 映射工具，把中文部门转成数字 ID
@@ -304,11 +319,12 @@ export const members = rawMemberData.map((m, i) => {
 })
 
 /* ========== 任务 ========== */
+// 设备统一使用 equipmentId（对应 biz_task_equipment.equipment_id），名称在页面里由 deviceList 映射
 export const tasks = [
     {
         id: 1, title: '2024 秋季运动会开幕式报道', status: 0, startTime: '2024-11-05 08:00', endTime: '2024-11-05 12:00', // 👈 0筹备
         location: '学校田径场', themeTag: '体育比赛', tags: ['运动会','新闻报道'],
-        deptIds: [105, 104], relatedDeptIds: [102], devices: ['单反相机','摄像机'], // 👈 部门改为 deptIds
+        deptIds: [105, 104], relatedDeptIds: [102], equipmentIds: [2, 9], // 👈 部门 deptIds / 设备 equipmentIds
         desc: '负责开幕式全程图文与视频素材采集，当天 18:00 前完成初稿。',
         participants: [
             { name: '徐钰婷', deptId: 105, extraScore: 2, scoreReason: '开幕式现场报道及时，文笔优秀' },
@@ -324,7 +340,7 @@ export const tasks = [
     {
         id: 2, title: '校园文化节宣传片拍摄', status: 1, startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00', // 👈 1进行中
         location: '大学生活动中心', themeTag: '舞蹈比赛', tags: ['宣传片','文化节'],
-        deptIds: [104], relatedDeptIds: [103, 106], devices: ['稳定器','无人机'],
+        deptIds: [104], relatedDeptIds: [103, 106], equipmentIds: [6, 8],
         desc: '拍摄 3 分钟校园文化节宣传片，摄制部负责拍摄，影音部负责后期。',
         participants: [
             { name: '卢波源', deptId: 104, extraScore: 3, scoreReason: '航拍画面极其震撼' },
@@ -337,7 +353,7 @@ export const tasks = [
     {
         id: 3, title: '新生入学教育专题稿件', status: 2, startTime: '2024-09-10 09:00', endTime: '2024-09-12 18:00', // 👈 2已结束
         location: '线上', themeTag: '迎新', tags: ['迎新','专题'],
-        deptIds: [105], relatedDeptIds: [], devices: [],
+        deptIds: [105], relatedDeptIds: [], equipmentIds: [],
         desc: '入学教育专题稿件撰写与审核。',
         participants: [
             { name: '徐钰婷', deptId: 105, extraScore: 1, scoreReason: '稿件质量高' },
@@ -348,7 +364,7 @@ export const tasks = [
     {
         id: 4, title: '校庆 70 周年海报设计', status: 1, startTime: '2024-11-01 09:00', endTime: '2024-11-15 18:00',
         location: '设计部工作室', themeTag: '节日类', tags: ['校庆','海报'],
-        deptIds: [106], relatedDeptIds: [102], devices: ['图形工作站'],
+        deptIds: [106], relatedDeptIds: [102], equipmentIds: [1],
         desc: '主视觉海报 3 版方案。',
         participants: [
             { name: '王亚楠', deptId: 106, extraScore: 2, scoreReason: '主视觉方案被领导直接采用' },
@@ -360,7 +376,7 @@ export const tasks = [
     {
         id: 5, title: '“青春之声”主题直播', status: 0, startTime: '2024-11-20 19:00', endTime: '2024-11-20 21:00',
         location: '融媒体演播厅', themeTag: '文艺活动', tags: ['直播'],
-        deptIds: [104, 103], relatedDeptIds: [102], devices: ['导播台','麦克风'],
+        deptIds: [104, 103], relatedDeptIds: [102], equipmentIds: [10, 21],
         desc: '校园歌手大赛决赛直播。',
         participants: [
             { name: '侯艾彤', deptId: 103 },
@@ -372,7 +388,7 @@ export const tasks = [
     {
         id: 6, title: '校党委理论学习中心组会议', status: 2, startTime: '2024-10-20 14:00', endTime: '2024-10-20 17:00',
         location: '行政楼 302', themeTag: '会议', tags: ['会议','新闻稿'],
-        deptIds: [105], relatedDeptIds: [], devices: [],
+        deptIds: [105], relatedDeptIds: [], equipmentIds: [],
         desc: '会议类新闻稿，需记录主要领导。',
         participants: [
             { name: '李润琪', deptId: 105, extraScore: 0.5, scoreReason: '会议记录详细完整' }
@@ -382,6 +398,7 @@ export const tasks = [
 ]
 
 /* ========== 素材 ========== */
+// type：1新闻稿 2推文图片 3海报设计图 4视频素材 5视频成片 6原创推文（与 biz_material.type 一致）
 export const materials = [
     { id: 1, title: '运动会开幕式新闻稿', type: 1, deptId: 105, author: '徐钰婷', // 👈 type 1新闻稿
         createdAt: '2024-11-05 13:20', leaderName: '李书记', themeTag: '体育比赛', taskId: 1,
@@ -391,12 +408,12 @@ export const materials = [
             { version: 'v3', updatedAt: '2024-11-05 13:20', size: '12KB', author: '徐钰婷' },
             { version: 'v2', updatedAt: '2024-11-05 12:10', size: '11KB', author: '徐钰婷' }
         ], extracts: [{ user: '刘钰珂', time: '2024-11-05 15:00' }] },
-    { id: 2, title: '校园文化节宣传片成片', type: 3, deptId: 103, author: '闫佳慧', // 👈 type 3视频成片
+    { id: 2, title: '校园文化节宣传片成片', type: 5, deptId: 103, author: '闫佳慧', // 👈 type 5视频成片
         createdAt: '2024-11-10 18:30', leaderName: '', themeTag: '舞蹈比赛', taskId: 2,
         content: '', videoChannelUrl: 'https://channels.weixin.qq.com/xxx',
         netdiskUrl: 'https://pan.example.com/s/vid456', netdiskCode: 'b2m1', sharedDeptIds: [102],
         versions: [{ version: 'v2', updatedAt: '2024-11-10 18:30', size: '1.2GB', author: '闫佳慧' }], extracts: [] },
-    { id: 3, title: '校庆 70 周年主视觉设计图', type: 4, deptId: 106, author: '李翔', // 👈 type 4设计图
+    { id: 3, title: '校庆 70 周年主视觉设计图', type: 3, deptId: 106, author: '李翔', // 👈 type 3海报设计图
         createdAt: '2024-11-08 10:00', leaderName: '', themeTag: '节日类', taskId: 4,
         content: '', netdiskUrl: 'https://pan.example.com/s/psd789', netdiskCode: 'q8w2', sharedDeptIds: [],
         versions: [{ version: 'v1', updatedAt: '2024-11-08 10:00', size: '320MB', author: '李翔' }], extracts: [] },
@@ -477,39 +494,39 @@ export const deviceApplications = [
 ]
 
 /* ========== 上传字段 ========== */
-// 键名依然保留中文或使用 ID 都可以，这里为了方便匹配，可以动态查
+// 键为 deptId（101~106），与 `materialApi.uploadFields(deptId)` 对应
 export const uploadFieldMap = {
-    '综合部': [
+    101: [
         { key: 'title', label: '材料名称', type: 'input', required: true },
         { key: 'content', label: '材料说明', type: 'textarea' },
         { key: 'netdiskUrl', label: '附件网盘链接', type: 'input' }
     ],
-    '网宣部': [
+    102: [
         { key: 'title', label: '推文标题', type: 'input', required: true },
         { key: 'content', label: '推文正文', type: 'textarea', required: true },
         { key: 'platform', label: '发布平台', type: 'input' },
         { key: 'netdiskUrl', label: '配图网盘链接', type: 'input' }
     ],
-    '影音部': [
+    103: [
         { key: 'title', label: '作品名称', type: 'input', required: true },
         { key: 'netdiskUrl', label: '成品百度网盘链接', type: 'input', required: true },
         { key: 'netdiskCode', label: '提取码', type: 'input' },
         { key: 'videoChannelUrl', label: '视频号链接', type: 'input' },
         { key: 'duration', label: '视频时长', type: 'input' }
     ],
-    '摄制部': [
+    104: [
         { key: 'title', label: '素材名称', type: 'input', required: true },
         { key: 'netdiskUrl', label: '原始素材网盘链接', type: 'input', required: true },
         { key: 'netdiskCode', label: '提取码', type: 'input' },
         { key: 'shootDate', label: '拍摄日期', type: 'input' }
     ],
-    '新闻部': [
+    105: [
         { key: 'title', label: '稿件标题', type: 'input', required: true },
         { key: 'content', label: '新闻稿正文', type: 'textarea', required: true },
         { key: 'leaderName', label: '主要领导（会议类必填）', type: 'input' },
         { key: 'netdiskUrl', label: '配图网盘链接', type: 'input' }
     ],
-    '设计部': [
+    106: [
         { key: 'title', label: '作品名称', type: 'input', required: true },
         { key: 'netdiskUrl', label: '设计图网盘链接', type: 'input', required: true },
         { key: 'netdiskCode', label: '提取码', type: 'input' },
@@ -641,8 +658,8 @@ export const dashboardData = {
 }
 
 export const announcements = [
-    { id: 1, title: '关于 2024 年秋季运动会宣传工作的通知', author: '王主任', scope: '全体', createdAt: '2024-11-01 09:00', content: '各相关部门：\n\n为做好秋季运动会宣传工作，请新闻部、摄制部提前做好人员安排与设备准备……' },
-    { id: 2, title: '融媒体中心 10 月考评结果公示', author: '王主任', scope: '全体', createdAt: '2024-11-02 15:00', content: '10 月考评结果已出，请各部门部长登录部门管理区查看详情。' }
+    { id: 1, title: '关于 2024 年秋季运动会宣传工作的通知', author: '王主任', scope: 1, createdAt: '2024-11-01 09:00', content: '各相关部门：\n\n为做好秋季运动会宣传工作，请新闻部、摄制部提前做好人员安排与设备准备……' },
+    { id: 2, title: '融媒体中心 10 月考评结果公示', author: '王主任', scope: 1, createdAt: '2024-11-02 15:00', content: '10 月考评结果已出，请各部门部长登录部门管理区查看详情。' }
 ]
 
 export const deptProfiles = Object.fromEntries(
@@ -655,13 +672,15 @@ export const deptProfiles = Object.fromEntries(
 /* ========== 筛选工具 ========== */
 // 注意这里前端如果传参也会变成数字
 export const filterTasks = ({ status } = {}) =>
-    status === undefined || status === -1 ? tasks : tasks.filter(t => t.status === status)
+    status === undefined || status === null || Number(status) === -1
+        ? tasks
+        : tasks.filter(t => Number(t.status) === Number(status))
 
 export const filterMaterials = (p = {}) => materials.filter(m => {
     if (p.title && !m.title.includes(p.title)) return false
     if (p.content && !(m.content || '').includes(p.content)) return false
-    if (p.deptId && m.deptId !== p.deptId) return false
-    if (p.leader && m.leaderName !== p.leader) return false
+    if (p.deptId && Number(m.deptId) !== Number(p.deptId)) return false
+    if (p.leaderName && m.leaderName !== p.leaderName) return false
     if (p.startTime && m.createdAt < p.startTime) return false
     if (p.endTime && m.createdAt > p.endTime) return false
     return true
@@ -685,3 +704,17 @@ export const specialAdminMenus = {
         { path: 'devices', label: '设备管理' }
     ]
 }
+
+/* ========== 部门模块挂载（biz_dept_module） ========== */
+// 键为 deptId，值为启用的 module_key 数组
+export const deptModuleConfig = Object.fromEntries(
+    departments.map(d => [d.id, [...d.modules]])
+)
+
+/* ========== 首页最新视频 ========== */
+export const videos = [
+    { id: 1, title: '你好，新同学！', duration: '03:12', cover: '' },
+    { id: 2, title: '执笔书梦 青春诗行', duration: '04:05', cover: '' },
+    { id: 3, title: '校运会精彩集锦', duration: '02:38', cover: '' },
+    { id: 4, title: '融媒体中心纳新宣传片', duration: '01:56', cover: '' }
+]
