@@ -325,7 +325,7 @@ export const tasks = [
         id: 1, title: '2024 秋季运动会开幕式报道', status: 0, startTime: '2024-11-05 08:00', endTime: '2024-11-05 12:00', // 👈 0筹备
         location: '学校田径场', themeTag: '体育比赛', tags: ['运动会','新闻报道'],
         deptIds: [105, 104], relatedDeptIds: [102], equipmentIds: [2, 9], // 👈 部门 deptIds / 设备 equipmentIds
-        desc: '负责开幕式全程图文与视频素材采集，当天 18:00 前完成初稿。',
+        description: '负责开幕式全程图文与视频素材采集，当天 18:00 前完成初稿。',
         participants: [
             { name: '徐钰婷', deptId: 105, extraScore: 2, scoreReason: '开幕式现场报道及时，文笔优秀' },
             { name: '李润琪', deptId: 105 },
@@ -341,7 +341,7 @@ export const tasks = [
         id: 2, title: '校园文化节宣传片拍摄', status: 1, startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00', // 👈 1进行中
         location: '大学生活动中心', themeTag: '舞蹈比赛', tags: ['宣传片','文化节'],
         deptIds: [104], relatedDeptIds: [103, 106], equipmentIds: [6, 8],
-        desc: '拍摄 3 分钟校园文化节宣传片，摄制部负责拍摄，影音部负责后期。',
+        description: '拍摄 3 分钟校园文化节宣传片，摄制部负责拍摄，影音部负责后期。',
         participants: [
             { name: '卢波源', deptId: 104, extraScore: 3, scoreReason: '航拍画面极其震撼' },
             { name: '麻敬怡', deptId: 104 },
@@ -354,7 +354,7 @@ export const tasks = [
         id: 3, title: '新生入学教育专题稿件', status: 2, startTime: '2024-09-10 09:00', endTime: '2024-09-12 18:00', // 👈 2已结束
         location: '线上', themeTag: '迎新', tags: ['迎新','专题'],
         deptIds: [105], relatedDeptIds: [], equipmentIds: [],
-        desc: '入学教育专题稿件撰写与审核。',
+        description: '入学教育专题稿件撰写与审核。',
         participants: [
             { name: '徐钰婷', deptId: 105, extraScore: 1, scoreReason: '稿件质量高' },
             { name: '赵敏', deptId: 105 }
@@ -365,7 +365,7 @@ export const tasks = [
         id: 4, title: '校庆 70 周年海报设计', status: 1, startTime: '2024-11-01 09:00', endTime: '2024-11-15 18:00',
         location: '设计部工作室', themeTag: '节日类', tags: ['校庆','海报'],
         deptIds: [106], relatedDeptIds: [102], equipmentIds: [1],
-        desc: '主视觉海报 3 版方案。',
+        description: '主视觉海报 3 版方案。',
         participants: [
             { name: '王亚楠', deptId: 106, extraScore: 2, scoreReason: '主视觉方案被领导直接采用' },
             { name: '李梓凡', deptId: 106 },
@@ -377,7 +377,7 @@ export const tasks = [
         id: 5, title: '“青春之声”主题直播', status: 0, startTime: '2024-11-20 19:00', endTime: '2024-11-20 21:00',
         location: '融媒体演播厅', themeTag: '文艺活动', tags: ['直播'],
         deptIds: [104, 103], relatedDeptIds: [102], equipmentIds: [10, 21],
-        desc: '校园歌手大赛决赛直播。',
+        description: '校园歌手大赛决赛直播。',
         participants: [
             { name: '侯艾彤', deptId: 103 },
             { name: '张策', deptId: 103 },
@@ -389,7 +389,7 @@ export const tasks = [
         id: 6, title: '校党委理论学习中心组会议', status: 2, startTime: '2024-10-20 14:00', endTime: '2024-10-20 17:00',
         location: '行政楼 302', themeTag: '会议', tags: ['会议','新闻稿'],
         deptIds: [105], relatedDeptIds: [], equipmentIds: [],
-        desc: '会议类新闻稿，需记录主要领导。',
+        description: '会议类新闻稿，需记录主要领导。',
         participants: [
             { name: '李润琪', deptId: 105, extraScore: 0.5, scoreReason: '会议记录详细完整' }
         ],
