@@ -4,11 +4,10 @@
       <div>
         <h2>任务中心</h2>
         <p class="muted" style="margin: 8px 0 0;">
-          {{ isMember ? `本部门任务 · 共 ${list.length} 个` : `全部任务 · 共 ${list.length} 个` }}
+          {{ userStore.isMember ? `本部门任务 · 共 ${list.length} 个` : `全部任务 · 共 ${list.length} 个` }}
         </p>
       </div>
-      <!-- 只有部长和主任能看到发布按钮 -->
-      <button v-if="canManage" class="pill active" @click="router.push('/tasks/create')" style="padding: 10px 20px;">
+      <button v-if="userStore.canManage" class="pill active" @click="router.push('/tasks/create')" style="padding: 10px 20px;">
         <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发布任务
       </button>
     </div>
@@ -46,24 +45,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { taskApi } from '@/api'
+import {ref, onMounted} from 'vue'
+import {useRouter} from 'vue-router'
+import {taskApi} from '@/api'
+import {userStore} from '@/store/user'
 
 const router = useRouter()
 const tabs = ['全部', '筹备', '进行中', '已结束']
 const active = ref('全部')
 const list = ref([])
 const loading = ref(false)
-
-// 角色判断
-const role = localStorage.getItem('role') || 'member'
-const canManage = computed(() => role === 'minister' || role === 'director')
-const isMember = computed(() => role === 'member')
-
-// 获取当前用户的部门（用于过滤）
-const user = JSON.parse(localStorage.getItem('user') || '{}')
-const currentDept = user.dept || ''
 
 const dotClass = (s) => ({
   '筹备': 'dot-prepare',
@@ -74,13 +65,10 @@ const dotClass = (s) => ({
 async function load() {
   loading.value = true
   try {
-    const params = { status: active.value }
-
-    // 如果是部员，必须传部门参数，只查自己部门的任务
-    if (isMember.value) {
-      params.dept = currentDept
+    const params = {status: active.value}
+    if (userStore.isMember) {
+      params.dept = userStore.dept
     }
-
     list.value = await taskApi.list(params)
   } finally {
     loading.value = false

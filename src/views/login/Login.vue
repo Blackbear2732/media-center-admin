@@ -26,7 +26,7 @@
           <button type="button" class="role-card director" :disabled="loading" @click.prevent="quickLogin('director')">
             <div class="role-icon" style="background: linear-gradient(135deg,#5a8f7b,#8fc4a9);">主</div>
             <div class="role-info">
-              <div class="role-name">张主任</div>
+              <div class="role-name">王主任</div>
               <div class="role-desc">查看全中心数据、所有部门成员与设备</div>
             </div>
             <el-icon class="role-arrow"><ArrowRight /></el-icon>
@@ -65,10 +65,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { authApi } from '@/api'
+import {ref} from 'vue'
+import {useRouter, useRoute} from 'vue-router'
+import {ElMessage} from 'element-plus'
+import {authApi} from '@/api'
+import {userStore} from '@/store/user'
 
 const router = useRouter()
 const route = useRoute()
@@ -87,20 +88,11 @@ const deptHints = {
 async function quickLogin(role, dept) {
   loading.value = true
   try {
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
-    localStorage.removeItem('user')
-    localStorage.removeItem('adminDept')
-
-    const res = await authApi.login({ role, dept })
+    const res = await authApi.login({role, dept})
     if (!res || !res.token) throw new Error('登录返回数据异常')
 
-    localStorage.setItem('token', res.token)
-    localStorage.setItem('role', res.role || 'member')
-    localStorage.setItem('user', JSON.stringify(res.user || {}))
-
-    // 主任默认全部部门，部长锁定自己部门
-    localStorage.setItem('adminDept', res.role === 'director' ? '' : (res.user?.dept || '新闻部'))
+    // 使用 store 统一管理登录状态
+    userStore.login(res.token, res.role, res.user)
 
     ElMessage.success(`已以「${res.user?.name}」身份登录`)
 
@@ -108,9 +100,7 @@ async function quickLogin(role, dept) {
     if (!redirect) {
       redirect = res.role === 'member' ? '/' : '/admin/overview'
     }
-
-    await router.replace(redirect)
-    setTimeout(() => { window.location.reload() }, 100)
+    router.replace(redirect)
   } catch (e) {
     console.error('登录失败:', e)
     ElMessage.error(e.message || '登录发生异常')
@@ -119,26 +109,3 @@ async function quickLogin(role, dept) {
   }
 }
 </script>
-
-<style scoped>
-/* 登录页多部门卡片 */
-.login-box { width: 460px; }
-.role-group { margin-bottom: 24px; }
-.role-group h3 { font-size: 14px; font-weight: 600; color: var(--text-sub); margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; }
-.role-group h3::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.dept-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.dept-card {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 14px 10px; border-radius: 12px; border: 1px solid var(--border);
-  background: #fff; cursor: pointer; transition: all .2s;
-}
-.dept-card:hover { transform: translateY(-2px); border-color: #cfe0ee; box-shadow: var(--shadow-sm); background: #fafbfc; }
-.dept-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--brand), var(--accent));
-  color: #fff; font-weight: 600; display: flex; align-items: center; justify-content: center;
-  margin-bottom: 8px; font-size: 15px;
-}
-.dept-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-.dept-hint { font-size: 11px; color: var(--text-sub); }
-</style>

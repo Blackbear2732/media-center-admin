@@ -161,6 +161,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { homeApi ,adminApi} from '@/api'
+// 顶部引入
+import { getTaskDotClass } from '@/utils/dict'
 
 const router = useRouter()
 const loading = ref(false)
