@@ -262,21 +262,72 @@ export const adminApi = {
         ? delay(mock.tasks.filter(t => t.departments.includes(dept) || t.relatedDepts?.includes(dept)))
         : request.get('/admin/tasks', { params: { dept } }),
 
-    // 添加参与人
+    // 1. 添加参与人（真正把数据塞进 mock.tasks）
     addParticipant: (taskId, data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            if (task) {
+                if (!task.participants) task.participants = []
+                // 防止重复添加
+                if (!task.participants.some(p => p.name === data.name)) {
+                    task.participants.push({ name: data.name, dept: data.dept })
+                }
+            }
+            return { success: true }
+        })())
         : request.post(`/admin/tasks/${taskId}/participants`, data),
 
-    // 👇 新增：移除参与人
+    // 2. 移除参与人（真正从 mock.tasks 移除）
     removeParticipant: (taskId, name) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            if (task && task.participants) {
+                task.participants = task.participants.filter(p => p.name !== name)
+            }
+            return { success: true }
+        })())
         : request.delete(`/admin/tasks/${taskId}/participants`, { data: { name } }),
 
-    // 确认报名
+    // 3. 确认报名（从 signups 转移到 participants）
     confirmSignup: (taskId, name) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            if (task) {
+                if (!task.participants) task.participants = []
+                const signup = (task.signups || []).find(s => s.name === name)
+                if (signup) {
+                    // 加入参与人
+                    if (!task.participants.some(p => p.name === signup.name)) {
+                        task.participants.push({ name: signup.name, dept: signup.dept })
+                    }
+                    // 从报名列表移除
+                    task.signups = task.signups.filter(s => s.name !== name)
+                }
+            }
+            return { success: true }
+        })())
         : request.put(`/admin/tasks/${taskId}/signups/${name}/confirm`),
+    // 👇 新增：更新任务
+    updateTask: (id, data) => USE_MOCK
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(id))
+            if (task) {
+                Object.assign(task, data)
+            }
+            return { success: true }
+        })())
+        : request.put(`/admin/tasks/${id}`, data),
 
+    // 👇 新增：删除任务
+    deleteTask: (id) => USE_MOCK
+        ? delay((() => {
+            const index = mock.tasks.findIndex(t => String(t.id) === String(id))
+            if (index > -1) {
+                mock.tasks.splice(index, 1)
+            }
+            return { success: true }
+        })())
+        : request.delete(`/admin/tasks/${id}`),
 
 
 

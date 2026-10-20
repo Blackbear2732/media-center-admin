@@ -9,7 +9,6 @@
               <!-- 1. 本部门参与人 (支持多选、批量删除) -->
               <div class="muted" style="margin-bottom:8px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
                 <span>本部门参与人</span>
-                <!-- 批量移除按钮 -->
                 <el-button
                     v-if="selectedParticipants[row.id]?.length > 0"
                     type="danger"
@@ -78,7 +77,9 @@
 
         <el-table-column prop="title" label="任务名称" min-width="220" />
         <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }"><el-tag size="small">{{ row.status }}</el-tag></template>
+          <template #default="{ row }">
+            <el-tag size="small" :type="getTaskTagType(row.status)">{{ row.status }}</el-tag>
+          </template>
         </el-table-column>
         <el-table-column prop="startTime" label="开始时间" width="160" />
         <el-table-column label="参与部门" min-width="160">
@@ -86,42 +87,111 @@
             <el-tag v-for="d in row.departments" :key="d" size="small" style="margin-right:4px">{{ d }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100">
+
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="router.push('/tasks/' + row.id)">查看</el-button>
+            <el-button link type="warning" @click="openEdit(row)">编辑</el-button>
+            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
+
+    <!-- 👇 完整版编辑任务弹窗 -->
+    <el-dialog v-model="editVisible" title="编辑任务信息" width="700px" :close-on-click-modal="false">
+      <el-form :model="editForm" label-width="90px">
+        <el-form-item label="任务名称" required>
+          <el-input v-model="editForm.title" />
+        </el-form-item>
+        <el-form-item label="任务状态" required>
+          <el-select v-model="editForm.status" style="width:200px">
+            <el-option label="筹备" value="筹备" />
+            <el-option label="进行中" value="进行中" />
+            <el-option label="已结束" value="已结束" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="任务时间" required>
+          <el-date-picker v-model="editForm.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:46%" />
+          <span style="margin:0 8px;">至</span>
+          <el-date-picker v-model="editForm.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:46%" />
+        </el-form-item>
+        <el-form-item label="任务地点" required>
+          <el-input v-model="editForm.location" />
+        </el-form-item>
+        <el-form-item label="任务说明">
+          <el-input v-model="editForm.desc" type="textarea" :rows="3" />
+        </el-form-item>
+
+        <el-form-item label="任务标签">
+          <el-input v-model="tagInput" placeholder="输入后回车添加" style="width:200px" @keyup.enter="addTag" />
+          <div style="margin-top:8px; width:100%;">
+            <el-tag v-for="t in editForm.tags" :key="t" closable style="margin-right:6px" @close="editForm.tags = editForm.tags.filter(x => x !== t)">{{ t }}</el-tag>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="参与部门">
+          <el-select v-model="editForm.departments" multiple placeholder="请选择主力部门" style="width:100%">
+            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.name" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="联动部门">
+          <el-select v-model="editForm.relatedDepts" multiple placeholder="请选择协同部门" style="width:100%">
+            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.name" :disabled="editForm.departments.includes(d.name)" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="关联设备">
+          <el-select v-model="editForm.devices" multiple placeholder="请选择所需设备" style="width:100%">
+            <el-option v-for="(d, i) in availableDevices" :key="i" :label="typeof d === 'string' ? d : d.name" :value="typeof d === 'string' ? d : d.name" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingEdit" @click="saveEdit">保存修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { adminApi } from '@/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { adminApi, taskApi } from '@/api'
+import { userStore } from '@/store/user'
+import { getTaskTagType } from '@/utils/dict'
 
 const router = useRouter()
-const dept = localStorage.getItem('adminDept') || '新闻部'
+const dept = userStore.isDirector ? (userStore.adminDept || '') : userStore.dept
 const list = ref([]), loading = ref(false)
 const deptMembers = ref([])
 
 // 记录每个任务下拉框里选中的待添加人员
 const selectedNames = reactive({})
-// 记录每个任务里勾选的要移除的参与人
 const selectedParticipants = reactive({})
-// 记录每个任务是否处于添加中（防止连点）
 const adding = reactive({})
 
-// 获取当前任务下本部门已参与的人（兼容历史脏数据去重）
+// --- 编辑弹窗状态 ---
+const editVisible = ref(false)
+const savingEdit = ref(false)
+const tagInput = ref('')
+const departments = ref([])
+const availableDevices = ref([])
+
+const editForm = reactive({
+  id: null, title: '', status: '', startTime: '', endTime: '',
+  location: '', desc: '', tags: [], departments: [], relatedDepts: [], devices: []
+})
+
 const deptParticipants = (row) => {
   const parts = (row.participants || []).filter(p => p.dept === dept)
-  // 去重，防止有重复的 name 导致 vue 渲染报错
   return Array.from(new Map(parts.map(item => [item.name, item])).values())
 }
 
-// 计算可选人员：过滤掉已经在这个任务里的人员
 function getAvailableMembers(row) {
   const currentNames = (row.participants || []).map(p => p.name)
   return deptMembers.value.filter(m => !currentNames.includes(m.name))
@@ -133,7 +203,6 @@ async function load() {
     list.value = await adminApi.tasks(dept)
     deptMembers.value = await adminApi.members(dept)
 
-    // 初始化响应式对象
     list.value.forEach(t => {
       selectedNames[t.id] = []
       selectedParticipants[t.id] = []
@@ -144,10 +213,68 @@ async function load() {
   }
 }
 
+// --- 编辑与删除 ---
+async function openEdit(row) {
+  // 每次打开时确保有最新字典
+  if(departments.value.length === 0) departments.value = await taskApi.departments()
+  if(availableDevices.value.length === 0) availableDevices.value = await taskApi.devices()
+
+  Object.assign(editForm, {
+    id: row.id,
+    title: row.title,
+    status: row.status,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    location: row.location,
+    desc: row.desc,
+    tags: row.tags || [],
+    departments: row.departments || [],
+    relatedDepts: row.relatedDepts || [],
+    devices: row.devices || []
+  })
+  editVisible.value = true
+}
+
+function addTag() {
+  const v = tagInput.value.trim()
+  if (v && !editForm.tags.includes(v)) editForm.tags.push(v)
+  tagInput.value = ''
+}
+
+async function saveEdit() {
+  if (!editForm.title || !editForm.startTime || !editForm.endTime) {
+    return ElMessage.warning('请填写必填项')
+  }
+  savingEdit.value = true
+  try {
+    await adminApi.updateTask(editForm.id, { ...editForm })
+    ElMessage.success('修改成功')
+    editVisible.value = false
+    load() // 刷新列表
+  } catch (e) {
+    ElMessage.error('修改失败')
+  } finally {
+    savingEdit.value = false
+  }
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除任务「${row.title}」吗？删除后不可恢复。`, '危险操作', {
+      type: 'warning',
+      confirmButtonText: '确认删除',
+      confirmButtonClass: 'el-button--danger'
+    })
+    await adminApi.deleteTask(row.id)
+    ElMessage.success('任务已删除')
+    load()
+  } catch (e) {}
+}
+
+// ... 其他人员管理逻辑保持不变 ...
 async function confirm(row, s) {
   await adminApi.confirmSignup(row.id, s.name)
   row.signups = row.signups.filter(x => x.name !== s.name)
-  // 确认时也去重
   if (!row.participants.some(p => p.name === s.name)) {
     row.participants.push({ name: s.name, dept: s.dept || dept })
   }
@@ -159,7 +286,6 @@ function reject(row, s) {
   ElMessage.info('已忽略该报名')
 }
 
-// 批量添加（加防抖和去重）
 async function addParticipants(row) {
   const names = selectedNames[row.id] || []
   if (names.length === 0) return ElMessage.warning('请选择要添加的成员')
@@ -168,7 +294,6 @@ async function addParticipants(row) {
   let successCount = 0
   try {
     for (const name of names) {
-      // 严格二次校验，防止重复添加
       if (!row.participants.some(p => p.name === name)) {
         await adminApi.addParticipant(row.id, { name, dept })
         row.participants.push({ name, dept })
@@ -176,26 +301,20 @@ async function addParticipants(row) {
       }
     }
     selectedNames[row.id] = []
-    if (successCount > 0) {
-      ElMessage.success(`成功添加 ${successCount} 人`)
-    } else {
-      ElMessage.warning('所选人员已在任务中')
-    }
+    if (successCount > 0) ElMessage.success(`成功添加 ${successCount} 人`)
+    else ElMessage.warning('所选人员已在任务中')
   } finally {
     adding[row.id] = false
   }
 }
 
-// 批量删除选中人员
 async function removeParticipants(row) {
   const names = selectedParticipants[row.id] || []
   if (names.length === 0) return
-
   try {
     for (const name of names) {
       await adminApi.removeParticipant(row.id, name)
     }
-    // 从本地数组移除
     row.participants = row.participants.filter(p => !names.includes(p.name))
     selectedParticipants[row.id] = []
     ElMessage.success(`已移除 ${names.length} 人`)
