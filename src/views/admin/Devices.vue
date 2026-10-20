@@ -11,7 +11,7 @@
       <div class="stat-grid" style="margin-bottom: 20px;">
         <div class="surface-card stat-card" @click="filterStatus = ''" :class="{ 'active-filter': filterStatus === '' }">
           <div class="stat-num">{{ devices.length }}</div>
-          <div class="stat-label">设备总数</div>
+          <div class="stat-label">设备种类</div>
         </div>
         <div class="surface-card stat-card" @click="filterStatus = '可用'" :class="{ 'active-filter': filterStatus === '可用' }">
           <div class="stat-num" style="color: #4a9d6e;">{{ statusCount['可用'] || 0 }}</div>
@@ -29,7 +29,7 @@
 
       <div class="flex-between" style="margin-bottom:12px">
         <div class="muted">
-          当前显示：{{ filterStatus ? `仅看「${filterStatus}」` : '全部设备' }}（共 {{ filteredDevices.length }} 台）
+          当前显示：{{ filterStatus ? `仅看「${filterStatus}」` : '全部设备' }}（共 {{ filteredDevices.length }} 条）
         </div>
         <button class="pill active" @click="openEdit()">+ 新增设备</button>
       </div>
@@ -37,18 +37,27 @@
       <div class="surface-card" style="padding:8px 0">
         <el-table :data="filteredDevices" stripe>
           <el-table-column prop="code" label="编号" width="100" />
-          <el-table-column prop="name" label="名称" min-width="180" />
-          <el-table-column prop="model" label="型号" width="120" />
-          <el-table-column prop="buyDate" label="购买日期" width="120" />
-          <el-table-column prop="status" label="当前状态" width="120">
+          <el-table-column prop="name" label="设备名称" min-width="180" />
+          <el-table-column prop="stock" label="库存数量" width="100" align="center">
             <template #default="{ row }">
-              <el-tag :type="getStatusTagType(row.status)" size="small" effect="dark" round>
-                {{ row.status }}
+              <el-tag :type="row.stock > 0 ? 'success' : 'danger'" size="small" effect="plain">
+                {{ row.stock }} 件
               </el-tag>
-
             </template>
           </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="140" />
+          <el-table-column prop="model" label="型号" width="140" />
+          <el-table-column prop="buyDate" label="购买日期" width="120" />
+          <el-table-column prop="status" label="当前状态" width="110">
+            <template #default="{ row }">
+              <el-tag
+                  :type="{ '可用': 'success', '借出': 'warning', '维修': 'danger', '报废': 'info' }[row.status]"
+                  size="small" effect="dark" round
+              >
+                {{ row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="remark" label="备注 / 配件清单" min-width="200" show-overflow-tooltip />
           <el-table-column label="操作" width="100" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
@@ -65,15 +74,17 @@
           <el-table-column prop="applicant" label="申请人" width="100" />
           <el-table-column prop="dept" label="部门" width="100" />
           <el-table-column prop="device" label="设备" min-width="160" />
+          <el-table-column prop="applyNum" label="数量" width="80" align="center">
+            <template #default="{ row }">{{ row.applyNum || 1 }}</template>
+          </el-table-column>
           <el-table-column prop="startTime" label="开始" width="140" />
           <el-table-column prop="endTime" label="结束" width="140" />
           <el-table-column prop="purpose" label="用途" min-width="140" show-overflow-tooltip />
           <el-table-column prop="status" label="审核状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="getStatusTagType(row.status)" size="small" effect="dark" round>
+              <el-tag :type="{ '待审核': 'info', '已通过': 'success', '已拒绝': 'danger' }[row.status]" size="small">
                 {{ row.status }}
               </el-tag>
-
             </template>
           </el-table-column>
           <el-table-column label="操作" width="180" fixed="right">
@@ -91,6 +102,9 @@
       <div class="surface-card" style="padding:8px 0">
         <el-table :data="usage" stripe>
           <el-table-column prop="device" label="设备" min-width="180" />
+          <el-table-column prop="applyNum" label="数量" width="80" align="center">
+            <template #default="{ row }">{{ row.applyNum || 1 }}</template>
+          </el-table-column>
           <el-table-column prop="applicant" label="借用人" width="100" />
           <el-table-column prop="dept" label="部门" width="100" />
           <el-table-column prop="phone" label="联系电话" width="140" />
@@ -98,10 +112,9 @@
           <el-table-column prop="endTime" label="结束" width="140" />
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="getStatusTagType(row.status)" size="small" effect="dark" round>
+              <el-tag :type="row.status === '使用中' ? 'warning' : 'success'" size="small">
                 {{ row.status }}
               </el-tag>
-
             </template>
           </el-table-column>
         </el-table>
@@ -123,7 +136,10 @@
             <el-option v-for="s in ['可用','借出','维修','报废']" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
-        <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="库存数量">
+          <el-input-number v-model="form.stock" :min="0" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注配件"><el-input v-model="form.remark" type="textarea" :rows="3" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
@@ -137,8 +153,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
-import { getStatusTagType } from '@/utils/dict'
-
 
 const tabs = ['设备档案', '申请审核', '使用记录']
 const active = ref('设备档案')
@@ -146,10 +160,8 @@ const loading = ref(false), saving = ref(false)
 const devices = ref([]), applications = ref([]), usage = ref([])
 const editVisible = ref(false)
 
-// 状态筛选控制
 const filterStatus = ref('')
 
-// 统计各状态的设备数量
 const statusCount = computed(() => {
   const counts = {}
   devices.value.forEach(d => {
@@ -158,13 +170,12 @@ const statusCount = computed(() => {
   return counts
 })
 
-// 根据点击的卡片过滤列表
 const filteredDevices = computed(() => {
   if (!filterStatus.value) return devices.value
   return devices.value.filter(d => d.status === filterStatus.value)
 })
 
-const form = reactive({ id: null, code: '', name: '', model: '', buyDate: '', status: '可用', remark: '' })
+const form = reactive({ id: null, code: '', name: '', model: '', buyDate: '', status: '可用', stock: 1, remark: '' })
 
 async function load() {
   loading.value = true
@@ -176,7 +187,7 @@ async function load() {
 }
 
 function openEdit(row) {
-  Object.assign(form, row ? { ...row } : { id: null, code: '', name: '', model: '', buyDate: '', status: '可用', remark: '' })
+  Object.assign(form, row ? { ...row } : { id: null, code: '', name: '', model: '', buyDate: '', status: '可用', stock: 1, remark: '' })
   editVisible.value = true
 }
 
@@ -199,3 +210,13 @@ async function review(row, status) {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.stat-card { padding: 20px; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.stat-card.active-filter { border-color: var(--brand); background-color: var(--brand-soft); }
+.stat-num { font-size: 28px; font-weight: 700; color: var(--brand); }
+.stat-label { color: var(--text-sub); font-size: 13px; margin-top: 4px; }
+@media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+</style>

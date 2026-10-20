@@ -56,15 +56,14 @@
 
         <el-form-item label="关联设备">
           <el-select v-model="form.devices" multiple placeholder="请选择任务所需设备" style="width:100%" :loading="deviceLoading">
-            <!-- 👇 万能兼容版：无论后端返回字符串还是对象，都能正常渲染 -->
             <el-option
-                v-for="(d, index) in availableDevices"
-                :key="index"
-                :label="typeof d === 'string' ? d : d.name + ' (' + d.code + ' - ' + d.status + ')'"
+                v-for="d in availableDevices"
+                :key="d.id"
+                :label="typeof d === 'string' ? d : `${d.name} ${d.stock > 1 ? '(库存 '+d.stock+'件)' : ''}`"
                 :value="typeof d === 'string' ? d : d.name">
             </el-option>
           </el-select>
-          <div class="muted" style="margin-top:4px">选择后部长可去后台申请设备</div>
+          <div class="muted" style="margin-top:4px">仅显示“可用”或“借出”状态的设备，选择后部长可去后台申请</div>
         </el-form-item>
 
         <el-form-item style="margin-top: 30px;">
@@ -79,11 +78,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { taskApi } from '@/api'
-import { userStore } from '@/store/user'
+import {ref, reactive, computed, onMounted} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage} from 'element-plus'
+import {taskApi} from '@/api'
+import {userStore} from '@/store/user'
 
 const router = useRouter()
 const submitting = ref(false)
@@ -93,14 +92,10 @@ const tagInput = ref('')
 const departments = ref([])
 const rawDevices = ref([])
 
-// 兼容处理：无论是字符串数组还是对象数组，都能筛选
 const availableDevices = computed(() => {
   if (!rawDevices.value || !Array.isArray(rawDevices.value)) return []
-
   return rawDevices.value.filter(d => {
-    // 如果是字符串（老数据），直接放行
     if (typeof d === 'string') return true
-    // 如果是对象，过滤掉维修和报废的
     return d.status === '可用' || d.status === '借出'
   })
 })
@@ -128,7 +123,7 @@ async function submit() {
 
   submitting.value = true
   try {
-    await taskApi.create({ ...form, participants: [], signups: [] })
+    await taskApi.create({...form, participants: [], signups: []})
     ElMessage.success('任务发布成功，已通知相关部门')
     router.push(userStore.canManage ? '/admin/tasks' : '/tasks')
   } catch (e) {
