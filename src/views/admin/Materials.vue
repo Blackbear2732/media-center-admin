@@ -21,13 +21,17 @@
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="220" />
-        <el-table-column prop="type" label="类型" width="100" />
+        <el-table-column prop="type" label="类型" width="110">
+          <template #default="{ row }">
+            <el-tag size="small" :type="getMaterialTypeTagType(row.type)" effect="plain">{{ getMaterialTypeLabel(row.type) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="author" label="上传人" width="100" />
         <el-table-column prop="createdAt" label="上传时间" width="160" />
         <el-table-column label="共享部门" min-width="140">
           <template #default="{ row }">
-            <el-tag v-for="d in row.sharedDepts || []" :key="d" size="small" style="margin-right:4px">{{ d }}</el-tag>
-            <span v-if="!row.sharedDepts?.length" class="muted">未共享</span>
+            <el-tag v-for="id in row.sharedDeptIds || []" :key="id" size="small" style="margin-right:4px">{{ getDeptLabel(id) }}</el-tag>
+            <span v-if="!row.sharedDeptIds?.length" class="muted">未共享</span>
           </template>
         </el-table-column>
       </el-table>
@@ -38,11 +42,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { adminApi } from '@/api'
+import { userStore } from '@/store/user'
+import { getDeptLabel, getMaterialTypeLabel, getMaterialTypeTagType } from '@/utils/dict'
 
-const dept = localStorage.getItem('adminDept') || '新闻部'
 const list = ref([]), loading = ref(false)
+
 onMounted(async () => {
   loading.value = true
-  try { list.value = await adminApi.materials(dept) } finally { loading.value = false }
+  try { list.value = await adminApi.materials(userStore.viewDeptId) } finally { loading.value = false }
 })
 </script>
