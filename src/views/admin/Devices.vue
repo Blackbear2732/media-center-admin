@@ -27,7 +27,7 @@
 
       <div class="flex-between" style="margin-bottom:12px">
         <div class="muted">
-          当前显示：{{ filterStatus === null ? '全部设备' : `仅看「${DEVICE_STATUS_MAP[filterStatus]}」` }}（共 {{ filteredDevices.length }} 条）
+          当前显示：{{ filterStatus === null ? '全部设备' : `仅看「${getDeviceStatusLabel(filterStatus)}」` }}（共 {{ filteredDevices.length }} 条）
         </div>
         <button class="pill active" @click="openEdit()">+ 新增设备</button>
       </div>
@@ -48,7 +48,7 @@
           <el-table-column prop="status" label="当前状态" width="110">
             <template #default="{ row }">
               <el-tag :type="getDeviceStatusType(row.status)" size="small" effect="dark" round>
-                {{ DEVICE_STATUS_MAP[row.status] }}
+                {{ getDeviceStatusLabel(row.status) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -80,7 +80,7 @@
           <el-table-column prop="status" label="审核状态" width="100">
             <template #default="{ row }">
               <el-tag :type="getApplyStatusType(row.status)" size="small">
-                {{ APPLY_STATUS_MAP[row.status] }}
+                {{ getApplyStatusLabel(row.status) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -112,7 +112,7 @@
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
               <el-tag :type="getApplyStatusType(row.status)" size="small">
-                {{ APPLY_STATUS_MAP[row.status] }}
+                {{ getApplyStatusLabel(row.status) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -154,12 +154,12 @@ import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
 import {
   APPLY_STATUS,
-  APPLY_STATUS_MAP,
   DEVICE_STATUS,
-  DEVICE_STATUS_MAP,
   DEVICE_STATUS_OPTIONS,
+  getApplyStatusLabel,
   getApplyStatusType,
   getDeptLabel,
+  getDeviceStatusLabel,
   getDeviceStatusType
 } from '@/utils/dict'
 
@@ -178,10 +178,10 @@ const filterStatus = ref(null)
 
 // 统计卡片：可用 / 借出 / 维修
 const STAT_CARDS = [
-  { status: DEVICE_STATUS.AVAILABLE, label: DEVICE_STATUS_MAP[DEVICE_STATUS.AVAILABLE], color: '#4a9d6e' },
-  { status: DEVICE_STATUS.LENT, label: DEVICE_STATUS_MAP[DEVICE_STATUS.LENT], color: '#e8833a' },
-  { status: DEVICE_STATUS.REPAIR, label: DEVICE_STATUS_MAP[DEVICE_STATUS.REPAIR], color: '#f56c6c' }
-]
+  { status: DEVICE_STATUS.AVAILABLE, color: '#4a9d6e' },
+  { status: DEVICE_STATUS.LENT, color: '#e8833a' },
+  { status: DEVICE_STATUS.REPAIR, color: '#f56c6c' }
+].map(item => ({ ...item, label: getDeviceStatusLabel(item.status) }))
 
 const statusCount = computed(() => {
   const counts = {}
