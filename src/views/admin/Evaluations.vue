@@ -285,21 +285,10 @@ async function loadPreview() {
   }
   previewLoading.value = true
   try {
-    previewList.value = form.selectedMembers.map(name => {
-      const memberInfo = candidates.value.find(m => m.name === name)
-      const autoScore = Math.floor(Math.random() * 8) + 6
-      const taskExtraScore = Math.random() > 0.5 ? 2 : 0
-      return {
-        name,
-        dept: memberInfo?.dept,
-        autoScore,
-        taskExtraScore,
-        manualScore: 0,
-        currentTotal: autoScore + taskExtraScore, // 👈 初始化计算总分
-        level: '合格',
-        reason: ''
-      }
-    })
+    // 👇 替换为真实的接口调用，不再用 Math.random()
+    previewList.value = await adminApi.previewEvaluation(form.month, form.selectedMembers)
+  } catch (e) {
+    console.error('获取考评预览失败', e)
   } finally {
     previewLoading.value = false
   }

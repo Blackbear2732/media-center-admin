@@ -69,13 +69,19 @@
           <div class="score-row" style="flex-direction: column; align-items: flex-start; gap: 8px; padding-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; width: 100%;">
               <span>📸 任务参与加分</span>
-              <span class="plus-score">+{{ currentEval.details?.taskScore || 0 }}</span>
+              <!-- 👇 合并展示：基础分 + 附加分 -->
+              <span class="plus-score">+{{ (currentEval.details?.taskScore || 0) + (currentEval.details?.taskExtraScore || 0) }}</span>
             </div>
             <!-- 任务明细列表 -->
             <div class="sub-list" v-if="currentEval.details?.taskList?.length">
               <div v-for="(t, i) in currentEval.details.taskList" :key="i" class="sub-item">
                 <span class="dot"></span> {{ t.title }}
                 <span class="sub-score">+{{ t.score }}</span>
+              </div>
+              <!-- 如果有额外的任务表现分，单独列一条 -->
+              <div v-if="currentEval.details?.taskExtraScore > 0" class="sub-item" style="color: var(--accent);">
+                <span class="dot" style="background: var(--accent);"></span> 任务额外表现加分
+                <span class="sub-score">+{{ currentEval.details.taskExtraScore }}</span>
               </div>
             </div>
           </div>
@@ -92,6 +98,7 @@
                 <span class="sub-score">+{{ m.score }}</span>
               </div>
             </div>
+            <span v-else class="muted" style="font-size:12px; margin-top: 4px;">本月无会议加分</span>
           </div>
         </div>
 

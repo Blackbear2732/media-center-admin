@@ -416,30 +416,120 @@ export const adminApi = {
         ? delay(mock.evaluationTemplate)
         : request.get('/admin/evaluations/template'),
 
+    previewEvaluation: (month, memberNames) => USE_MOCK
+        ? delay((() => {
+            return memberNames.map(name => {
+                const memberInfo = mock.members.find(m => m.name === name)
+
+                // 1. 算打卡分（每次 0.5 分）
+                // 去 mock.checkinRecords 里找这个人当月的打卡记录
+                const checkinCount = (mock.checkinRecords || []).filter(
+                    r => r.member === name && r.date.startsWith(month) && r.status === '已打卡'
+                ).length
+                const checkinScore = checkinCount * 0.5
+
+                // 2. 算会议分（每次 1 分）
+                // 去 mock.adminMeetings 里找记录
+                let meetingCount = 0
+                ;(mock.adminMeetings || []).forEach(m => {
+                    if (m.records) {
+                        const record = m.records.find(r => r.name === name && r.status === '到场')
+                        if (record) meetingCount++
+                    }
+                })
+                const meetingScore = meetingCount * 1
+
+                // 3. 算任务基础参与分（每次 1 分）
+                const taskCount = mock.tasks.filter(t =>
+                    t.participants && t.participants.some(p => p.name === name)
+                ).length
+                const taskBaseScore = taskCount * 1
+
+                // 4. 算任务附加分（你之前加的 20 分）
+                let taskExtraScore = 0
+                mock.tasks.forEach(t => {
+                    const p = (t.participants || []).find(x => x.name === name)
+                    if (p && p.extraScore) {
+                        taskExtraScore += p.extraScore
+                    }
+                })
+
+                // 基础总分 = 打卡 + 会议 + 任务基础
+                const baseAutoScore = checkinScore + meetingScore + taskBaseScore
+
+                return {
+                    name,
+                    dept: memberInfo?.dept || '',
+                    autoScore: baseAutoScore,
+                    taskExtraScore: taskExtraScore,
+                    manualScore: 0,
+                    level: '合格',
+                    reason: ''
+                }
+            })
+        })())
+        : request.post('/admin/evaluations/preview', { month, memberNames }),
+
     // 发起考评（修复了报错，并加入内存）
-    // 发起考评
+    // 发起考评（自动联动真实明细并入库）
     createEvaluation: (data) => USE_MOCK
         ? delay((() => {
             data.members.forEach((m, idx) => {
+                const name = m.name
+                const month = data.month
+
+                // 1. 提取真实的打卡明细
+                const userCheckins = (mock.checkinRecords || []).filter(
+                    r => r.member === name && r.date.startsWith(month) && r.status === '已打卡'
+                )
+                const checkinDays = userCheckins.length
+                const checkinScore = checkinDays * 0.5
+
+                // 2. 提取真实的会议明细
+                const userMeetingList = []
+                ;(mock.adminMeetings || []).forEach(meeting => {
+                    const record = (meeting.records || []).find(r => r.name === name && r.status === '到场')
+                    if (record) {
+                        userMeetingList.push({ title: meeting.title, score: 1 })
+                    }
+                })
+                const meetingScore = userMeetingList.length * 1
+
+                // 3. 提取真实的任务明细
+                const userTaskList = []
+                let taskBaseScore = 0
+                let taskExtraScore = 0
+                mock.tasks.forEach(t => {
+                    const p = (t.participants || []).find(x => x.name === name)
+                    if (p) {
+                        userTaskList.push({ title: t.title, score: 1 }) // 基础参与分1
+                        taskBaseScore += 1
+                        if (p.extraScore) {
+                            taskExtraScore += p.extraScore // 任务额外附加分
+                        }
+                    }
+                })
+
                 mock.evaluations.unshift({
                     id: Date.now() + idx,
-                    month: data.month,
+                    month: month,
                     dept: m.dept,
-                    member: m.name,
-                    autoScore: m.autoScore,
-                    manualScore: m.manualScore,
+                    member: name,
+                    autoScore: m.autoScore, // 前端算好的（基础分+任务附加分）
+                    manualScore: m.manualScore, // 部长填的
                     total: m.autoScore + m.manualScore,
                     level: m.level || '合格',
                     status: '已完成',
                     createdAt: new Date().toLocaleString(),
                     details: {
                         extraNote: m.extraNote || '',
-                        checkinDays: 8,
-                        checkinScore: 4,
-                        taskScore: Math.floor(m.autoScore * 0.4),
-                        meetingScore: m.autoScore - 4 - Math.floor(m.autoScore * 0.4),
-                        taskList: [{ title: '本月参与的各项任务', score: Math.floor(m.autoScore * 0.4) }],
-                        meetingList: [{ title: '本月参与的各项会议', score: m.autoScore - 4 - Math.floor(m.autoScore * 0.4) }]
+                        checkinDays: checkinDays,
+                        checkinScore: checkinScore,
+                        taskScore: taskBaseScore,
+                        taskExtraScore: taskExtraScore, // 👈 这里单独存任务附加分
+                        meetingScore: meetingScore,
+                        taskList: userTaskList,
+                        meetingList: userMeetingList
                     }
                 })
             })
