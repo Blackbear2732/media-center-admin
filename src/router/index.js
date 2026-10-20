@@ -10,7 +10,6 @@ const routes = [
             { path: 'my/tasks', component: () => import('@/views/user/MyTasks.vue'), meta: { title: '我的任务' } },
             { path: 'my/checkins', component: () => import('@/views/user/MyCheckins.vue'), meta: { title: '我的打卡' } },
             { path: 'my/meetings', component: () => import('@/views/user/MyMeetings.vue'), meta: { title: '我的会议' } },
-            { path: 'my/devices', component: () => import('@/views/user/MyDevices.vue'), meta: { title: '我的设备' } },
             { path: 'my/messages', component: () => import('@/views/user/MyMessages.vue'), meta: { title: '我的消息' } },
             { path: 'tasks', component: () => import('@/views/task/TaskList.vue'), meta: { title: '任务列表' } },
             { path: 'tasks/create', component: () => import('@/views/task/TaskCreate.vue'), meta: { title: '发布任务', roles: ['minister', 'director'] } },

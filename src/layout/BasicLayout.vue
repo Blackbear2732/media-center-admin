@@ -49,7 +49,6 @@
                   <el-dropdown-item command="/my/tasks">我的任务</el-dropdown-item>
                   <el-dropdown-item command="/my/checkins">我的打卡</el-dropdown-item>
                   <el-dropdown-item command="/my/meetings">我的会议</el-dropdown-item>
-                  <el-dropdown-item command="/my/devices">我的设备</el-dropdown-item>
                   <el-dropdown-item v-if="userStore.canManage" command="/admin" divided>部门管理区</el-dropdown-item>
                   <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
                 </el-dropdown-menu>
