@@ -130,7 +130,24 @@ export const taskApi = {
         }
     ),
     detail:      pick(id => request.get(`/tasks/${id}`),id => delay(mock.tasks.find(t => String(t.id) === String(id)) || mock.tasks[0])),
-    create:      pick(d => request.post('/tasks', d),() => delay({ success: true, id: 99 })),
+    create: pick(
+        d => request.post('/tasks', d),
+        (data) => {
+            // 1. 组装符合 mock.tasks 格式的新数据
+            const newTask = {
+                ...data,
+                id: Date.now(), // 生成唯一 ID
+                status: '筹备', // 默认状态为筹备
+                participants: [], // 初始参与人为空，等待部长去加
+                signups: []
+            }
+
+            // 2. 把新任务塞进 mock.tasks 的最前面
+            mock.tasks.unshift(newTask)
+
+            return delay({ success: true, id: newTask.id })
+        }
+    ),
     materials:   pick(id => request.get(`/tasks/${id}/materials`),id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
     departments: pick(() => request.get('/departments'), () => delay(mock.departments)),
     signup: (taskId, data) => USE_MOCK
