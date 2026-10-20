@@ -79,8 +79,50 @@
         </el-card>
       </el-col>
 
-      <!-- 右侧：人员管理面板 -->
+      <!-- 右侧面板区 -->
       <el-col :span="9">
+
+        <!-- 👇 新增：任务关联设备管理面板 -->
+        <el-card shadow="never" class="surface-card" style="margin-bottom: 16px;">
+          <template #header>
+            <div class="flex-between">
+              <b>任务所需设备</b>
+              <span v-if="canManageDevices" class="tag-soft" style="font-size: 11px; background: #fdf1e6; color: var(--accent);">摄制部可管理</span>
+            </div>
+          </template>
+
+          <div v-if="!task.devices || task.devices.length === 0" class="muted" style="padding: 10px 0;">
+            暂无关联设备
+          </div>
+
+          <div v-else v-for="d in task.devices" :key="d" class="flex-between" style="padding: 8px 0; border-bottom: 1px dashed var(--border);">
+            <span style="font-weight: 500; font-size: 14px;">{{ d }}</span>
+            <el-button
+                v-if="canManageDevices"
+                link type="danger"
+                size="small"
+                @click="removeDevice(d)"
+            >移除</el-button>
+          </div>
+
+          <!-- 添加设备控件 -->
+          <div v-if="canManageDevices" style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border);">
+            <div class="muted" style="margin-bottom: 8px; font-weight: 600;">添加设备清单</div>
+            <div style="display: flex; gap: 8px;">
+              <el-select v-model="selectedNewDevice" placeholder="请选择全库设备" size="small" style="flex: 1;" filterable>
+                <el-option
+                    v-for="d in availableDevicesForAdd"
+                    :key="d.id"
+                    :label="d.name"
+                    :value="d.name"
+                />
+              </el-select>
+              <el-button type="primary" size="small" @click="addDevice">添加</el-button>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 参与人员管理面板 -->
         <el-card shadow="never" class="surface-card">
           <template #header>
             <div class="flex-between">
@@ -89,12 +131,10 @@
             </div>
           </template>
 
-          <!-- 已确认参与人列表 -->
           <div v-for="p in (task.participants || [])" :key="p.name" class="flex-between" style="padding:8px 0;border-bottom:1px solid #f0f2f5">
             <span>
               <el-avatar :size="26" style="margin-right:8px">{{ p.name.slice(0,1) }}</el-avatar>
               {{ p.name }}
-              <!-- 展示这个人在该任务中获得的任务附加分 -->
               <el-tag v-if="p.extraScore" type="warning" size="small" effect="plain" style="margin-left: 8px;">
                 附加分 +{{ p.extraScore }}
               </el-tag>
@@ -102,7 +142,6 @@
             <div style="display: flex; align-items: center; gap: 8px;">
               <el-tag size="small" type="info">{{ p.dept }}</el-tag>
 
-              <!-- 管理者操作按钮：打分、移除 -->
               <template v-if="canManageDept(p.dept)">
                 <el-button link type="primary" size="small" @click="openScoreDialog(p)">打分</el-button>
                 <el-button link type="danger" size="small" @click="handleRemove(p)">移除</el-button>
@@ -111,9 +150,8 @@
           </div>
           <el-empty v-if="!task.participants || task.participants.length === 0" description="暂无参与人" :image-size="50" />
 
-          <!-- ================= 管理者视角 (部长/主任) ================= -->
+          <!-- 管理者视角 -->
           <template v-if="userStore.canManage">
-            <!-- 待确认报名 -->
             <div v-if="pendingSignups.length > 0" style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
               <div class="muted" style="margin-bottom:8px; font-weight: 600;">待确认报名</div>
               <div v-for="s in pendingSignups" :key="s.name" class="flex-between" style="padding:8px 0;">
@@ -125,7 +163,6 @@
               </div>
             </div>
 
-            <!-- 添加人员 -->
             <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
               <div class="muted" style="margin-bottom:8px; font-weight: 600;">添加人员</div>
               <el-select v-model="selectedMember" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;" filterable>
@@ -135,7 +172,7 @@
             </div>
           </template>
 
-          <!-- ================= 部员视角 ================= -->
+          <!-- 部员视角 -->
           <template v-else>
             <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--border); text-align: center;">
               <div v-if="myParticipantStatus === 'joined'" class="muted">
@@ -183,7 +220,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { taskApi, adminApi } from '@/api'
+import { taskApi, adminApi, deviceApi } from '@/api'
 import { getTaskTagType } from '@/utils/dict'
 import { userStore } from '@/store/user'
 
@@ -194,7 +231,51 @@ const task = ref({})
 const materials = ref([]), opened = ref([])
 let timer = null
 
-// --- 人员管理逻辑 ---
+// --- 设备清单管理 ---
+const globalDevices = ref([])
+const selectedNewDevice = ref('')
+
+// 权限判断：主任 或 摄制部（不管部长还是部员）
+const canManageDevices = computed(() => {
+  return userStore.isDirector || userStore.dept === '摄制部'
+})
+
+// 计算可选设备（排除任务里已经有的）
+const availableDevicesForAdd = computed(() => {
+  const currentDevices = task.value.devices || []
+  return globalDevices.value.filter(d => !currentDevices.includes(d.name))
+})
+
+async function loadGlobalDevices() {
+  try {
+    const res = await deviceApi.list()
+    globalDevices.value = Array.isArray(res) ? res : []
+  } catch (e) {}
+}
+
+async function addDevice() {
+  if (!selectedNewDevice.value) return ElMessage.warning('请选择要添加的设备')
+
+  const newDevices = [...(task.value.devices || []), selectedNewDevice.value]
+  await adminApi.updateTaskDevices(task.value.id, newDevices)
+
+  // 更新视图
+  task.value.devices = newDevices
+  selectedNewDevice.value = ''
+  ElMessage.success('设备已添加到任务')
+}
+
+async function removeDevice(deviceName) {
+  await ElMessageBox.confirm(`确认从任务中移除「${deviceName}」吗？`, '提示', { type: 'warning' })
+
+  const newDevices = (task.value.devices || []).filter(d => d !== deviceName)
+  await adminApi.updateTaskDevices(task.value.id, newDevices)
+
+  task.value.devices = newDevices
+  ElMessage.success('已移除')
+}
+
+// --- 人员管理 ---
 const selectedMember = ref('')
 const deptMembers = ref([])
 
@@ -203,14 +284,12 @@ const scoreVisible = ref(false)
 const savingScore = ref(false)
 const scoreForm = reactive({ memberName: '', score: 0, reason: '' })
 
-// 判断是否可管理特定部门
 const canManageDept = (dept) => {
   if (userStore.isDirector) return true
   if (userStore.isMinister && dept === userStore.dept) return true
   return false
 }
 
-// 过滤待确认报名列表（部长只看本部门，主任看全部）
 const pendingSignups = computed(() => {
   let signups = task.value.signups || []
   if (userStore.isMinister) {
@@ -219,7 +298,6 @@ const pendingSignups = computed(() => {
   return signups
 })
 
-// 判断当前登录部员的状态
 const myParticipantStatus = computed(() => {
   const myName = userStore.name
   const isJoined = (task.value.participants || []).some(p => p.name === myName)
@@ -229,24 +307,21 @@ const myParticipantStatus = computed(() => {
   return 'none'
 })
 
-// 计算可添加的成员（排除已参与的）
 const availableMembers = computed(() => {
   const currentNames = (task.value.participants || []).map(p => p.name)
-
-  // 👇 修复：如果是主任，返回所有部门未参与的人；如果是部长，只返回本部门未参与的人
   if (userStore.isDirector) {
     return (deptMembers.value || []).filter(m => !currentNames.includes(m.name))
   }
-
   return (deptMembers.value || []).filter(m =>
       m.dept === userStore.dept && !currentNames.includes(m.name)
   )
 })
 
+// ---------------- 业务操作 ----------------
+
 async function loadMembers() {
   if (!userStore.canManage) return
   try {
-    // 主任传空字符串拉取全部，部长传自己的部门
     const targetDept = userStore.isDirector ? '' : userStore.dept
     const res = await adminApi.members(targetDept)
     deptMembers.value = Array.isArray(res) ? res : []
@@ -255,9 +330,6 @@ async function loadMembers() {
   }
 }
 
-// ---------------- 业务操作 ----------------
-
-// 部员报名
 async function handleSignup() {
   try {
     await taskApi.signup(task.value.id, { name: userStore.name, dept: userStore.dept })
@@ -269,7 +341,6 @@ async function handleSignup() {
   }
 }
 
-// 管理者：添加成员
 async function handleAddParticipant() {
   if (!selectedMember.value) return ElMessage.warning('请选择要添加的成员')
   const member = deptMembers.value.find(m => m.name === selectedMember.value)
@@ -281,7 +352,6 @@ async function handleAddParticipant() {
   ElMessage.success('添加成功')
 }
 
-// 管理者：移除成员
 async function handleRemove(p) {
   await ElMessageBox.confirm(`确认将「${p.name}」移出该任务吗？`, '提示', { type: 'warning' })
   await adminApi.removeParticipant(task.value.id, p.name)
@@ -289,7 +359,6 @@ async function handleRemove(p) {
   ElMessage.success('已移除')
 }
 
-// 管理者：确认报名
 async function handleConfirm(s) {
   await adminApi.confirmSignup(task.value.id, s.name)
   task.value.signups = task.value.signups.filter(x => x.name !== s.name)
@@ -297,13 +366,11 @@ async function handleConfirm(s) {
   ElMessage.success('已确认报名')
 }
 
-// 管理者：拒绝报名
 function handleReject(s) {
   task.value.signups = task.value.signups.filter(x => x.name !== s.name)
   ElMessage.info('已拒绝该报名')
 }
 
-// 管理者：打开打分弹窗
 function openScoreDialog(p) {
   scoreForm.memberName = p.name
   scoreForm.score = p.extraScore || 0
@@ -311,14 +378,11 @@ function openScoreDialog(p) {
   scoreVisible.value = true
 }
 
-// 管理者：保存打分
 async function saveScore() {
   if (scoreForm.score < 0) return ElMessage.warning('分数不能为负')
   savingScore.value = true
   try {
     await adminApi.updateTaskScore(task.value.id, scoreForm.memberName, scoreForm.score, scoreForm.reason)
-
-    // 更新本地视图
     const p = task.value.participants.find(x => x.name === scoreForm.memberName)
     if (p) {
       p.extraScore = scoreForm.score
@@ -340,10 +404,10 @@ async function loadTask() {
       task.value = res
       if (!task.value.participants) task.value.participants = []
       if (!task.value.signups) task.value.signups = []
+      if (!task.value.devices) task.value.devices = []
     }
   } catch (e) {
     console.error('加载任务失败', e)
-    ElMessage.error('加载任务失败')
   } finally {
     loading.value = false
   }
@@ -363,6 +427,7 @@ onMounted(() => {
   loadTask()
   loadMaterials()
   loadMembers()
+  loadGlobalDevices()
   timer = setInterval(loadMaterials, 15000)
 })
 
@@ -370,7 +435,20 @@ onUnmounted(() => timer && clearInterval(timer))
 </script>
 
 <style scoped>
-.mb { margin-bottom: 16px; }
-.article-content { white-space: pre-wrap; line-height: 1.9; color: var(--text); font-size: 14px; }
-.surface-card { background: #fff; border-radius: 14px; border: 1px solid #e6ebf1; }
+.mb {
+  margin-bottom: 16px;
+}
+
+.article-content {
+  white-space: pre-wrap;
+  line-height: 1.9;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.surface-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e6ebf1;
+}
 </style>

@@ -591,6 +591,18 @@ export const adminApi = {
     // D-19 摄制部：设备申请审核
     deviceApplications: () => USE_MOCK ? delay(mock.deviceApplications) : request.get('/admin/device-applications'),
 
+    // 👇 新增：更新任务关联的设备清单
+    updateTaskDevices: (taskId, devices) => USE_MOCK
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            if (task) {
+                task.devices = devices
+            }
+            return { success: true }
+        })())
+        : request.put(`/admin/tasks/${taskId}/devices`, { devices }),
+
+
     // 审核设备（加入内存）
     reviewDevice: (id, data) => USE_MOCK
         ? delay((() => {
