@@ -115,6 +115,14 @@ async function quickLogin(role, dept) {
 </script>
 
 <style scoped>
+@media (max-width: 768px) {
+  .login-page { grid-template-columns: 1fr; }
+  .login-visual { display: none; } /* 手机上直接隐藏左侧大图 */
+  .login-panel { padding: 16px; }
+  .login-box { width: 100%; }
+  .dept-cards { grid-template-columns: repeat(2, 1fr); } /* 部长卡片变成两列 */
+}
+
 /* ================== 页面左右分栏 ================== */
 .login-page {
   min-height: 100vh;

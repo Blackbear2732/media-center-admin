@@ -212,3 +212,12 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+@media (max-width: 768px) {
+  .hero { padding: 24px; grid-template-columns: 1fr; }
+  .hero-art { display: none; } /* 隐藏右侧装饰 */
+  .hero-content h1 { font-size: 24px; }
+  .hero-stats { flex-wrap: wrap; gap: 20px; }
+}
+</style>
