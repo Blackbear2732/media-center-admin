@@ -2,34 +2,32 @@
   <div v-loading="loading">
     <!-- 顶部标签页 -->
     <div class="admin-tabs" style="margin-bottom:16px">
-      <span v-for="t in tabs" :key="t" class="pill" :class="{ active: active === t }" @click="active = t">{{ t }}</span>
+      <span v-for="t in tabs" :key="t.key" class="pill" :class="{ active: active === t.key }" @click="active = t.key">{{ t.label }}</span>
     </div>
 
     <!-- ================= 1. 设备档案 ================= -->
-    <template v-if="active === '设备档案'">
+    <template v-if="active === 'archive'">
       <!-- 状态统计卡片 -->
       <div class="stat-grid" style="margin-bottom: 20px;">
-        <div class="surface-card stat-card" @click="filterStatus = ''" :class="{ 'active-filter': filterStatus === '' }">
+        <div class="surface-card stat-card" @click="filterStatus = null" :class="{ 'active-filter': filterStatus === null }">
           <div class="stat-num">{{ devices.length }}</div>
           <div class="stat-label">设备种类</div>
         </div>
-        <div class="surface-card stat-card" @click="filterStatus = '可用'" :class="{ 'active-filter': filterStatus === '可用' }">
-          <div class="stat-num" style="color: #4a9d6e;">{{ statusCount['可用'] || 0 }}</div>
-          <div class="stat-label">可用设备</div>
-        </div>
-        <div class="surface-card stat-card" @click="filterStatus = '借出'" :class="{ 'active-filter': filterStatus === '借出' }">
-          <div class="stat-num" style="color: #e8833a;">{{ statusCount['借出'] || 0 }}</div>
-          <div class="stat-label">借出中</div>
-        </div>
-        <div class="surface-card stat-card" @click="filterStatus = '维修'" :class="{ 'active-filter': filterStatus === '维修' }">
-          <div class="stat-num" style="color: #f56c6c;">{{ statusCount['维修'] || 0 }}</div>
-          <div class="stat-label">维修中</div>
+        <div
+            v-for="s in STAT_CARDS"
+            :key="s.status"
+            class="surface-card stat-card"
+            @click="filterStatus = s.status"
+            :class="{ 'active-filter': filterStatus === s.status }"
+        >
+          <div class="stat-num" :style="{ color: s.color }">{{ statusCount[s.status] || 0 }}</div>
+          <div class="stat-label">{{ s.label }}</div>
         </div>
       </div>
 
       <div class="flex-between" style="margin-bottom:12px">
         <div class="muted">
-          当前显示：{{ filterStatus ? `仅看「${filterStatus}」` : '全部设备' }}（共 {{ filteredDevices.length }} 条）
+          当前显示：{{ filterStatus === null ? '全部设备' : `仅看「${DEVICE_STATUS_MAP[filterStatus]}」` }}（共 {{ filteredDevices.length }} 条）
         </div>
         <button class="pill active" @click="openEdit()">+ 新增设备</button>
       </div>
@@ -49,11 +47,8 @@
           <el-table-column prop="buyDate" label="购买日期" width="120" />
           <el-table-column prop="status" label="当前状态" width="110">
             <template #default="{ row }">
-              <el-tag
-                  :type="{ '可用': 'success', '借出': 'warning', '维修': 'danger', '报废': 'info' }[row.status]"
-                  size="small" effect="dark" round
-              >
-                {{ row.status }}
+              <el-tag :type="getDeviceStatusType(row.status)" size="small" effect="dark" round>
+                {{ DEVICE_STATUS_MAP[row.status] }}
               </el-tag>
             </template>
           </el-table-column>
@@ -68,11 +63,13 @@
     </template>
 
     <!-- ================= 2. 申请审核 ================= -->
-    <template v-else-if="active === '申请审核'">
+    <template v-else-if="active === 'review'">
       <div class="surface-card" style="padding:8px 0">
         <el-table :data="applications" stripe>
           <el-table-column prop="applicant" label="申请人" width="100" />
-          <el-table-column prop="dept" label="部门" width="100" />
+          <el-table-column prop="deptId" label="部门" width="100">
+            <template #default="{ row }">{{ getDeptLabel(row.deptId) }}</template>
+          </el-table-column>
           <el-table-column prop="device" label="设备" min-width="160" />
           <el-table-column prop="applyNum" label="数量" width="80" align="center">
             <template #default="{ row }">{{ row.applyNum || 1 }}</template>
@@ -82,15 +79,15 @@
           <el-table-column prop="purpose" label="用途" min-width="140" show-overflow-tooltip />
           <el-table-column prop="status" label="审核状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="{ '待审核': 'info', '已通过': 'success', '已拒绝': 'danger' }[row.status]" size="small">
-                {{ row.status }}
+              <el-tag :type="getApplyStatusType(row.status)" size="small">
+                {{ APPLY_STATUS_MAP[row.status] }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
-              <el-button link type="success" :disabled="row.status !== '待审核'" @click="review(row, '已通过')">通过</el-button>
-              <el-button link type="danger" :disabled="row.status !== '待审核'" @click="review(row, '已拒绝')">拒绝</el-button>
+              <el-button link type="success" :disabled="Number(row.status) !== APPLY_STATUS.PENDING" @click="review(row, APPLY_STATUS.APPROVED)">通过</el-button>
+              <el-button link type="danger" :disabled="Number(row.status) !== APPLY_STATUS.PENDING" @click="review(row, APPLY_STATUS.REJECTED)">拒绝</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -106,14 +103,16 @@
             <template #default="{ row }">{{ row.applyNum || 1 }}</template>
           </el-table-column>
           <el-table-column prop="applicant" label="借用人" width="100" />
-          <el-table-column prop="dept" label="部门" width="100" />
+          <el-table-column prop="deptId" label="部门" width="100">
+            <template #default="{ row }">{{ getDeptLabel(row.deptId) }}</template>
+          </el-table-column>
           <el-table-column prop="phone" label="联系电话" width="140" />
           <el-table-column prop="startTime" label="开始" width="140" />
           <el-table-column prop="endTime" label="结束" width="140" />
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.status === '使用中' ? 'warning' : 'success'" size="small">
-                {{ row.status }}
+              <el-tag :type="getApplyStatusType(row.status)" size="small">
+                {{ APPLY_STATUS_MAP[row.status] }}
               </el-tag>
             </template>
           </el-table-column>
@@ -133,7 +132,7 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="form.status" style="width:100%">
-            <el-option v-for="s in ['可用','借出','维修','报废']" :key="s" :label="s" :value="s" />
+            <el-option v-for="s in DEVICE_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="库存数量">
@@ -153,14 +152,36 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import {
+  APPLY_STATUS,
+  APPLY_STATUS_MAP,
+  DEVICE_STATUS,
+  DEVICE_STATUS_MAP,
+  DEVICE_STATUS_OPTIONS,
+  getApplyStatusType,
+  getDeptLabel,
+  getDeviceStatusType
+} from '@/utils/dict'
 
-const tabs = ['设备档案', '申请审核', '使用记录']
-const active = ref('设备档案')
+const tabs = [
+  { key: 'archive', label: '设备档案' },
+  { key: 'review', label: '申请审核' },
+  { key: 'usage', label: '使用记录' }
+]
+const active = ref('archive')
 const loading = ref(false), saving = ref(false)
 const devices = ref([]), applications = ref([]), usage = ref([])
 const editVisible = ref(false)
 
-const filterStatus = ref('')
+// null 表示全部
+const filterStatus = ref(null)
+
+// 统计卡片：可用 / 借出 / 维修
+const STAT_CARDS = [
+  { status: DEVICE_STATUS.AVAILABLE, label: DEVICE_STATUS_MAP[DEVICE_STATUS.AVAILABLE], color: '#4a9d6e' },
+  { status: DEVICE_STATUS.LENT, label: DEVICE_STATUS_MAP[DEVICE_STATUS.LENT], color: '#e8833a' },
+  { status: DEVICE_STATUS.REPAIR, label: DEVICE_STATUS_MAP[DEVICE_STATUS.REPAIR], color: '#f56c6c' }
+]
 
 const statusCount = computed(() => {
   const counts = {}
@@ -171,23 +192,26 @@ const statusCount = computed(() => {
 })
 
 const filteredDevices = computed(() => {
-  if (!filterStatus.value) return devices.value
-  return devices.value.filter(d => d.status === filterStatus.value)
+  if (filterStatus.value === null) return devices.value
+  return devices.value.filter(d => Number(d.status) === Number(filterStatus.value))
 })
 
-const form = reactive({ id: null, code: '', name: '', model: '', buyDate: '', status: '可用', stock: 1, remark: '' })
+const emptyForm = () => ({ id: null, code: '', name: '', model: '', buyDate: '', status: DEVICE_STATUS.AVAILABLE, stock: 1, remark: '' })
+const form = reactive(emptyForm())
 
 async function load() {
   loading.value = true
   try {
     devices.value = await adminApi.devices()
     applications.value = await adminApi.deviceApplications()
-    usage.value = applications.value.filter(a => a.status === '使用中' || a.status === '已通过')
+    usage.value = applications.value.filter(a =>
+      Number(a.status) === APPLY_STATUS.USING || Number(a.status) === APPLY_STATUS.APPROVED
+    )
   } finally { loading.value = false }
 }
 
 function openEdit(row) {
-  Object.assign(form, row ? { ...row } : { id: null, code: '', name: '', model: '', buyDate: '', status: '可用', stock: 1, remark: '' })
+  Object.assign(form, row ? { ...row } : emptyForm())
   editVisible.value = true
 }
 
@@ -203,7 +227,8 @@ async function save() {
 }
 
 async function review(row, status) {
-  await adminApi.reviewDevice(row.id, { status, opinion: status === '已通过' ? '同意' : '时间冲突，请协调' })
+  const opinion = status === APPLY_STATUS.APPROVED ? '同意' : '时间冲突，请协调'
+  await adminApi.reviewDevice(row.id, { status, opinion })
   row.status = status
   ElMessage.success('审核完成')
 }
