@@ -24,7 +24,7 @@
         <!-- 主任 -->
         <div class="role-group">
           <h3>中心主任</h3>
-          <button type="button" class="role-card director" :disabled="loading" @click.prevent="quickLogin('director')">
+          <button type="button" class="role-card director" :disabled="loading" @click.prevent="quickLogin(2)">
             <div class="role-icon" style="background: linear-gradient(135deg,#5a8f7b,#8fc4a9);">主</div>
             <div class="role-info">
               <div class="role-name">王主任</div>
@@ -38,10 +38,10 @@
         <div class="role-group">
           <h3>部门部长 (点击体验专属模块)</h3>
           <div class="dept-cards">
-            <button v-for="d in depts" :key="d" type="button" class="dept-card" :disabled="loading" @click.prevent="quickLogin('minister', d)">
-              <div class="dept-icon">{{ d.slice(0,1) }}</div>
-              <div class="dept-name">{{ d }}</div>
-              <div class="dept-hint">{{ deptHints[d] }}</div>
+            <button v-for="d in deptOptions" :key="d.value" type="button" class="dept-card" :disabled="loading" @click.prevent="quickLogin(1, d.value)">
+              <div class="dept-icon">{{ d.label.slice(0,1) }}</div>
+              <div class="dept-name">{{ d.label }}</div>
+              <div class="dept-hint">{{ deptHints[d.value] }}</div>
             </button>
           </div>
         </div>
@@ -49,7 +49,7 @@
         <!-- 部员 -->
         <div class="role-group">
           <h3>普通部员</h3>
-          <button type="button" class="role-card member" :disabled="loading" @click.prevent="quickLogin('member')">
+          <button type="button" class="role-card member" :disabled="loading" @click.prevent="quickLogin(0)">
             <div class="role-icon" style="background: linear-gradient(135deg,#3d7aab,#6fa8d4);">部</div>
             <div class="role-info">
               <div class="role-name">徐钰婷</div>
@@ -73,26 +73,28 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '@/api'
 import { userStore } from '@/store/user'
-import { MODULE_LABEL } from '@/utils/dict'
+import { DEPARTMENTS_OPTIONS, MODULE_LABEL, ROLE } from '@/utils/dict'
 
 const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
 
-const depts = ['综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
+// 部门下拉/卡片统一来自字典，值是 deptId（101~106）
+const deptOptions = DEPARTMENTS_OPTIONS
 const deptHints = {
-  '综合部': MODULE_LABEL.checkin,
-  '网宣部': MODULE_LABEL.article,
-  '影音部': MODULE_LABEL.video,
-  '摄制部': MODULE_LABEL.device,
-  '新闻部': MODULE_LABEL.news,
-  '设计部': MODULE_LABEL.design
+  101: MODULE_LABEL.checkin,
+  102: MODULE_LABEL.article,
+  103: MODULE_LABEL.video,
+  104: MODULE_LABEL.equipment,
+  105: MODULE_LABEL.news,
+  106: MODULE_LABEL.design
 }
 
-async function quickLogin(role, dept) {
+// role：0 部员 / 1 部长 / 2 主任；deptId：仅部长需要
+async function quickLogin(role, deptId) {
   loading.value = true
   try {
-    const res = await authApi.login({role, dept})
+    const res = await authApi.login({ role, deptId })
     if (!res || !res.token) throw new Error('登录返回数据异常')
 
     // 统一走 Store 登录
@@ -102,7 +104,7 @@ async function quickLogin(role, dept) {
 
     let redirect = route.query.redirect
     if (!redirect) {
-      redirect = res.role === 'member' ? '/' : '/admin/overview'
+      redirect = Number(res.role) === ROLE.MEMBER ? '/' : '/admin/overview'
     }
     router.replace(redirect)
   } catch (e) {
