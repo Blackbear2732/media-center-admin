@@ -34,8 +34,8 @@
                   <span class="rank-num" :class="{ 'top-3': $index < 3 }">{{ $index + 1 }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="dept" label="所属部门" width="120">
-                <template #default="{ row }"><span class="dept-label">{{ row.dept }}</span></template>
+              <el-table-column prop="deptId" label="所属部门" width="120">
+                <template #default="{ row }"><span class="dept-label">{{ getDeptLabel(row.deptId) }}</span></template>
               </el-table-column>
               <el-table-column prop="member" label="考评对象" width="120">
                 <template #default="{ row }"><div style="font-weight: 500;">{{ row.member }}</div></template>
@@ -53,8 +53,8 @@
 
               <el-table-column prop="level" label="评定等级" width="110" align="center">
                 <template #default="{ row }">
-                  <el-tag :type="getLevelType(row.level)" size="small" effect="dark" round>
-                    {{ row.level || '未评级' }}
+                  <el-tag :type="getEvalLevelType(row.level)" size="small" effect="dark" round>
+                    {{ getEvalLevelLabel(row.level) }}
                   </el-tag>
                 </template>
               </el-table-column>
@@ -149,10 +149,7 @@
         <el-table-column label="评定等级" width="120" align="center">
           <template #default="{ row }">
             <el-select v-model="row.level" size="small" placeholder="请选择">
-              <el-option label="优秀" value="优秀" />
-              <el-option label="良好" value="良好" />
-              <el-option label="合格" value="合格" />
-              <el-option label="不合格" value="不合格" />
+              <el-option v-for="l in EVAL_LEVEL_OPTIONS" :key="l.value" :label="l.label" :value="l.value" />
             </el-select>
           </template>
         </el-table-column>
@@ -186,15 +183,15 @@
             <div class="num" style="color: var(--accent);">{{ currentEval.manualScore }}</div>
           </div>
           <div class="stat-card total-card">
-            <div class="muted">综合总分 ({{ currentEval.level }})</div>
+            <div class="muted">综合总分 ({{ getEvalLevelLabel(currentEval.level) }})</div>
             <div class="num" style="color: #fff;">{{ currentEval.total }}</div>
           </div>
         </div>
 
         <div class="sec-title" style="font-size: 14px;">打卡明细</div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-          <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="c.status === '已打卡' ? 'success' : 'danger'" size="small" effect="plain">
-            {{ c.date }} {{ c.status }}
+          <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="getCheckinStatusType(c.status)" size="small" effect="plain">
+            {{ c.date }} {{ CHECKIN_STATUS_MAP[c.status] }}
           </el-tag>
         </div>
 
@@ -220,6 +217,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, User } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
+import {
+  ALL_DEPT_ID,
+  CHECKIN_STATUS_MAP,
+  EVAL_LEVEL_OPTIONS,
+  ROLE,
+  getCheckinStatusType,
+  getDeptLabel,
+  getEvalLevelLabel,
+  getEvalLevelType
+} from '@/utils/dict'
 
 const loading = ref(false), saving = ref(false), detailLoading = ref(false), previewLoading = ref(false)
 const list = ref([])
@@ -246,15 +253,10 @@ const groupedList = computed(() => {
 
 const groupedMonths = computed(() => Object.keys(groupedList.value).sort().reverse())
 
-const getLevelType = (level) => {
-  const map = { '优秀': 'danger', '良好': 'warning', '合格': 'primary', '不合格': 'info' }
-  return map[level] || 'info'
-}
-
 async function load() {
   loading.value = true
   try {
-    const res = await adminApi.evaluations(userStore.isDirector ? '' : userStore.dept)
+    const res = await adminApi.evaluations(userStore.viewDeptId)
     list.value = res || []
     if (groupedMonths.value.length > 0 && activeMonths.value.length === 0) {
       activeMonths.value = [groupedMonths.value[0]]
@@ -267,11 +269,13 @@ async function load() {
 async function openCreate() {
   form.month = new Date().toISOString().slice(0, 7)
   if (userStore.isDirector) {
-    const allMembers = await adminApi.members('')
-    candidates.value = allMembers.filter(m => m.title.includes('部长'))
+    // 主任评部长
+    const allMembers = await adminApi.members(ALL_DEPT_ID)
+    candidates.value = allMembers.filter(m => Number(m.role) === ROLE.MINISTER)
   } else {
-    const deptMembers = await adminApi.members(userStore.dept)
-    candidates.value = deptMembers.filter(m => !m.title.includes('部长'))
+    // 部长评本部门部员
+    const deptMembers = await adminApi.members(userStore.deptId)
+    candidates.value = deptMembers.filter(m => Number(m.role) === ROLE.MEMBER)
   }
   form.selectedMembers = candidates.value.map(m => m.name)
   createVisible.value = true
@@ -285,8 +289,12 @@ async function loadPreview() {
   }
   previewLoading.value = true
   try {
-    // 👇 替换为真实的接口调用，不再用 Math.random()
-    previewList.value = await adminApi.previewEvaluation(form.month, form.selectedMembers)
+    const res = await adminApi.previewEvaluation(form.month, form.selectedMembers)
+    // 初始化当前总分，便于排序与手动分联动
+    previewList.value = (res || []).map(row => ({
+      ...row,
+      currentTotal: (row.autoScore || 0) + (row.taskExtraScore || 0) + (row.manualScore || 0)
+    }))
   } catch (e) {
     console.error('获取考评预览失败', e)
   } finally {
@@ -321,12 +329,13 @@ async function submitEvaluation() {
     saving.value = true
     const submitData = {
       month: form.month,
+      deptId: userStore.viewDeptId,
       members: previewList.value.map(row => ({
         name: row.name,
-        dept: row.dept,
+        deptId: row.deptId,
         autoScore: row.autoScore + row.taskExtraScore,
         manualScore: row.manualScore,
-        level: row.level,
+        level: Number(row.level),
         extraNote: row.reason
       }))
     }
