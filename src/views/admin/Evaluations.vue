@@ -191,7 +191,7 @@
         <div class="sec-title" style="font-size: 14px;">打卡明细</div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
           <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="getCheckinStatusType(c.status)" size="small" effect="plain">
-            {{ c.date }} {{ CHECKIN_STATUS_MAP[c.status] }}
+            {{ c.date }} {{ getCheckinStatusLabel(c.status) }}
           </el-tag>
         </div>
 
@@ -219,9 +219,9 @@ import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import {
   ALL_DEPT_ID,
-  CHECKIN_STATUS_MAP,
   EVAL_LEVEL_OPTIONS,
   ROLE,
+  getCheckinStatusLabel,
   getCheckinStatusType,
   getDeptLabel,
   getEvalLevelLabel,
