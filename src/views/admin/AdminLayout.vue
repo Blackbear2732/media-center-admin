@@ -27,7 +27,10 @@
     </div>
 
     <div class="admin-body">
-      <router-view />
+      <!-- 👇 加上 :key="dept" -->
+      <div class="admin-body">
+        <router-view :key="dept" />
+      </div>
     </div>
   </div>
 </template>
