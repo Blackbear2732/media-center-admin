@@ -13,6 +13,19 @@
  */
 
 /* ==========================================
+ * 0. 字典取值工具
+ * 后端若依返回的字典值可能是字符串（如 "1"），这里统一按数字取值，
+ * 前端页面只调用 getXxxLabel / getXxxType，不直接索引 Map。
+ * ========================================== */
+const toKey = (value) => (value === null || value === undefined ? value : Number(value))
+
+// 取中文标签
+export const dictLabel = (map, value, fallback = '') => map[toKey(value)] || fallback
+
+// 取 el-tag 颜色
+export const dictTagType = (map, value) => map[toKey(value)] || 'info'
+
+/* ==========================================
  * 1. 部门字典（sys_dept）
  * ========================================== */
 export const DEPT_MAP = {
@@ -36,7 +49,7 @@ export const DEPARTMENTS_OPTIONS = DEPT_OPTIONS.filter(item => item.value !== 10
 
 export const ALL_DEPT_ID = 100
 
-export const getDeptLabel = (deptId) => DEPT_MAP[deptId] || '未知部门'
+export const getDeptLabel = (deptId) => dictLabel(DEPT_MAP, deptId, '未知部门')
 
 // 是否全中心视角（主任默认视角）
 export const isAllDept = (deptId) => !deptId || Number(deptId) === ALL_DEPT_ID
@@ -61,9 +74,9 @@ export const ROLE_OPTIONS = Object.keys(ROLE_LABEL).map(key => ({
     label: ROLE_LABEL[key]
 }))
 
-export const getRoleLabel = (role) => ROLE_LABEL[role] || '部员'
+export const getRoleLabel = (role) => dictLabel(ROLE_LABEL, role, '部员')
 
-export const getRoleTagType = (role) => ({ 0: 'info', 1: 'warning', 2: 'danger' }[role] || 'info')
+export const getRoleTagType = (role) => dictTagType({ 0: 'info', 1: 'warning', 2: 'danger' }, role)
 
 /* ==========================================
  * 3. 成员状态（biz_user_profile.status / sys_user.status）
@@ -75,6 +88,7 @@ export const MEMBER_STATUS_OPTIONS = Object.keys(MEMBER_STATUS_MAP).map(key => (
     value: Number(key),
     label: MEMBER_STATUS_MAP[key]
 }))
+export const getMemberStatusLabel = (status) => dictLabel(MEMBER_STATUS_MAP, status, '停用')
 export const getMemberStatusType = (status) => (Number(status) === 1 ? 'success' : 'info')
 
 /* ==========================================
@@ -100,21 +114,21 @@ export const TASK_STATUS_OPTIONS = Object.keys(TASK_STATUS_MAP).map(key => ({
 // 任务列表筛选：-1 代表全部
 export const TASK_STATUS_FILTER_OPTIONS = [{ value: -1, label: '全部' }, ...TASK_STATUS_OPTIONS]
 
-export const getTaskStatusLabel = (status) => TASK_STATUS_MAP[status] || '筹备中'
+export const getTaskStatusLabel = (status) => dictLabel(TASK_STATUS_MAP, status, '筹备中')
 
 // 获取任务状态的圆点 CSS 类名
-export const getTaskDotClass = (status) => ({
+export const getTaskDotClass = (status) => dictLabel({
     0: 'dot-prepare',
     1: 'dot-doing',
     2: 'dot-done'
-}[status] || 'dot-prepare')
+}, status, 'dot-prepare')
 
 // 获取任务状态的 Element Plus Tag 类型
-export const getTaskTagType = (status) => ({
+export const getTaskTagType = (status) => dictTagType({
     0: 'info',
     1: 'warning',
     2: 'success'
-}[status] || 'info')
+}, status)
 
 // 兼容旧命名
 export const getTaskStatusType = getTaskTagType
@@ -150,8 +164,8 @@ export const MATERIAL_TYPE_OPTIONS = Object.keys(MATERIAL_TYPE_MAP).map(key => (
     label: MATERIAL_TYPE_MAP[key]
 }))
 
-export const getMaterialTypeLabel = (type) => MATERIAL_TYPE_MAP[type] || '其他素材'
-export const getMaterialTypeTagType = (type) => ({
+export const getMaterialTypeLabel = (type) => dictLabel(MATERIAL_TYPE_MAP, type, '其他素材')
+export const getMaterialTypeTagType = (type) => dictTagType({
     1: 'primary',
     2: 'success',
     3: 'warning',
@@ -170,9 +184,10 @@ export const DEVICE_STATUS_OPTIONS = Object.keys(DEVICE_STATUS_MAP).map(key => (
     value: Number(key),
     label: DEVICE_STATUS_MAP[key]
 }))
-export const getDeviceStatusType = (status) => ({
+export const getDeviceStatusLabel = (status) => dictLabel(DEVICE_STATUS_MAP, status, '未知状态')
+export const getDeviceStatusType = (status) => dictTagType({
     0: 'success', 1: 'warning', 2: 'danger', 3: 'info'
-}[status] || 'info')
+}, status)
 
 /* ==========================================
  * 8. 设备申请状态（biz_equipment_apply.status）
@@ -184,9 +199,10 @@ export const APPLY_STATUS_OPTIONS = Object.keys(APPLY_STATUS_MAP).map(key => ({
     value: Number(key),
     label: APPLY_STATUS_MAP[key]
 }))
-export const getApplyStatusType = (status) => ({
+export const getApplyStatusLabel = (status) => dictLabel(APPLY_STATUS_MAP, status, '未知状态')
+export const getApplyStatusType = (status) => dictTagType({
     0: 'info', 1: 'success', 2: 'danger', 3: 'warning', 4: 'success'
-}[status] || 'info')
+}, status)
 
 /* ==========================================
  * 9. 打卡状态（biz_checkin_record.status：0未转发 1已转发）
@@ -198,23 +214,26 @@ export const CHECKIN_STATUS_OPTIONS = Object.keys(CHECKIN_STATUS_MAP).map(key =>
     value: Number(key),
     label: CHECKIN_STATUS_MAP[key]
 }))
+export const getCheckinStatusLabel = (status) => dictLabel(CHECKIN_STATUS_MAP, status, '未打卡')
 export const getCheckinStatusType = (status) => (Number(status) === 1 ? 'success' : 'danger')
 
 // 个人考勤明细（正常 / 迟到 / 缺勤）
 export const ATTENDANCE_STATUS = { NONE: 0, NORMAL: 1, LATE: 2, ABSENT: 3 }
 
 export const ATTENDANCE_STATUS_MAP = { 0: '未打卡', 1: '正常', 2: '迟到', 3: '缺勤' }
-export const getAttendanceStatusType = (status) => ({
+export const getAttendanceStatusLabel = (status) => dictLabel(ATTENDANCE_STATUS_MAP, status, '未打卡')
+export const getAttendanceStatusType = (status) => dictTagType({
     0: 'info', 1: 'success', 2: 'warning', 3: 'danger'
-}[status] || 'info')
+}, status)
 
 /* ==========================================
  * 10. 打卡申诉状态（biz_checkin_appeal.status）
  * ========================================== */
 export const APPEAL_STATUS_MAP = { 0: '待审批', 1: '已通过', 2: '已拒绝' }
-export const getAppealStatusType = (status) => ({
+export const getAppealStatusLabel = (status) => dictLabel(APPEAL_STATUS_MAP, status, '待审批')
+export const getAppealStatusType = (status) => dictTagType({
     0: 'info', 1: 'success', 2: 'danger'
-}[status] || 'info')
+}, status)
 
 /* ==========================================
  * 11. 会议签到状态（biz_meeting_member.status：1到场 2迟到 3请假 4缺席）
@@ -226,12 +245,14 @@ export const MEETING_STATUS_OPTIONS = Object.keys(MEETING_STATUS_MAP).map(key =>
     value: Number(key),
     label: MEETING_STATUS_MAP[key]
 }))
-export const getMeetingStatusType = (status) => ({
+export const getMeetingStatusLabel = (status) => dictLabel(MEETING_STATUS_MAP, status, '缺席')
+export const getMeetingStatusType = (status) => dictTagType({
     1: 'success', 2: 'warning', 3: 'info', 4: 'danger'
-}[status] || 'info')
+}, status)
 
 // 个人参会状态（0待参加 1已参加）
 export const MEETING_JOIN_STATUS_MAP = { 0: '待参加', 1: '已参加' }
+export const getMeetingJoinStatusLabel = (status) => dictLabel(MEETING_JOIN_STATUS_MAP, status, '待参加')
 export const getMeetingJoinStatusType = (status) => (Number(status) === 1 ? 'success' : 'info')
 
 /* ==========================================
@@ -242,10 +263,10 @@ export const EVAL_LEVEL_OPTIONS = Object.keys(EVAL_LEVEL_MAP).map(key => ({
     value: Number(key),
     label: EVAL_LEVEL_MAP[key]
 }))
-export const getEvalLevelLabel = (level) => EVAL_LEVEL_MAP[level] || '未评级'
-export const getEvalLevelType = (level) => ({
+export const getEvalLevelLabel = (level) => dictLabel(EVAL_LEVEL_MAP, level, '未评级')
+export const getEvalLevelType = (level) => dictTagType({
     0: 'info', 1: 'primary', 2: 'warning', 3: 'danger'
-}[level] || 'info')
+}, level)
 
 // 考评状态（biz_evaluation.status：0草稿 1已发布）
 export const EVAL_STATUS_MAP = { 0: '草稿', 1: '已发布' }
@@ -260,7 +281,7 @@ export const NOTICE_SCOPE_OPTIONS = Object.keys(NOTICE_SCOPE_MAP).map(key => ({
     value: Number(key),
     label: NOTICE_SCOPE_MAP[key]
 }))
-export const getNoticeScopeLabel = (scope) => NOTICE_SCOPE_MAP[scope] || '全体'
+export const getNoticeScopeLabel = (scope) => dictLabel(NOTICE_SCOPE_MAP, scope, '全体')
 
 /* ==========================================
  * 14. 部门业务模块（biz_dept_module.module_key）
@@ -280,9 +301,9 @@ export const MODULE_LABEL = {
 /* ==========================================
  * 15. 兼容旧代码的通用标签颜色（新代码请用上面具体的 getXxxType）
  * ========================================== */
-export const getStatusTagType = (status) => ({
+export const getStatusTagType = (status) => dictTagType({
     0: 'danger',
     1: 'success',
     2: 'warning',
     3: 'info'
-}[Number(status)] || 'info')
+}, status)
