@@ -64,7 +64,7 @@
         <el-table-column prop="phone" label="电话" width="130" />
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="getMemberStatusType(row.status)" size="small">{{ MEMBER_STATUS_MAP[row.status] }}</el-tag>
+            <el-tag :type="getMemberStatusType(row.status)" size="small">{{ getMemberStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
@@ -140,7 +140,7 @@
         <div v-if="detail.meetings && detail.meetings.length > 0">
           <div v-for="m in detail.meetings" :key="m.id" class="flex-between" style="padding:8px 0;border-bottom:1px dashed var(--border)">
             <span style="font-size: 13px;">{{ m.title }}</span>
-            <el-tag size="small" :type="getMeetingJoinStatusType(m.status)" effect="plain">{{ MEETING_JOIN_STATUS_MAP[m.status] }}</el-tag>
+            <el-tag size="small" :type="getMeetingJoinStatusType(m.status)" effect="plain">{{ getMeetingJoinStatusLabel(m.status) }}</el-tag>
           </div>
         </div>
         <el-empty v-else description="暂无会议记录" :image-size="50" />
@@ -170,12 +170,12 @@ import {
   ALL_DEPT_ID,
   DEPARTMENTS_OPTIONS,
   MEMBER_STATUS,
-  MEMBER_STATUS_MAP,
-  MEETING_JOIN_STATUS_MAP,
   ROLE_OPTIONS,
   getDeptLabel,
   getEvalLevelLabel,
+  getMeetingJoinStatusLabel,
   getMeetingJoinStatusType,
+  getMemberStatusLabel,
   getMemberStatusType,
   getRoleLabel,
   getRoleTagType,
