@@ -145,6 +145,9 @@ export const taskApi = {
     create:      pick(d => request.post('/tasks', d),               () => delay({ success: true, id: 99 })),
     materials:   pick(id => request.get(`/tasks/${id}/materials`),  id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
     departments: pick(() => request.get('/departments'),            () => delay(mock.departments)),
+    signup: (taskId, data) => USE_MOCK
+        ? delay({ success: true })
+        : request.post(`/tasks/${taskId}/signup`, data),
     devices:     pick(() => request.get('/devices/names'),          () => delay(mock.deviceNames))
 }
 

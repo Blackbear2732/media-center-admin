@@ -2,7 +2,6 @@
   <div class="page" v-loading="loading">
     <el-page-header content="任务详情" @back="router.back()" style="margin-bottom:16px" />
 
-    <!-- 确保 task 有数据时才渲染，防止报错 -->
     <el-row :gutter="16" v-if="task && task.id">
       <el-col :span="15">
         <!-- 左侧：任务基础信息 -->
@@ -80,23 +79,25 @@
         </el-card>
       </el-col>
 
-      <!-- 右侧：参与人员管理 -->
+      <!-- 右侧：参与人员面板 -->
       <el-col :span="9">
         <el-card shadow="never" class="surface-card">
           <template #header>
             <div class="flex-between">
               <b>参与人（{{ (task.participants || []).length }}）</b>
+              <!-- 管理身份标识 -->
               <span v-if="userStore.canManage" class="tag-soft" style="font-size: 11px;">可管理</span>
             </div>
           </template>
 
-          <!-- 已确认参与人 -->
+          <!-- 所有角色都能看到的：已确认参与人列表 -->
           <div v-for="p in (task.participants || [])" :key="p.name" class="flex-between" style="padding:8px 0;border-bottom:1px solid #f0f2f5">
             <span><el-avatar :size="26" style="margin-right:8px">{{ p.name.slice(0,1) }}</el-avatar>{{ p.name }}</span>
             <div>
               <el-tag size="small" type="info" style="margin-right: 8px;">{{ p.dept }}</el-tag>
+              <!-- 只有管理者能移除人员 -->
               <el-button
-                  v-if="canManageDept(p.dept)"
+                  v-if="userStore.canManage && canManageDept(p.dept)"
                   link type="danger"
                   size="small"
                   @click="handleRemove(p)"
@@ -105,31 +106,52 @@
           </div>
           <el-empty v-if="!task.participants || task.participants.length === 0" description="暂无参与人" :image-size="50" />
 
-          <!-- 待确认报名 -->
-          <div v-if="pendingSignups.length > 0" style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
-            <div class="muted" style="margin-bottom:8px; font-weight: 600;">待确认报名</div>
-            <div v-for="s in pendingSignups" :key="s.name" class="flex-between" style="padding:8px 0;">
-              <span>{{ s.name }}（{{ s.dept }}）</span>
-              <div>
-                <el-button size="small" type="success" plain @click="handleConfirm(s)">确认</el-button>
-                <el-button size="small" type="danger" plain @click="handleReject(s)">拒绝</el-button>
+          <!-- ================= 管理者视角 (部长/主任) ================= -->
+          <template v-if="userStore.canManage">
+            <!-- 待确认报名 -->
+            <div v-if="pendingSignups.length > 0" style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
+              <div class="muted" style="margin-bottom:8px; font-weight: 600;">待确认报名</div>
+              <div v-for="s in pendingSignups" :key="s.name" class="flex-between" style="padding:8px 0;">
+                <span>{{ s.name }}（{{ s.dept }}）</span>
+                <div>
+                  <el-button size="small" type="success" plain @click="handleConfirm(s)">确认</el-button>
+                  <el-button size="small" type="danger" plain @click="handleReject(s)">拒绝</el-button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- 添加人员 -->
-          <div v-if="userStore.canManage" style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
-            <div class="muted" style="margin-bottom:8px; font-weight: 600;">添加人员</div>
-            <el-select v-model="selectedMember" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;">
-              <el-option v-for="m in availableMembers" :key="m.id" :label="`${m.name} (${m.dept})`" :value="m.name" />
-            </el-select>
-            <el-button type="primary" size="small" style="width: 100%;" @click="handleAddParticipant">添加到任务</el-button>
-          </div>
+            <!-- 添加人员 -->
+            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
+              <div class="muted" style="margin-bottom:8px; font-weight: 600;">添加人员</div>
+              <el-select v-model="selectedMember" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;">
+                <el-option v-for="m in availableMembers" :key="m.id" :label="`${m.name} (${m.dept})`" :value="m.name" />
+              </el-select>
+              <el-button type="primary" size="small" style="width: 100%;" @click="handleAddParticipant">添加到任务</el-button>
+            </div>
+          </template>
+
+          <!-- ================= 部员视角 ================= -->
+          <template v-else>
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--border); text-align: center;">
+              <div v-if="myParticipantStatus === 'joined'" class="muted">
+                <el-tag type="success" size="large" effect="dark" round>您已参与该任务</el-tag>
+              </div>
+              <div v-else-if="myParticipantStatus === 'pending'" class="muted">
+                <el-tag type="warning" size="large" effect="dark" round>报名审核中，请等待部长确认</el-tag>
+              </div>
+              <div v-else>
+                <el-button type="primary" size="large" style="width: 100%; border-radius: 8px;" @click="handleSignup">
+                  报名参加此任务
+                </el-button>
+                <div class="muted" style="margin-top: 10px; font-size: 12px;">报名后需部长或主任确认</div>
+              </div>
+            </div>
+          </template>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-empty v-else-if="!loading" description="未找到该任务或任务已被删除" />
+    <el-empty v-else-if="!loading" description="未找到该任务" />
   </div>
 </template>
 
@@ -138,7 +160,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { taskApi, adminApi } from '@/api'
-// ✅ 修复：这里不再从 api 引入 statusTagType，而是从 dict 引入
 import { getTaskTagType } from '@/utils/dict'
 import { userStore } from '@/store/user'
 
@@ -149,18 +170,17 @@ const task = ref({})
 const materials = ref([]), opened = ref([])
 let timer = null
 
-// --- 人员管理逻辑 ---
 const selectedMember = ref('')
 const deptMembers = ref([])
 
-// 计算当前用户是否有权限管理该部门 (主任全权，部长只能管本部门)
+// 判断是否可管理特定部门
 const canManageDept = (dept) => {
   if (userStore.isDirector) return true
   if (userStore.isMinister && dept === userStore.dept) return true
   return false
 }
 
-// 计算待确认的报名列表
+// 过滤待确认报名列表（部长只看本部门，主任看全部）
 const pendingSignups = computed(() => {
   let signups = task.value.signups || []
   if (userStore.isMinister) {
@@ -169,11 +189,24 @@ const pendingSignups = computed(() => {
   return signups
 })
 
-// 计算可添加的成员
+// 判断当前登录部员的状态（已参与 / 待审核 / 未报名）
+const myParticipantStatus = computed(() => {
+  const myName = userStore.name
+  // 是否已在参与人列表
+  const isJoined = (task.value.participants || []).some(p => p.name === myName)
+  if (isJoined) return 'joined'
+
+  // 是否在待审核列表
+  const isPending = (task.value.signups || []).some(s => s.name === myName)
+  if (isPending) return 'pending'
+
+  return 'none'
+})
+
+// 计算可添加的成员（排除已参与和已报名的）
 const availableMembers = computed(() => {
   const currentNames = (task.value.participants || []).map(p => p.name)
   const targetDept = userStore.isDirector ? (userStore.adminDept || '新闻部') : userStore.dept
-
   return (deptMembers.value || []).filter(m =>
       m.dept === targetDept && !currentNames.includes(m.name)
   )
@@ -187,6 +220,18 @@ async function loadMembers() {
     deptMembers.value = Array.isArray(res) ? res : []
   } catch (e) {
     deptMembers.value = []
+  }
+}
+
+async function handleSignup() {
+  try {
+    await taskApi.signup(task.value.id, { name: userStore.name, dept: userStore.dept })
+    // 将当前用户推入待审核列表
+    if (!task.value.signups) task.value.signups = []
+    task.value.signups.push({ name: userStore.name, dept: userStore.dept })
+    ElMessage.success('报名成功，请等待部长确认')
+  } catch (e) {
+    ElMessage.error('报名失败')
   }
 }
 
@@ -220,7 +265,6 @@ function handleReject(s) {
   ElMessage.info('已拒绝该报名')
 }
 
-// --- 基础数据加载 ---
 async function loadTask() {
   loading.value = true
   try {
@@ -232,7 +276,6 @@ async function loadTask() {
     }
   } catch (e) {
     console.error('加载任务失败', e)
-    ElMessage.error('加载任务失败')
   } finally {
     loading.value = false
   }
