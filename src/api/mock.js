@@ -502,11 +502,47 @@ export const messages = [
 
 /* ========== 设备 ========== */
 export const deviceList = [
-    { id: 1, code: 'SJ-001', name: '佳能 EOS R5 单反相机', model: 'EOS R5', buyDate: '2023-03-15', status: '可用', remark: '', stock: 3 },
-    { id: 2, code: 'SJ-002', name: '索尼 FX3 摄像机', model: 'FX3', buyDate: '2023-05-20', status: '借出', remark: '新闻部借用中', stock: 2 },
-    { id: 3, code: 'SJ-003', name: '大疆 Mavic 3 无人机', model: 'Mavic 3', buyDate: '2023-09-01', status: '可用', remark: '', stock: 1 },
-    { id: 4, code: 'SJ-004', name: '智云稳定器', model: 'CRANE 3S', buyDate: '2022-11-11', status: '维修', remark: '云台异响', stock: 4 }
+    { id: 1, code: 'SJ-001', name: '图形工作站', model: '联想 (i7-12700F/16G)', buyDate: '2025-03-01', status: '可用', remark: '含显示器27寸、键鼠、HDMI线及转换器', stock: 1 },
+
+    // 👇 佳能 R6 拆分
+    { id: 2, code: 'SJ-002', name: '佳能 R6 单反相机 - 1号', model: '佳能 EOS R6', buyDate: '2023-03-01', status: '借出', remark: '含：RF24-105 普通镜头、电池及充电器', stock: 1 },
+    { id: 3, code: 'SJ-003', name: '佳能 R6 单反相机 - 2号', model: '佳能 EOS R6', buyDate: '2023-03-01', status: '可用', remark: '含：RF24-105 普通镜头、电池及充电器', stock: 1 },
+
+    // 👇 佳能 R6 Mark II 拆分
+    { id: 4, code: 'SJ-004', name: '佳能 R6 Mark II 单反 - 1号', model: '佳能 EOS R6 Mark II', buyDate: '2025-03-01', status: '可用', remark: '含：普通镜头、备用电池', stock: 1 },
+    { id: 5, code: 'SJ-005', name: '佳能 R6 Mark II 单反 - 2号', model: '佳能 EOS R6 Mark II', buyDate: '2025-03-01', status: '可用', remark: '含：红圈镜头、备用电池', stock: 1 },
+
+    // 👇 稳定器拆分
+    { id: 6, code: 'SJ-006', name: '大疆 RS5 稳定器 - 1号', model: '大疆如影 RS5 专业套装', buyDate: '2025-03-01', status: '可用', remark: '含：手提转接件、快装板、电池手柄', stock: 1 },
+    { id: 7, code: 'SJ-007', name: '大疆 RS5 稳定器 - 2号', model: '大疆如影 RS5 专业套装', buyDate: '2025-03-01', status: '可用', remark: '含：手提转接件、快装板、电池手柄', stock: 1 },
+
+    // 👇 无人机、摄像机（单件直接列）
+    { id: 8, code: 'SJ-008', name: '无人机', model: '大疆御4 Pro 畅飞套装', buyDate: '2025-03-01', status: '可用', remark: '含：RC遥控*2，螺旋桨*4，电池*3，ND镜，256G卡', stock: 1 },
+    { id: 9, code: 'SJ-009', name: '索尼摄像机', model: '索尼 Z150', buyDate: '2025-03-01', status: '可用', remark: '含：国产电池*2，摄像机包，ECM-VG1麦克风', stock: 1 },
+
+    { id: 10, code: 'SJ-010', name: '麦克风套装', model: '纽曼+MOMA', buyDate: '2025-03-01', status: '维修', remark: '含：接收器，麦克风*4，监听器*3，防风球*2，收纳包*3', stock: 1 },
+    { id: 11, code: 'SJ-011', name: '提词器', model: 'Besview', buyDate: '2025-03-01', status: '可用', remark: '含：主体，升降云台，遮光罩，遥控器，支架，收纳包', stock: 1 },
+
+    // 👇 三脚架拆分
+    { id: 12, code: 'SJ-012', name: '三脚架 - 1号(大)', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '含：快拆、收纳包', stock: 1 },
+    { id: 13, code: 'SJ-013', name: '三脚架 - 2号(大)', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '含：快拆、收纳包', stock: 1 },
+    { id: 14, code: 'SJ-014', name: '三脚架 - 3号(小)', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '含：快拆、收纳包', stock: 1 },
+
+    { id: 15, code: 'SJ-015', name: '补光灯套装', model: 'CINEPEER+100W', buyDate: '2025-03-01', status: '可用', remark: '含：补光灯棒*2，100w补光灯，柔光球罩，电池，适配器', stock: 1 },
+    { id: 16, code: 'SJ-016', name: '反光板', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '标准反光板', stock: 1 },
+    { id: 17, code: 'SJ-017', name: '手持DV', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: 'DV套装', stock: 1 },
+    { id: 18, code: 'SJ-018', name: '长焦镜头', model: '佳能 F2.8 70-200mm', buyDate: '2023-03-01', status: '可用', remark: '含：遮光罩，镜头盖（红圈）', stock: 1 },
+    { id: 19, code: 'SJ-019', name: '运动相机', model: '大疆 Action 5 Pro', buyDate: '2025-03-01', status: '可用', remark: '含：主机，兔笼，快拆*2，手柄，电池仓，电池*3', stock: 1 },
+    { id: 20, code: 'SJ-020', name: '内存卡', model: '雷克沙 128G', buyDate: '2025-03-01', status: '可用', remark: '128G 高速内存卡', stock: 1 },
+    { id: 21, code: 'SJ-021', name: '无线麦克风', model: '大疆麦克风套装', buyDate: '2025-03-01', status: '可用', remark: '含：麦克风*2，充电仓，数据线*3，防风罩*2，接收器', stock: 1 },
+    { id: 22, code: 'SJ-022', name: '闪光灯套装', model: '神牛', buyDate: '2025-03-01', status: '可用', remark: '含：主灯及电池，收纳包，副闪光灯，充电器，微型底座', stock: 1 },
+
+    // 👇 活动马甲（按你的要求保持数量不拆）
+    { id: 23, code: 'SJ-023', name: '活动马甲', model: '融媒体中心专用', buyDate: '2025-03-01', status: '可用', remark: '共15件', stock: 15 }
 ]
+
+// 自动提取名称，方便任务发布等下拉框使用
+export const deviceNames = deviceList.map(d => d.name)
 
 // export const deviceNames = ['单反相机','摄像机','无人机','稳定器','导播台','麦克风','图形工作站','补光灯']
 
