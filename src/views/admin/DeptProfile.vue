@@ -1,7 +1,19 @@
 <template>
   <div v-loading="loading" style="max-width:760px">
+    <el-alert
+        v-if="isCenterView"
+        type="info"
+        :closable="false"
+        class="mb"
+        title="当前为全中心视角，请先在右上角切换到具体部门后再编辑部门介绍。"
+    />
+
     <div class="surface-card" style="padding:22px">
-      <el-form :model="form" label-width="90px">
+      <div class="flex-between" style="margin-bottom:16px">
+        <b>{{ deptLabel }} · 部门介绍</b>
+      </div>
+
+      <el-form :model="form" label-width="90px" :disabled="isCenterView">
         <el-form-item label="部门简介">
           <el-input v-model="form.intro" type="textarea" :rows="4" />
         </el-form-item>
@@ -23,7 +35,7 @@
           </div>
         </el-form-item>
         <el-form-item>
-          <button class="pill active" type="button" :disabled="saving" @click="save">
+          <button class="pill active" type="button" :disabled="saving || isCenterView" @click="save">
             {{ saving ? '保存中…' : '保存修改' }}
           </button>
         </el-form-item>
@@ -33,11 +45,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { userStore } from '@/store/user'
+import { getDeptLabel, isAllDept } from '@/utils/dict'
 
-const dept = localStorage.getItem('adminDept') || '新闻部'
+// 部门介绍只能针对具体部门维护，全中心视角不可编辑
+const isCenterView = computed(() => isAllDept(userStore.viewDeptId))
+const deptId = computed(() => (isCenterView.value ? null : userStore.viewDeptId))
+const deptLabel = computed(() => (deptId.value ? getDeptLabel(deptId.value) : '全中心'))
+
 const loading = ref(false), saving = ref(false)
 const photoInput = ref('')
 const form = reactive({ intro: '', contact: '', logo: '', cover: '', photos: [], members: [] })
@@ -47,15 +65,19 @@ function addPhoto() {
   if (v && !form.photos.includes(v)) form.photos.push(v)
   photoInput.value = ''
 }
+
 async function save() {
+  if (!deptId.value) return ElMessage.warning('请先选择具体部门')
   saving.value = true
   try {
-    await adminApi.saveDeptProfile(dept, { ...form })
+    await adminApi.saveDeptProfile(deptId.value, { ...form })
     ElMessage.success('部门介绍已更新')
   } finally { saving.value = false }
 }
+
 onMounted(async () => {
+  if (!deptId.value) return
   loading.value = true
-  try { Object.assign(form, await adminApi.deptProfile(dept)) } finally { loading.value = false }
+  try { Object.assign(form, await adminApi.deptProfile(deptId.value)) } finally { loading.value = false }
 })
 </script>
