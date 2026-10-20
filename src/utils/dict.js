@@ -68,6 +68,8 @@ export const getRoleTagType = (role) => ({ 0: 'info', 1: 'warning', 2: 'danger' 
 /* ==========================================
  * 3. 成员状态（biz_user_profile.status / sys_user.status）
  * ========================================== */
+export const MEMBER_STATUS = { DISABLED: 0, ACTIVE: 1 }
+
 export const MEMBER_STATUS_MAP = { 0: '停用', 1: '在岗' }
 export const MEMBER_STATUS_OPTIONS = Object.keys(MEMBER_STATUS_MAP).map(key => ({
     value: Number(key),
@@ -175,6 +177,8 @@ export const getDeviceStatusType = (status) => ({
 /* ==========================================
  * 8. 设备申请状态（biz_equipment_apply.status）
  * ========================================== */
+export const APPLY_STATUS = { PENDING: 0, APPROVED: 1, REJECTED: 2, USING: 3, RETURNED: 4 }
+
 export const APPLY_STATUS_MAP = { 0: '待审核', 1: '已通过', 2: '已拒绝', 3: '使用中', 4: '已归还' }
 export const APPLY_STATUS_OPTIONS = Object.keys(APPLY_STATUS_MAP).map(key => ({
     value: Number(key),
@@ -187,7 +191,13 @@ export const getApplyStatusType = (status) => ({
 /* ==========================================
  * 9. 打卡状态（biz_checkin_record.status：0未转发 1已转发）
  * ========================================== */
+export const CHECKIN_STATUS = { NOT_DONE: 0, DONE: 1 }
+
 export const CHECKIN_STATUS_MAP = { 0: '未打卡', 1: '已打卡' }
+export const CHECKIN_STATUS_OPTIONS = Object.keys(CHECKIN_STATUS_MAP).map(key => ({
+    value: Number(key),
+    label: CHECKIN_STATUS_MAP[key]
+}))
 export const getCheckinStatusType = (status) => (Number(status) === 1 ? 'success' : 'danger')
 
 // 个人考勤明细（正常 / 迟到 / 缺勤）
@@ -209,6 +219,8 @@ export const getAppealStatusType = (status) => ({
 /* ==========================================
  * 11. 会议签到状态（biz_meeting_member.status：1到场 2迟到 3请假 4缺席）
  * ========================================== */
+export const MEETING_STATUS = { PRESENT: 1, LATE: 2, LEAVE: 3, ABSENT: 4 }
+
 export const MEETING_STATUS_MAP = { 1: '到场', 2: '迟到', 3: '请假', 4: '缺席' }
 export const MEETING_STATUS_OPTIONS = Object.keys(MEETING_STATUS_MAP).map(key => ({
     value: Number(key),
@@ -241,6 +253,8 @@ export const EVAL_STATUS_MAP = { 0: '草稿', 1: '已发布' }
 /* ==========================================
  * 13. 公告范围（biz_notice）
  * ========================================== */
+export const NOTICE_SCOPE = { ALL: 1, DEPT: 2 }
+
 export const NOTICE_SCOPE_MAP = { 1: '全体', 2: '本部门' }
 export const NOTICE_SCOPE_OPTIONS = Object.keys(NOTICE_SCOPE_MAP).map(key => ({
     value: Number(key),
