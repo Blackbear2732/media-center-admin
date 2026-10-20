@@ -13,8 +13,8 @@
       <div v-else v-for="item in list" :key="item.id" class="eval-card surface-card" @click="viewDetail(item)">
         <div class="card-header">
           <div class="month-badge">{{ item.month }} 月度考评</div>
-          <el-tag :type="getLevelType(item.level)" effect="dark" round>
-            {{ item.level || '未评级' }}
+          <el-tag :type="getEvalLevelType(item.level)" effect="dark" round>
+            {{ getEvalLevelLabel(item.level) }}
           </el-tag>
         </div>
 
@@ -36,7 +36,7 @@
         </div>
 
         <div class="card-footer flex-between">
-          <span class="tag-soft">{{ item.dept }}</span>
+          <span class="tag-soft">{{ getDeptLabel(item.deptId) }}</span>
           <span class="link-text">查看得分明细 <el-icon><ArrowRight /></el-icon></span>
         </div>
       </div>
@@ -52,8 +52,8 @@
             <div class="muted" style="color: rgba(255,255,255,0.8); margin-bottom: 4px;">{{ currentEval.month }} 综合总分</div>
             <div class="big-score">{{ currentEval.total }}<span>分</span></div>
           </div>
-          <el-tag :type="getLevelType(currentEval.level)" effect="dark" size="large" style="border: none; font-weight: 600;">
-            {{ currentEval.level || '未评级' }}
+          <el-tag :type="getEvalLevelType(currentEval.level)" effect="dark" size="large" style="border: none; font-weight: 600;">
+            {{ getEvalLevelLabel(currentEval.level) }}
           </el-tag>
         </div>
 
@@ -124,16 +124,12 @@
 import { ref, onMounted } from 'vue'
 import { userApi } from '@/api'
 import { ArrowRight } from '@element-plus/icons-vue'
+import { getDeptLabel, getEvalLevelLabel, getEvalLevelType } from '@/utils/dict'
 
 const list = ref([])
 const loading = ref(false)
 const detailVisible = ref(false)
 const currentEval = ref(null)
-
-const getLevelType = (level) => {
-  const map = { '优秀': 'danger', '良好': 'success', '合格': 'primary', '不合格': 'info' }
-  return map[level] || 'info'
-}
 
 function viewDetail(item) {
   currentEval.value = item
