@@ -3,14 +3,14 @@
     <div class="admin-head">
       <div>
         <h2>部门管理区</h2>
-        <p class="muted">{{ roleLabel }} · {{ dept ? `当前部门：${dept}` : '全中心视角' }}</p>
+        <p class="muted">{{ roleLabel }} · {{ deptLabel }}</p>
       </div>
       <div class="admin-actions">
-        <!-- 主任可以切换部门 -->
-        <el-select v-if="userStore.isDirector" v-model="dept" style="width:150px" @change="changeDept">
-          <el-option v-for="d in deptList" :key="d" :label="d === '' ? '全部部门' : d" :value="d" />
+        <!-- 主任可以切换部门视角（100-全中心） -->
+        <el-select v-if="userStore.isDirector" v-model="deptId" style="width:150px" @change="changeDept">
+          <el-option v-for="d in DEPT_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
         </el-select>
-        <span v-else class="tag-soft">{{ dept }}</span>
+        <span v-else class="tag-soft">{{ deptLabel }}</span>
         <button class="pill" @click="router.push('/')">返回前台</button>
       </div>
     </div>
@@ -28,30 +28,34 @@
     </div>
 
     <div class="admin-body">
-      <!-- 加了 :key="dept"，切换部门时强制刷新子页面 -->
-      <router-view :key="dept" />
+      <!-- 加了 :key="deptId"，切换部门时强制刷新子页面 -->
+      <router-view :key="deptId" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userStore } from '@/store/user'
+import { ALL_DEPT_ID, DEPT_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 
 const route = useRoute()
 const router = useRouter()
 
-const deptList = ['', '综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
 const roleLabel = computed(() => userStore.isDirector ? '中心主任' : '部长')
 
-// 当前选中的部门
-const dept = computed({
-  get: () => userStore.adminDept,
+// 当前管理视角部门：数字 deptId（100 = 全中心）
+const deptId = computed({
+  get: () => userStore.viewDeptId,
   set: (val) => userStore.setAdminDept(val)
 })
 
-// 👇 补全报错缺失的基础菜单数组
+const deptLabel = computed(() => {
+  const id = deptId.value
+  return isAllDept(id) ? '全中心视角' : `当前部门：${getDeptLabel(id)}`
+})
+
 const baseMenus = [
   { path: 'overview', label: '概览' },
   { path: 'members', label: '成员管理' },
@@ -66,15 +70,16 @@ const baseMenus = [
 // 动态组合菜单
 const menus = computed(() => {
   const list = [...baseMenus]
+  const id = Number(deptId.value)
 
-  // 综合部 或 全中心视角，加上打卡和数据看板
-  if (dept.value === '综合部' || dept.value === '') {
+  // 综合部（101）或全中心（100）视角，加上打卡和数据看板
+  if (id === 101 || isAllDept(id)) {
     list.push({ path: 'checkins', label: '打卡管理' })
     list.push({ path: 'dashboard', label: '数据看板' })
   }
 
-  // 摄制部 或 全中心视角，加上设备管理
-  if (dept.value === '摄制部' || dept.value === '') {
+  // 摄制部（104）或全中心视角，加上设备管理
+  if (id === 104 || isAllDept(id)) {
     list.push({ path: 'devices', label: '设备管理' })
   }
 
@@ -98,7 +103,9 @@ function changeDept(val) {
 
 onMounted(() => {
   if (userStore.isMinister) {
-    userStore.setAdminDept(userStore.dept)
+    userStore.setAdminDept(userStore.deptId)
+  } else if (userStore.isDirector && !userStore.adminDept) {
+    userStore.setAdminDept(ALL_DEPT_ID)
   }
 })
 </script>
