@@ -556,10 +556,36 @@ export const defaultEvaluationTemplate = [
     { key: 'extra', name: '临时加派', score: 1, type: 'manual' }
 ]
 
+// 考评记录（包含月份、自动分明细）
 export const evaluations = [
-    { id: 1, period: '2024-10', dept: '新闻部', member: '徐钰婷', autoScore: 8.5, manualScore: 2, total: 10.5, status: '已完成', createdAt: '2024-11-01 10:00' },
-    { id: 2, period: '2024-10', dept: '新闻部', member: '李润琪', autoScore: 6, manualScore: 1.5, total: 7.5, status: '已完成', createdAt: '2024-11-01 10:05' }
+    {
+        id: 1, month: '2024-11', dept: '新闻部', member: '徐钰婷',
+        autoScore: 12.5, manualScore: 2, total: 14.5, status: '已完成', createdAt: '2024-11-20 10:00',
+        details: { checkinDays: 10, taskCount: 2, meetingCount: 1, extraNote: '排版质量高，加2分' }
+    },
+    {
+        id: 2, month: '2024-11', dept: '新闻部', member: '李润琪',
+        autoScore: 8, manualScore: 0, total: 8, status: '已完成', createdAt: '2024-11-20 10:00',
+        details: { checkinDays: 6, taskCount: 2, meetingCount: 0, extraNote: '' }
+    },
+    {
+        id: 3, month: '2024-10', dept: '新闻部', member: '徐钰婷',
+        autoScore: 15, manualScore: 1, total: 16, status: '已完成', createdAt: '2024-10-31 18:00',
+        details: { checkinDays: 12, taskCount: 3, meetingCount: 2, extraNote: '全勤奖励' }
+    }
 ]
+
+// 考评模板（当前所有部门通用，后期由后端下发）
+export const evaluationTemplate = [
+    { key: 'checkin', name: '每日转发打卡', score: 0.5, type: 'auto', desc: '每打卡一次加 0.5 分' },
+    { key: 'task', name: '参与任务', score: 1, type: 'auto', desc: '每参与一个任务加 1 分' },
+    { key: 'meeting', name: '会议到场', score: 0.5, type: 'auto', desc: '到场加 0.5 分，迟到加 0.2 分' },
+    { key: 'manual', name: '部长附加评分', score: 0, type: 'manual', desc: '根据日常表现手动打分' }
+]
+
+
+
+
 
 export const checkinRecords = [
     { id: 1, date: '2026-05-20', dept: '新闻部', member: '徐钰婷', status: '已打卡' },

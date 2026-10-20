@@ -41,7 +41,7 @@
         <el-card shadow="never" class="surface-card">
           <template #header>
             <div class="flex-between">
-              <b>素材区域（上传即展示）</b>
+              <b>素材</b>
               <el-button size="small" :loading="matLoading" @click="loadMaterials">
                 <el-icon><Refresh /></el-icon> 刷新
               </el-button>

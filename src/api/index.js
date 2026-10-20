@@ -287,15 +287,53 @@ export const adminApi = {
         : request.put(`/admin/meetings/${id}/records`, { records }),
 
     // D-06/07/08 考评管理
+    // 获取考评列表（支持按部门过滤）
     evaluations: (dept) => USE_MOCK
-        ? delay(mock.evaluations.filter(e => e.dept === dept))
+        ? delay(dept ? mock.evaluations.filter(e => e.dept === dept) : mock.evaluations)
         : request.get('/admin/evaluations', { params: { dept } }),
-    evaluationTemplate: (dept) => USE_MOCK
-        ? delay(mock.evaluationTemplates[dept] || mock.defaultEvaluationTemplate)
-        : request.get('/admin/evaluations/template', { params: { dept } }),
+
+    // 获取考评模板
+    evaluationTemplate: () => USE_MOCK
+        ? delay(mock.evaluationTemplate)
+        : request.get('/admin/evaluations/template'),
+
+    // 发起考评
     createEvaluation: (data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            // 模拟后端接收数据并生成记录
+            data.members.forEach((m, idx) => {
+                mock.evaluations.unshift({
+                    id: Date.now() + idx,
+                    month: data.month,
+                    dept: m.dept,
+                    member: m.name,
+                    autoScore: m.autoScore, // 前端算好传过来的，实际应由后端计算
+                    manualScore: m.manualScore,
+                    total: m.autoScore + m.manualScore,
+                    status: '已完成',
+                    createdAt: new Date().toLocaleString(),
+                    details: { checkinDays: 10, taskCount: 2, meetingCount: 1, extraNote: m.extraNote }
+                })
+            })
+            return { success: true }
+        })())
         : request.post('/admin/evaluations', data),
+
+    // 获取某个成员考评明细（模拟展示打卡、任务等数据）
+    memberEvalDetail: (memberName, month) => USE_MOCK
+        ? delay({
+            // 这里可以模拟从其他表里查数据，现在直接返回死数据演示
+            checkinList: [
+                { date: `${month}-01`, status: '已打卡' },
+                { date: `${month}-02`, status: '已打卡' },
+                { date: `${month}-03`, status: '未打卡' }
+            ],
+            taskList: [
+                { title: '2024 秋季运动会开幕式报道', role: '参与人' },
+                { title: '校园文化节宣传片拍摄', role: '参与人' }
+            ]
+        })
+        : request.get('/admin/evaluations/detail', { params: { memberName, month } }),
 
     // D-09 本部门素材
     materials: (dept) => USE_MOCK
