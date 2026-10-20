@@ -22,7 +22,6 @@ const pick = (real, mockFn) => (...args) => USE_MOCK ? mockFn(...args) : real(..
 export const homeApi = {
     centerInfo:   pick(() => request.get('/center'),              () => delay(mock.centerInfo)),
     departments:  pick(() => request.get('/departments'),         () => delay(mock.departments)),
-    // 首页最新任务，非主任只能看自己部门的
     latestTasks:  pick(() => request.get('/tasks/latest'),        () => {
         const user = mock.currentUser()
         const role = localStorage.getItem('role') || 'member'
@@ -36,7 +35,6 @@ export const homeApi = {
 }
 
 /* ================= 登录认证 ================= */
-/* 登录 */
 export const authApi = {
     login: (payload = {}) => USE_MOCK
         ? delay((() => {
@@ -64,43 +62,40 @@ export const userApi = {
     attendance:     pick(() => request.get('/user/attendance'),       () => delay(mock.attendance)),
     appeal:         pick(d => request.post('/user/attendance/appeal', d), () => delay({ success: true })),
     myMeetings:     pick(() => request.get('/user/meetings'),         () => delay(mock.meetings)),
-    myDevices:      pick(() => request.get('/user/devices'),          () => delay(mock.myDevices))
-}
+    myDevices:      pick(() => request.get('/user/devices'),          () => delay(mock.myDevices)),
 
+    // 部员查看个人考评
+    myEvaluations: () => USE_MOCK
+        ? delay((() => {
+            const user = mock.currentUser()
+            return (mock.evaluations || []).filter(e => e.member === user.name)
+        })())
+        : request.get('/user/evaluations'),
+}
 
 /* ================= 消息 F-07 ================= */
 export const messageApi = {
     list: pick(() => request.get('/messages'), () => {
         const role = localStorage.getItem('role') || 'member'
-        const user = mock.currentUser()
-
-        // 1. 先获取底层真实的、包含已读状态的数组
         let msgs = mock.messages || []
-
-        // 2. 根据角色过滤（不改变原数据，只返回副本引用即可，因为后续只会修改 read 属性）
         if (role === 'minister') {
-            msgs = msgs.filter(m => m.id === 1 || m.id === 3) // 演示：部长看指定消息
+            msgs = msgs.filter(m => m.id === 1 || m.id === 3)
         } else if (role === 'director') {
-            msgs = msgs.filter(m => m.id === 2) // 演示：主任看指定消息
+            msgs = msgs.filter(m => m.id === 2)
         }
-
-        return delay(JSON.parse(JSON.stringify(msgs))) // 深拷贝返回，防止视图直接篡改原数组
+        return delay(JSON.parse(JSON.stringify(msgs)))
     }),
-
     markRead: pick(
         id => request.put(`/messages/${id}/read`),
         (id) => {
-            // 真正去修改 mock.messages 里的 read 状态
             const msg = mock.messages.find(m => m.id === id)
             if (msg) msg.read = true
             return delay({ success: true })
         }
     ),
-
     markAllRead: pick(
         () => request.put('/messages/read-all'),
         () => {
-            // 真正把 mock.messages 里所有的 read 设为 true
             mock.messages.forEach(m => m.read = true)
             return delay({ success: true })
         }
@@ -116,13 +111,11 @@ export const taskApi = {
             const role = localStorage.getItem('role') || 'member'
             let result = mock.tasks
 
-            // 部员和部长只能看本部门的，主任看全部
             if (role !== 'director') {
                 result = result.filter(t =>
                     t.departments.includes(user.dept) || t.relatedDepts?.includes(user.dept)
                 )
             }
-
             if (p?.status && p.status !== '全部') {
                 result = result.filter(t => t.status === p.status)
             }
@@ -133,26 +126,34 @@ export const taskApi = {
     create: pick(
         d => request.post('/tasks', d),
         (data) => {
-            // 1. 组装符合 mock.tasks 格式的新数据
             const newTask = {
                 ...data,
-                id: Date.now(), // 生成唯一 ID
-                status: '筹备', // 默认状态为筹备
-                participants: [], // 初始参与人为空，等待部长去加
+                id: Date.now(),
+                status: '筹备',
+                participants: [],
                 signups: []
             }
-
-            // 2. 把新任务塞进 mock.tasks 的最前面
             mock.tasks.unshift(newTask)
-
             return delay({ success: true, id: newTask.id })
         }
     ),
     materials:   pick(id => request.get(`/tasks/${id}/materials`),id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
     departments: pick(() => request.get('/departments'), () => delay(mock.departments)),
+
+    // 部员报名
     signup: (taskId, data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            if (task) {
+                if (!task.signups) task.signups = []
+                if (!task.signups.some(s => s.name === data.name)) {
+                    task.signups.push({ name: data.name, dept: data.dept, status: '待确认' })
+                }
+            }
+            return { success: true }
+        })())
         : request.post(`/tasks/${taskId}/signup`, data),
+
     devices:     pick(() => request.get('/devices/names'),() => delay(mock.deviceList))
 }
 
@@ -165,13 +166,10 @@ export const materialApi = {
             const role = localStorage.getItem('role') || 'member'
             let result = mock.filterMaterials(p)
 
-            // 素材权限隔离逻辑
-            if (role !== 'director') { // 主任看全部
+            if (role !== 'director') {
                 if (role === 'minister') {
-                    // 部长看本部门的所有素材
                     result = result.filter(m => m.department === user.dept)
                 } else {
-                    // 部员只能看：自己上传的 + 共享给自己部门的 + 自己参与的任务下的
                     const myTasks = mock.tasks.filter(t =>
                         t.participants?.some(part => part.name === user.name) ||
                         t.departments.includes(user.dept)
@@ -186,7 +184,8 @@ export const materialApi = {
             }
             return delay(result)
         }
-    ),    detail:        pick(id => request.get(`/materials/${id}`),        id => delay(mock.materials.find(m => String(m.id) === String(id)) || mock.materials[0])),
+    ),
+    detail:        pick(id => request.get(`/materials/${id}`),        id => delay(mock.materials.find(m => String(m.id) === String(id)) || mock.materials[0])),
     versions:      pick(id => request.get(`/materials/${id}/versions`), id => {
         const m = mock.materials.find(x => String(x.id) === String(id)) || mock.materials[0]
         return delay(m.versions)
@@ -194,13 +193,52 @@ export const materialApi = {
     recordExtract: pick(id => request.post(`/materials/${id}/extract`), () => delay({ success: true })),
     uploadFields:  pick(dept => request.get('/upload/fields', { params: { department: dept } }),
         dept => delay(mock.uploadFieldMap[dept] || mock.uploadFieldMap['综合部'])),
-    upload:        pick(d => request.post('/upload', d),               () => delay({ success: true }))
+
+    // 素材上传（加入内存）
+    upload:        pick(d => request.post('/upload', d), (data) => {
+        const newMaterial = {
+            id: Date.now(),
+            title: data.title,
+            type: data.department === '新闻部' ? '新闻稿' : '其他',
+            department: data.department,
+            author: mock.currentUser().name,
+            createdAt: new Date().toLocaleString(),
+            taskId: data.taskId,
+            content: data.content || '',
+            netdiskUrl: data.netdiskUrl || '',
+            netdiskCode: data.netdiskCode || '',
+            sharedDepts: data.sharedDepts || [],
+            versions: [{ version: 'v1', updatedAt: new Date().toLocaleString(), size: '未知', author: mock.currentUser().name }],
+            extracts: []
+        }
+        mock.materials.unshift(newMaterial)
+        return delay({ success: true })
+    })
 }
 
 /* ================= 设备申请 F-14 ================= */
 export const deviceApi = {
     list:           pick(() => request.get('/devices'),                    () => delay(mock.deviceList)),
-    apply:          pick(d => request.post('/device-applications', d),      () => delay({ success: true })),
+
+    // 申请设备（加入内存）
+    apply:          pick(d => request.post('/device-applications', d), (data) => {
+        const newApp = {
+            id: Date.now(),
+            applicant: mock.currentUser().name,
+            dept: mock.currentUser().dept,
+            phone: mock.currentUser().phone || '',
+            device: data.deviceName,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            purpose: data.purpose,
+            taskName: '',
+            status: '待审核',
+            opinion: ''
+        }
+        mock.deviceApplications.unshift(newApp)
+        return delay({ success: true })
+    }),
+
     myApplications: pick(() => request.get('/device-applications/my'),      () => delay(mock.deviceApplications))
 }
 
@@ -213,7 +251,6 @@ export const adminApi = {
             const filteredMembers = isAll ? (mock.members || []) : (mock.members || []).filter(m => m.dept === dept)
             const activeCount = filteredMembers.filter(m => m.status === '在岗').length
 
-            // 动态生成各部门的待办
             let todos = []
             if (dept === '综合部') {
                 todos = [{ type: 'checkin', text: '今日打卡名单尚未核对，请及时处理', time: '2024-11-05 08:00' }]
@@ -236,33 +273,45 @@ export const adminApi = {
         : request.get('/admin/overview', { params: { dept } }),
 
     // D-02 成员管理
-    // D-02 成员管理
     members: (dept) => USE_MOCK
         ? delay(dept ? (mock.members || []).filter(m => m.dept === dept) : (mock.members || []))
         : request.get('/admin/members', { params: { dept } }),
+
+    // 保存成员（加入内存）
     saveMember: (data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            if (data.id) {
+                const target = mock.members.find(m => m.id === data.id)
+                if (target) Object.assign(target, data)
+            } else {
+                mock.members.unshift({
+                    ...data,
+                    id: Date.now(),
+                    status: '在岗',
+                    email: `${data.name}@example.com`
+                })
+            }
+            return { success: true }
+        })())
         : (data.id ? request.put(`/admin/members/${data.id}`, data) : request.post('/admin/members', data)),
+
     toggleMember: (id, status) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const target = mock.members.find(m => String(m.id) === String(id))
+            if (target) target.status = status
+            return { success: true }
+        })())
         : request.put(`/admin/members/${id}/status`, { status }),
 
     // D-03 成员详情
     memberDetail: (id) => USE_MOCK
         ? delay((() => {
-            // 1. 先找到这个成员
             const member = mock.members.find(m => String(m.id) === String(id))
             const memberName = member ? member.name : ''
 
-            // 2. 遍历全局 tasks，筛选出包含该成员参与的任务
-            const userTasks = mock.tasks.filter(t =>
-                (t.participants || []).some(p => p.name === memberName)
-            )
+            const userTasks = mock.tasks.filter(t => (t.participants || []).some(p => p.name === memberName))
+            const userEvaluations = (mock.evaluations || []).filter(e => e.member === memberName)
 
-            // 3. 过滤考评记录
-            const userEvaluations = mock.evaluations.filter(e => e.member === memberName)
-
-            // 4. 模拟打卡和会议记录（基于名字动态生成几条，显得真实）
             const userCheckins = memberName ? [
                 { id: 1, date: '2024-11-05', task: '日常推文转发', status: '正常' },
                 { id: 2, date: '2024-11-04', task: '日常推文转发', status: '正常' }
@@ -272,12 +321,7 @@ export const adminApi = {
                 { id: 1, title: `${member?.dept || ''} 11月例会`, time: '2024-11-04 14:00', status: '已参加' }
             ] : []
 
-            return {
-                tasks: userTasks,
-                checkins: userCheckins,
-                meetings: userMeetings,
-                evaluations: userEvaluations
-            }
+            return { tasks: userTasks, checkins: userCheckins, meetings: userMeetings, evaluations: userEvaluations }
         })())
         : request.get(`/admin/members/${id}/detail`),
 
@@ -286,13 +330,11 @@ export const adminApi = {
         ? delay(mock.tasks.filter(t => t.departments.includes(dept) || t.relatedDepts?.includes(dept)))
         : request.get('/admin/tasks', { params: { dept } }),
 
-    // 1. 添加参与人（真正把数据塞进 mock.tasks）
     addParticipant: (taskId, data) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(taskId))
             if (task) {
                 if (!task.participants) task.participants = []
-                // 防止重复添加
                 if (!task.participants.some(p => p.name === data.name)) {
                     task.participants.push({ name: data.name, dept: data.dept })
                 }
@@ -301,7 +343,6 @@ export const adminApi = {
         })())
         : request.post(`/admin/tasks/${taskId}/participants`, data),
 
-    // 2. 移除参与人（真正从 mock.tasks 移除）
     removeParticipant: (taskId, name) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(taskId))
@@ -312,7 +353,6 @@ export const adminApi = {
         })())
         : request.delete(`/admin/tasks/${taskId}/participants`, { data: { name } }),
 
-    // 3. 确认报名（从 signups 转移到 participants）
     confirmSignup: (taskId, name) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(taskId))
@@ -320,71 +360,66 @@ export const adminApi = {
                 if (!task.participants) task.participants = []
                 const signup = (task.signups || []).find(s => s.name === name)
                 if (signup) {
-                    // 加入参与人
                     if (!task.participants.some(p => p.name === signup.name)) {
                         task.participants.push({ name: signup.name, dept: signup.dept })
                     }
-                    // 从报名列表移除
                     task.signups = task.signups.filter(s => s.name !== name)
                 }
             }
             return { success: true }
         })())
         : request.put(`/admin/tasks/${taskId}/signups/${name}/confirm`),
-    // 👇 新增：更新任务
+
     updateTask: (id, data) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(id))
-            if (task) {
-                Object.assign(task, data)
-            }
+            if (task) Object.assign(task, data)
             return { success: true }
         })())
         : request.put(`/admin/tasks/${id}`, data),
 
-    // 👇 新增：删除任务
     deleteTask: (id) => USE_MOCK
         ? delay((() => {
             const index = mock.tasks.findIndex(t => String(t.id) === String(id))
-            if (index > -1) {
-                mock.tasks.splice(index, 1)
-            }
+            if (index > -1) mock.tasks.splice(index, 1)
             return { success: true }
         })())
         : request.delete(`/admin/tasks/${id}`),
 
-
-
     // D-05 会议管理
     meetings: (dept) => USE_MOCK
-        ? delay(mock.adminMeetings.filter(m => m.dept === dept))
+        ? delay(mock.adminMeetings.filter(m => m.dept === dept || m.dept === '全中心'))
         : request.get('/admin/meetings', { params: { dept } }),
+
+    // 创建会议（加入内存）
     createMeeting: (data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            mock.adminMeetings.unshift({ ...data, id: Date.now(), records: [] })
+            return { success: true }
+        })())
         : request.post('/admin/meetings', data),
+
     saveMeetingRecords: (id, records) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const target = mock.adminMeetings.find(m => String(m.id) === String(id))
+            if (target) target.records = records
+            return { success: true }
+        })())
         : request.put(`/admin/meetings/${id}/records`, { records }),
 
     // D-06/07/08 考评管理
-    // 获取考评列表（支持按部门过滤）
     evaluations: (dept) => USE_MOCK
         ? delay(dept ? mock.evaluations.filter(e => e.dept === dept) : mock.evaluations)
         : request.get('/admin/evaluations', { params: { dept } }),
 
-    // 获取考评模板
     evaluationTemplate: () => USE_MOCK
         ? delay(mock.evaluationTemplate)
         : request.get('/admin/evaluations/template'),
 
-    // 发起考评
+    // 发起考评（修复了报错，并加入内存）
     createEvaluation: (data) => USE_MOCK
         ? delay((() => {
-            // 确保 mock.evaluations 存在
-            if (!mock.evaluations) mock.evaluations = []
-
             data.members.forEach((m, idx) => {
-                // 生成一条真实的考评记录存入数组
                 mock.evaluations.unshift({
                     id: Date.now() + idx,
                     month: data.month,
@@ -403,11 +438,8 @@ export const adminApi = {
         })())
         : request.post('/admin/evaluations', data),
 
-
-    // 获取某个成员考评明细（模拟展示打卡、任务等数据）
     memberEvalDetail: (memberName, month) => USE_MOCK
         ? delay({
-            // 这里可以模拟从其他表里查数据，现在直接返回死数据演示
             checkinList: [
                 { date: `${month}-01`, status: '已打卡' },
                 { date: `${month}-02`, status: '已打卡' },
@@ -427,19 +459,43 @@ export const adminApi = {
 
     // D-11 公告管理
     announcements: () => USE_MOCK ? delay(mock.announcements) : request.get('/admin/announcements'),
+
+    // 保存公告（加入内存）
     saveAnnouncement: (data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            if (data.id) {
+                const target = mock.announcements.find(a => a.id === data.id)
+                if (target) Object.assign(target, data)
+            } else {
+                mock.announcements.unshift({ ...data, id: Date.now(), createdAt: new Date().toLocaleString() })
+            }
+            return { success: true }
+        })())
         : (data.id ? request.put(`/admin/announcements/${data.id}`, data) : request.post('/admin/announcements', data)),
-    deleteAnnouncement: (id) => USE_MOCK ? delay({ success: true }) : request.delete(`/admin/announcements/${id}`),
+
+    // 删除公告（加入内存）
+    deleteAnnouncement: (id) => USE_MOCK
+        ? delay((() => {
+            const index = mock.announcements.findIndex(a => String(a.id) === String(id))
+            if (index > -1) mock.announcements.splice(index, 1)
+            return { success: true }
+        })())
+        : request.delete(`/admin/announcements/${id}`),
 
     // D-12 部门介绍设置
     deptProfile: (dept) => USE_MOCK ? delay(mock.deptProfiles[dept]) : request.get('/admin/dept-profile', { params: { dept } }),
-    saveDeptProfile: (dept, data) => USE_MOCK ? delay({ success: true }) : request.put('/admin/dept-profile', { dept, ...data }),
 
-    // D-13/D-17 数据看板（返回 wx 和 yy 两块数据）
+    // 保存部门介绍（加入内存）
+    saveDeptProfile: (dept, data) => USE_MOCK
+        ? delay((() => {
+            if (mock.deptProfiles[dept]) Object.assign(mock.deptProfiles[dept], data)
+            return { success: true }
+        })())
+        : request.put('/admin/dept-profile', { dept, ...data }),
+
+    // D-13/D-17 数据看板
     dashboard: () => USE_MOCK ? delay(mock.dashboardData) : request.get('/admin/dashboard'),
 
-    // 上传 CSV（增加 type 参数区分 wx / yy）
     uploadCsv: (type, file) => USE_MOCK ? delay({ success: true, rows: 128 }) : (() => {
         const fd = new FormData();
         fd.append('file', file);
@@ -447,31 +503,21 @@ export const adminApi = {
         return request.post('/admin/dashboard/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     })(),
 
-    // D-14 打卡记录（过滤掉部长和主任，动态拼装部员的打卡状态）
+    // D-14 打卡记录
     checkins: (params) => USE_MOCK
         ? delay((() => {
             const { date, dept } = params || {}
-            // 1. 获取在岗成员
             let targetMembers = (mock.members || []).filter(m => m.status === '在岗')
+            targetMembers = targetMembers.filter(m => !m.title.includes('部长') && m.title !== '中心主任')
 
-            // 2. 过滤掉部长和主任（他们的 title 包含“部长”或等于“中心主任”）
-            targetMembers = targetMembers.filter(m =>
-                !m.title.includes('部长') && m.title !== '中心主任'
-            )
-
-            // 3. 按部门过滤
             if (dept && dept !== '全部') {
                 targetMembers = targetMembers.filter(m => m.dept === dept)
             }
 
-            // 4. 拼装记录
             return targetMembers.map((m) => {
-                // 从历史打卡记录里找是否已有这个人的记录
-                const record = (mock.checkinRecords || []).find(r =>
-                    r.date === date && r.dept === m.dept && r.member === m.name
-                )
+                const record = (mock.checkinRecords || []).find(r => r.date === date && r.dept === m.dept && r.member === m.name)
                 return {
-                    id: record ? record.id : `temp-${m.id}-${date}`, // 如果是新记录，给个临时ID
+                    id: record ? record.id : `temp-${m.id}-${date}`,
                     date,
                     dept: m.dept,
                     member: m.name,
@@ -482,15 +528,12 @@ export const adminApi = {
         })())
         : request.get('/admin/checkins', { params }),
 
-    // 标记打卡状态（真实环境下发送 PUT 请求，Mock 环境下修改数组）
     markCheckin: (id, status, record) => USE_MOCK
         ? delay((() => {
             const target = (mock.checkinRecords || []).find(r => r.id === id)
             if (target) {
-                // 已有记录，直接修改状态
                 target.status = status
             } else if (record) {
-                // 没有记录，且状态为已打卡，则新增一条
                 mock.checkinRecords.push({
                     id: Date.now(),
                     date: record.date,
@@ -502,60 +545,79 @@ export const adminApi = {
             return { success: true }
         })())
         : request.put(`/admin/checkins/${id}`, { status }),
+
     // D-15 综合部：打卡申诉审批
     checkinAppeals: () => USE_MOCK ? delay(mock.checkinAppeals) : request.get('/admin/checkins/appeals'),
+
+    // 审批申诉（加入内存）
     reviewAppeal: (id, status) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const target = mock.checkinAppeals.find(a => String(a.id) === String(id))
+            if (target) target.status = status
+            return { success: true }
+        })())
         : request.put(`/admin/checkins/appeals/${id}`, { status }),
 
     // D-16 综合部：打卡统计
     checkinStats: () => USE_MOCK ? delay(mock.checkinStats) : request.get('/admin/checkins/stats'),
 
     // D-18 摄制部：设备档案管理
-    // 获取设备列表（兼容 mock 和真实后端）
     devices: () => USE_MOCK
-        ? delay(mock.deviceList || []) // 防止 undefined
-        : request.get('/admin/devices'), // 真实接口路径
+        ? delay(mock.deviceList || [])
+        : request.get('/admin/devices'),
+
+    // 保存设备（加入内存）
     saveDevice: (data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            if (data.id) {
+                const target = mock.deviceList.find(d => d.id === data.id)
+                if (target) Object.assign(target, data)
+            } else {
+                mock.deviceList.unshift({ ...data, id: Date.now() })
+            }
+            return { success: true }
+        })())
         : (data.id ? request.put(`/admin/devices/${data.id}`, data) : request.post('/admin/devices', data)),
 
     // D-19 摄制部：设备申请审核
     deviceApplications: () => USE_MOCK ? delay(mock.deviceApplications) : request.get('/admin/device-applications'),
+
+    // 审核设备（加入内存）
     reviewDevice: (id, data) => USE_MOCK
-        ? delay({ success: true })
+        ? delay((() => {
+            const target = mock.deviceApplications.find(d => String(d.id) === String(id))
+            if (target) Object.assign(target, data)
+            return { success: true }
+        })())
         : request.put(`/admin/device-applications/${id}`, data),
-    // 获取部门专属模块配置 GET /api/admin/dept-modules
+
+    // 获取部门专属模块配置
     getDeptModules: (dept) => USE_MOCK
         ? delay(mock.deptModuleConfig[dept] || [])
         : request.get('/admin/dept-modules', { params: { dept } }),
-    // 获取管理区菜单 GET /api/admin/menus
+
+    // 获取管理区菜单
     getMenus: (dept, role) => USE_MOCK
         ? delay((() => {
-            // 基础菜单所有人都有
             let menus = [...mock.baseAdminMenus]
-
             if (role === 'director') {
-                // 主任拥有所有特殊菜单
                 const allSpecial = Object.values(mock.specialAdminMenus).flat()
-                // 去重（如果某个菜单在多个部门有）
                 const uniqueSpecial = Array.from(new Set(allSpecial.map(m => m.path)))
                     .map(path => allSpecial.find(m => m.path === path))
                 menus = [...menus, ...uniqueSpecial]
             } else if (dept) {
-                // 部长只有本部门的特殊菜单
                 const deptSpecial = mock.specialAdminMenus[dept] || []
                 menus = [...menus, ...deptSpecial]
             }
-
             return menus
         })())
         : request.get('/admin/menus', { params: { dept, role } }),
+
     // 为任务参与人打附加分
     updateTaskScore: (taskId, memberName, score, reason) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(taskId))
-            if (task) {
+            if (task && task.participants) {
                 const p = task.participants.find(x => x.name === memberName)
                 if (p) {
                     p.extraScore = score
@@ -566,6 +628,7 @@ export const adminApi = {
         })())
         : request.put(`/admin/tasks/${taskId}/score`, { memberName, score, reason }),
 }
-// 兼容旧代码（如果不小心在哪个页面还留着 statusTagType 引用，也不会报错）
+
+// 兼容旧代码
 import { getTaskTagType } from '@/utils/dict'
 export const statusTagType = getTaskTagType
