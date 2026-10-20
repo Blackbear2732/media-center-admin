@@ -462,7 +462,21 @@ export const adminApi = {
 
             return menus
         })())
-        : request.get('/admin/menus', { params: { dept, role } })
+        : request.get('/admin/menus', { params: { dept, role } }),
+    // 为任务参与人打附加分
+    updateTaskScore: (taskId, memberName, score, reason) => USE_MOCK
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            if (task) {
+                const p = task.participants.find(x => x.name === memberName)
+                if (p) {
+                    p.extraScore = score
+                    p.scoreReason = reason
+                }
+            }
+            return { success: true }
+        })())
+        : request.put(`/admin/tasks/${taskId}/score`, { memberName, score, reason }),
 }
 // 兼容旧代码（如果不小心在哪个页面还留着 statusTagType 引用，也不会报错）
 import { getTaskTagType } from '@/utils/dict'
