@@ -4,137 +4,70 @@ export const centerInfo = {
     desc: '山西农业大学青年融媒体中心成立于2013年，是学校对外宣传的重要窗口。中心现设有综合部、网宣部、新闻部、设计部、摄制部、影音部6个部门，以运营“山西农业大学团委“微信公众号和视频号为核心，全方位聚焦校园动态，及时跟进学校重大发展成果、宣传优秀师生典型。通过有力的新闻宣传和独特的视角，致力于传播农大声音、讲述农大故事、弘扬农大精神，生动展示师生积极向上的精神风貌，彰显学校深厚的文化底蕴。'
 }
 
+// 部门基础数据（与前端 dict.js 中的 DEPT_MAP 严格对应）
 export const departments = [
-    {
-        id: 1, name: '综合部',
-        intro: '负责沟通协调，承上启下我们将策划组织各类活动让你的大学生活丰富多彩并肩前行，解锁一个又一个成就感受到青春的无限可能',
-        modules: ['checkin', 'dashboardUpload'],
-        photos: [
-            'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&q=80',
-            'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&q=80',
-            'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=500&q=80'
-        ]
-    },
-    {
-        id: 2, name: '网宣部',
-        intro: '脑洞大开，创意无限在公众号大放异彩记录校园的精彩生活无论是原创话题还是社团活动都能在你的笔下变得生动有趣',
-        modules: ['article'],
-        photos: [
-            'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&q=80',
-            'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500&q=80',
-            'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=500&q=80'
-        ]
-    },
-    {
-        id: 3, name: '影音部',
-        intro: '负责音视频剪辑、后期包装与成片交付，用影像记录农大故事。',
-        modules: ['video'],
-        photos: [
-            'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=500&q=80',
-            'https://images.unsplash.com/photo-1626544827763-d516dce335e2?w=500&q=80',
-            'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=500&q=80'
-        ]
-    },
-    {
-        id: 4, name: '摄制部',
-        intro: '从日常生活到大型演出每一个快门的按下都记录下这些难忘的瞬间欢迎你，与我们一同拿起相机用影像讲述故事',
-        modules: ['device', 'raw'],
-        photos: [
-            'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80',
-            'https://images.unsplash.com/photo-1520390138845-fd2d229dd553?w=500&q=80',
-            'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?w=500&q=80'
-        ]
-    },
-    {
-        id: 5, name: '新闻部',
-        intro: '让我们用镜头、声音编织故事每一帧画面、每一段旋律都跳跃着青春的节拍带你沉浸式感受视频创作的魅力',
-        modules: ['news'],
-        photos: [
-            'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500&q=80',
-            'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=500&q=80',
-            'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=500&q=80'
-        ]
-    },
-    {
-        id: 6, name: '设计部',
-        intro: '在这里，你可以发挥你的创意天赋用海报与展板绘出农大青年的色彩你可以学到设计、绘画的技能结识更多志同道合的朋友',
-        modules: ['design'],
-        photos: [
-            'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500&q=80',
-            'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=500&q=80',
-            'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=500&q=80'
-        ]
-    }
+    { id: 101, name: '综合部', intro: '负责沟通协调，承上启下我们将策划组织各类活动...', modules: ['checkin', 'dashboardUpload'], photos: [] },
+    { id: 102, name: '网宣部', intro: '脑洞大开，创意无限在公众号大放异彩...', modules: ['article'], photos: [] },
+    { id: 103, name: '影音部', intro: '负责音视频剪辑、后期包装与成片交付...', modules: ['video'], photos: [] },
+    { id: 104, name: '摄制部', intro: '从日常生活到大型演出每一个快门的按下...', modules: ['device', 'raw'], photos: [] },
+    { id: 105, name: '新闻部', intro: '让我们用镜头、声音编织故事...', modules: ['news'], photos: [] },
+    { id: 106, name: '设计部', intro: '在这里，你可以发挥你的创意天赋...', modules: ['design'], photos: [] }
 ]
 
+// 角色：0-部员, 1-部长, 2-主任
 export const accounts = {
     member: {
-        token: 'mock-member', role: 'member', label: '部员',
-        user: {
-            studentNo: '20250404306', name: '徐钰婷', nickname: '钰婷', dept: '新闻部',
-            college: '资源环境学院', className: '资环2503', grade: '2025级',
-            phone: '18442808818', email: 'xuyuting@example.com', title: '部员',
-            gender: '女', politicalStatus: '共青团员'
-        }
+        token: 'mock-member', role: 0, label: '部员',
+        user: { studentNo: '20250404306', name: '徐钰婷', nickname: '钰婷', deptId: 105, college: '资源环境学院', className: '资环2503', grade: '2025级', phone: '18442808818', email: 'xuyuting@example.com', title: '部员', gender: '女', politicalStatus: '共青团员' }
     },
     director: {
-        token: 'mock-director', role: 'director', label: '中心主任',
-        user: {
-            studentNo: '2023000001', name: '张钧益', nickname: '钧益', dept: '全中心',
-            college: '—', className: '—', grade: '2023级',
-            phone: '13800000003', email: 'wang@example.com', title: '中心主任',
-            gender: '男', politicalStatus: '中共党员'
-        }
+        token: 'mock-director', role: 2, label: '中心主任',
+        user: { studentNo: '2023000001', name: '张钧益', nickname: '钧益', deptId: 100, college: '—', className: '—', grade: '2023级', phone: '13800000003', email: 'wang@example.com', title: '中心主任', gender: '男', politicalStatus: '中共党员' }
     },
-    // 👇 为每个部门单独定义一个部长账号
     '综合部长': {
-        token: 'mock-zh', role: 'minister', label: '部长',
-        user: { studentNo: '2024010001', name: '赵景磊', dept: '综合部', title: '综合部部长', phone: '13800001001', gender: '男', college: '动物科学学院', className: '动科2403', grade: '2024级', email: 'zh@example.com' }
+        token: 'mock-zh', role: 1, label: '部长',
+        user: { studentNo: '2024010001', name: '赵景磊', deptId: 101, title: '综合部部长', phone: '13800001001', gender: '男', college: '动物科学学院', className: '动科2403', grade: '2024级', email: 'zh@example.com' }
     },
     '网宣部长': {
-        token: 'mock-wx', role: 'minister', label: '部长',
-        user: { studentNo: '2024010008', name: '刘怡昕', dept: '网宣部', title: '网宣部部长', phone: '13800001008', gender: '女', college: '食品科学与工程学院', className: '营养2401', grade: '2024级', email: 'wx@example.com' }
+        token: 'mock-wx', role: 1, label: '部长',
+        user: { studentNo: '2024010008', name: '刘怡昕', deptId: 102, title: '网宣部部长', phone: '13800001008', gender: '女', college: '食品科学与工程学院', className: '营养2401', grade: '2024级', email: 'wx@example.com' }
     },
     '影音部长': {
-        token: 'mock-yy', role: 'minister', label: '部长',
-        user: { studentNo: '2024010003', name: '梁嘉怡', dept: '影音部', title: '影音部部长', phone: '13800001003', gender: '女', college: '软件学院', className: '软件2411', grade: '2024级', email: 'yy@example.com' }
+        token: 'mock-yy', role: 1, label: '部长',
+        user: { studentNo: '2024010003', name: '梁嘉怡', deptId: 103, title: '影音部部长', phone: '13800001003', gender: '女', college: '软件学院', className: '软件2411', grade: '2024级', email: 'yy@example.com' }
     },
     '摄制部长': {
-        token: 'mock-sz', role: 'minister', label: '部长',
-        user: { studentNo: '2024010011', name: '何文静', dept: '摄制部', title: '摄制部部长', phone: '13800001011', gender: '女', college: '园艺学院', className: '园艺2406z', grade: '2024级', email: 'sz@example.com' }
+        token: 'mock-sz', role: 1, label: '部长',
+        user: { studentNo: '2024010011', name: '何文静', deptId: 104, title: '摄制部部长', phone: '13800001011', gender: '女', college: '园艺学院', className: '园艺2406z', grade: '2024级', email: 'sz@example.com' }
     },
     '新闻部长': {
-        token: 'mock-xw', role: 'minister', label: '部长',
-        user: { studentNo: '2024010006', name: '张洋', dept: '新闻部', title: '新闻部部长', phone: '13800001006', gender: '男', college: '软件学院', className: '软件2406', grade: '2024级', email: 'xw@example.com' }
+        token: 'mock-xw', role: 1, label: '部长',
+        user: { studentNo: '2024010006', name: '张洋', deptId: 105, title: '新闻部部长', phone: '13800001006', gender: '男', college: '软件学院', className: '软件2406', grade: '2024级', email: 'xw@example.com' }
     },
     '设计部长': {
-        token: 'mock-sj', role: 'minister', label: '部长',
-        user: { studentNo: '2024010014', name: '李翔', dept: '设计部', title: '设计部部长', phone: '13800001014', gender: '男', college: '园艺学院', className: '视设2401', grade: '2024级', email: 'sj@example.com' }
+        token: 'mock-sj', role: 1, label: '部长',
+        user: { studentNo: '2024010014', name: '李翔', deptId: 106, title: '设计部部长', phone: '13800001014', gender: '男', college: '园艺学院', className: '视设2401', grade: '2024级', email: 'sj@example.com' }
     }
 }
 
-
-
-
-
 export function currentUser() {
-    // ✅ 优先从 localStorage 里取当前登录人的信息
     const userStr = localStorage.getItem('user')
     if (userStr) {
-        try {
-            return JSON.parse(userStr)
-        } catch (e) {}
+        try { return JSON.parse(userStr) } catch (e) {}
     }
-
-    // 如果本地没有，再根据 role 兜底
     const role = localStorage.getItem('role') || 'member'
     return accounts[role]?.user || accounts.member.user
 }
 
+export function currentRole() { return Number(localStorage.getItem('role')) || 0 }
 
-export function currentRole() { return localStorage.getItem('role') || 'member' }
+/* ========== 完整成员名单 ========== */
+// 映射工具，把中文部门转成数字 ID
+const getDeptId = (deptName) => {
+    const map = { '全中心': 100, '综合部': 101, '网宣部': 102, '影音部': 103, '摄制部': 104, '新闻部': 105, '设计部': 106 }
+    return map[deptName] || 100
+}
 
-/* ========== 完整成员名单 (198人) ========== */
 const rawMemberData = [
     // --- 部长名单 (15人) ---
     { n: '赵景磊', d: '综合部', c: '动物科学学院', cl: '动科2403', t: '部长', p: '13800001001', g: '男' },
@@ -349,97 +282,100 @@ const rawMemberData = [
     { n: '余智祥', d: '设计部', c: '农业经济管理学院', cl: '经管2501', t: '部员', p: '15698356256', g: '男' }
 ]
 
-// 自动生成完整成员对象
-export const members = rawMemberData.map((m, i) => ({
-    id: 1000 + i,
-    studentNo: m.t === '部长' ? `2024${String(i).padStart(6, '0')}` : `2025${String(i).padStart(6, '0')}`,
-    name: m.n,
-    dept: m.d,
-    college: m.c,
-    className: m.cl,
-    grade: m.t === '部长' ? '2024级' : '2025级',
-    title: m.t === '部长' ? `${m.d}部长` : '部员',
-    phone: m.p || '',
-    email: `user${i}@example.com`,
-    status: '在岗',
-    // 让部分部长成为中共党员，部员里分布共青团员和群众
-    politicalStatus: m.t === '部长' && i % 2 === 0 ? '中共党员' : (m.t === '部长' || i % 3 === 0 ? '共青团员' : '群众'),
-    gender: m.g
-}))
+// 自动生成完整成员对象（包含 deptId）
+export const members = rawMemberData.map((m, i) => {
+    const isMinister = m.t === '部长'
+    return {
+        id: 1000 + i,
+        studentNo: isMinister ? `2024${String(i).padStart(6, '0')}` : `2025${String(i).padStart(6, '0')}`,
+        name: m.n,
+        deptId: getDeptId(m.d), // 👈 数字部门 ID
+        college: m.c,
+        className: m.cl,
+        grade: isMinister ? '2024级' : '2025级',
+        role: isMinister ? 1 : 0, // 👈 0部员 1部长
+        title: isMinister ? `${m.d}部长` : '部员',
+        phone: m.p || '',
+        email: `user${i}@example.com`,
+        status: 1, // 👈 1-在岗 0-停用
+        politicalStatus: isMinister && i % 2 === 0 ? '中共党员' : (isMinister || i % 3 === 0 ? '共青团员' : '群众'),
+        gender: m.g
+    }
+})
 
 /* ========== 任务 ========== */
 export const tasks = [
     {
-        id: 1, title: '2024 秋季运动会开幕式报道', status: '筹备', startTime: '2024-11-05 08:00', endTime: '2024-11-05 12:00',
+        id: 1, title: '2024 秋季运动会开幕式报道', status: 0, startTime: '2024-11-05 08:00', endTime: '2024-11-05 12:00', // 👈 0筹备
         location: '学校田径场', themeTag: '体育比赛', tags: ['运动会','新闻报道'],
-        departments: ['新闻部','摄制部'], relatedDepts: ['网宣部'], devices: ['单反相机','摄像机'],
+        deptIds: [105, 104], relatedDeptIds: [102], devices: ['单反相机','摄像机'], // 👈 部门改为 deptIds
         desc: '负责开幕式全程图文与视频素材采集，当天 18:00 前完成初稿。',
         participants: [
-            { name: '徐钰婷', dept: '新闻部', extraScore: 2, scoreReason: '开幕式现场报道及时，文笔优秀' },
-            { name: '李润琪', dept: '新闻部' },
-            { name: '刘铂羽', dept: '摄制部', extraScore: 1.5, scoreReason: '扛机器一整天，非常辛苦' },
-            { name: '胡瑶璇', dept: '摄制部' }
+            { name: '徐钰婷', deptId: 105, extraScore: 2, scoreReason: '开幕式现场报道及时，文笔优秀' },
+            { name: '李润琪', deptId: 105 },
+            { name: '刘铂羽', deptId: 104, extraScore: 1.5, scoreReason: '扛机器一整天，非常辛苦' },
+            { name: '胡瑶璇', deptId: 104 }
         ],
         signups: [
-            { name: '陈存灿', dept: '新闻部', status: '待确认' },
-            { name: '王亚楠', dept: '设计部', status: '待确认' }
+            { name: '陈存灿', deptId: 105, status: 0 }, // 👈 0待确认(待审核)
+            { name: '王亚楠', deptId: 106, status: 0 }
         ]
     },
     {
-        id: 2, title: '校园文化节宣传片拍摄', status: '进行中', startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00',
+        id: 2, title: '校园文化节宣传片拍摄', status: 1, startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00', // 👈 1进行中
         location: '大学生活动中心', themeTag: '舞蹈比赛', tags: ['宣传片','文化节'],
-        departments: ['摄制部'], relatedDepts: ['影音部','设计部'], devices: ['稳定器','无人机'],
+        deptIds: [104], relatedDeptIds: [103, 106], devices: ['稳定器','无人机'],
         desc: '拍摄 3 分钟校园文化节宣传片，摄制部负责拍摄，影音部负责后期。',
         participants: [
-            { name: '卢波源', dept: '摄制部', extraScore: 3, scoreReason: '航拍画面极其震撼' },
-            { name: '麻敬怡', dept: '摄制部' },
-            { name: '闫佳慧', dept: '影音部', extraScore: 1, scoreReason: '后期剪辑效率高' },
-            { name: '王亚楠', dept: '设计部' }
+            { name: '卢波源', deptId: 104, extraScore: 3, scoreReason: '航拍画面极其震撼' },
+            { name: '麻敬怡', deptId: 104 },
+            { name: '闫佳慧', deptId: 103, extraScore: 1, scoreReason: '后期剪辑效率高' },
+            { name: '王亚楠', deptId: 106 }
         ],
         signups: []
     },
     {
-        id: 3, title: '新生入学教育专题稿件', status: '已结束', startTime: '2024-09-10 09:00', endTime: '2024-09-12 18:00',
+        id: 3, title: '新生入学教育专题稿件', status: 2, startTime: '2024-09-10 09:00', endTime: '2024-09-12 18:00', // 👈 2已结束
         location: '线上', themeTag: '迎新', tags: ['迎新','专题'],
-        departments: ['新闻部'], relatedDepts: [], devices: [],
+        deptIds: [105], relatedDeptIds: [], devices: [],
         desc: '入学教育专题稿件撰写与审核。',
         participants: [
-            { name: '徐钰婷', dept: '新闻部', extraScore: 1, scoreReason: '稿件质量高' },
-            { name: '赵敏', dept: '新闻部' }
+            { name: '徐钰婷', deptId: 105, extraScore: 1, scoreReason: '稿件质量高' },
+            { name: '赵敏', deptId: 105 }
         ],
         signups: []
     },
     {
-        id: 4, title: '校庆 70 周年海报设计', status: '进行中', startTime: '2024-11-01 09:00', endTime: '2024-11-15 18:00',
+        id: 4, title: '校庆 70 周年海报设计', status: 1, startTime: '2024-11-01 09:00', endTime: '2024-11-15 18:00',
         location: '设计部工作室', themeTag: '节日类', tags: ['校庆','海报'],
-        departments: ['设计部'], relatedDepts: ['网宣部'], devices: ['图形工作站'],
+        deptIds: [106], relatedDeptIds: [102], devices: ['图形工作站'],
         desc: '主视觉海报 3 版方案。',
         participants: [
-            { name: '王亚楠', dept: '设计部', extraScore: 2, scoreReason: '主视觉方案被领导直接采用' },
-            { name: '李梓凡', dept: '设计部' },
-            { name: '刘钰珂', dept: '网宣部' }
+            { name: '王亚楠', deptId: 106, extraScore: 2, scoreReason: '主视觉方案被领导直接采用' },
+            { name: '李梓凡', deptId: 106 },
+            { name: '刘钰珂', deptId: 102 }
         ],
         signups: []
     },
     {
-        id: 5, title: '“青春之声”主题直播', status: '筹备', startTime: '2024-11-20 19:00', endTime: '2024-11-20 21:00',
+        id: 5, title: '“青春之声”主题直播', status: 0, startTime: '2024-11-20 19:00', endTime: '2024-11-20 21:00',
         location: '融媒体演播厅', themeTag: '文艺活动', tags: ['直播'],
-        departments: ['摄制部','影音部'], relatedDepts: ['网宣部'], devices: ['导播台','麦克风'],
+        deptIds: [104, 103], relatedDeptIds: [102], devices: ['导播台','麦克风'],
         desc: '校园歌手大赛决赛直播。',
         participants: [
-            { name: '侯艾彤', dept: '影音部' },
-            { name: '张策', dept: '影音部' },
-            { name: '刘钰珂', dept: '网宣部', extraScore: 1, scoreReason: '直播间互动控场极佳' }
+            { name: '侯艾彤', deptId: 103 },
+            { name: '张策', deptId: 103 },
+            { name: '刘钰珂', deptId: 102, extraScore: 1, scoreReason: '直播间互动控场极佳' }
         ],
         signups: []
     },
     {
-        id: 6, title: '校党委理论学习中心组会议', status: '已结束', startTime: '2024-10-20 14:00', endTime: '2024-10-20 17:00',
+        id: 6, title: '校党委理论学习中心组会议', status: 2, startTime: '2024-10-20 14:00', endTime: '2024-10-20 17:00',
         location: '行政楼 302', themeTag: '会议', tags: ['会议','新闻稿'],
-        departments: ['新闻部'], relatedDepts: [], devices: [],
+        deptIds: [105], relatedDeptIds: [], devices: [],
         desc: '会议类新闻稿，需记录主要领导。',
         participants: [
-            { name: '李润琪', dept: '新闻部', extraScore: 0.5, scoreReason: '会议记录详细完整' }
+            { name: '李润琪', deptId: 105, extraScore: 0.5, scoreReason: '会议记录详细完整' }
         ],
         signups: []
     }
@@ -447,51 +383,54 @@ export const tasks = [
 
 /* ========== 素材 ========== */
 export const materials = [
-    { id: 1, title: '运动会开幕式新闻稿', type: '新闻稿', department: '新闻部', author: '徐钰婷',
+    { id: 1, title: '运动会开幕式新闻稿', type: 1, deptId: 105, author: '徐钰婷', // 👈 type 1新闻稿
         createdAt: '2024-11-05 13:20', leaderName: '李书记', themeTag: '体育比赛', taskId: 1,
         content: '11 月 5 日上午，我校 2024 年秋季运动会在田径场隆重开幕。校党委书记李书记出席开幕式并宣布运动会开幕。\n\n本次运动会共有来自 20 个学院的 1200 余名运动员参加 36 个项目的角逐。',
-        netdiskUrl: 'https://pan.example.com/s/abc123', netdiskCode: 'x7k9', sharedDepts: ['网宣部'],
+        netdiskUrl: 'https://pan.example.com/s/abc123', netdiskCode: 'x7k9', sharedDeptIds: [102], // 👈 共享部门
         versions: [
             { version: 'v3', updatedAt: '2024-11-05 13:20', size: '12KB', author: '徐钰婷' },
             { version: 'v2', updatedAt: '2024-11-05 12:10', size: '11KB', author: '徐钰婷' }
         ], extracts: [{ user: '刘钰珂', time: '2024-11-05 15:00' }] },
-    { id: 2, title: '校园文化节宣传片成片', type: '视频成片', department: '影音部', author: '闫佳慧',
+    { id: 2, title: '校园文化节宣传片成片', type: 3, deptId: 103, author: '闫佳慧', // 👈 type 3视频成片
         createdAt: '2024-11-10 18:30', leaderName: '', themeTag: '舞蹈比赛', taskId: 2,
         content: '', videoChannelUrl: 'https://channels.weixin.qq.com/xxx',
-        netdiskUrl: 'https://pan.example.com/s/vid456', netdiskCode: 'b2m1', sharedDepts: ['网宣部'],
+        netdiskUrl: 'https://pan.example.com/s/vid456', netdiskCode: 'b2m1', sharedDeptIds: [102],
         versions: [{ version: 'v2', updatedAt: '2024-11-10 18:30', size: '1.2GB', author: '闫佳慧' }], extracts: [] },
-    { id: 3, title: '校庆 70 周年主视觉设计图', type: '设计图', department: '设计部', author: '李翔',
+    { id: 3, title: '校庆 70 周年主视觉设计图', type: 4, deptId: 106, author: '李翔', // 👈 type 4设计图
         createdAt: '2024-11-08 10:00', leaderName: '', themeTag: '节日类', taskId: 4,
-        content: '', netdiskUrl: 'https://pan.example.com/s/psd789', netdiskCode: 'q8w2', sharedDepts: [],
+        content: '', netdiskUrl: 'https://pan.example.com/s/psd789', netdiskCode: 'q8w2', sharedDeptIds: [],
         versions: [{ version: 'v1', updatedAt: '2024-11-08 10:00', size: '320MB', author: '李翔' }], extracts: [] },
-    { id: 4, title: '校党委理论学习中心组会议新闻稿', type: '新闻稿', department: '新闻部', author: '李润琪',
+    { id: 4, title: '校党委理论学习中心组会议新闻稿', type: 1, deptId: 105, author: '李润琪',
         createdAt: '2024-10-20 18:00', leaderName: '李书记', themeTag: '会议', taskId: 6,
         content: '10 月 20 日下午，校党委理论学习中心组在行政楼 302 召开专题学习会，李书记主持会议并讲话。',
-        netdiskUrl: 'https://pan.example.com/s/txt321', netdiskCode: 'z3n5', sharedDepts: ['综合部'],
+        netdiskUrl: 'https://pan.example.com/s/txt321', netdiskCode: 'z3n5', sharedDeptIds: [101],
         versions: [{ version: 'v1', updatedAt: '2024-10-20 18:00', size: '6KB', author: '李润琪' }], extracts: [] }
 ]
 
 /* ========== 个人区 ========== */
+// 打卡状态（0未打卡 1已打卡 2迟到 3缺勤）这里用于个人考勤正常/迟到
 export const attendance = {
     rate: 92, total: 50, normal: 46, late: 2, absent: 2,
     records: [
-        { id: 1, date: '2024-11-05', task: '运动会开幕式报道', status: '正常', time: '08:02' },
-        { id: 2, date: '2024-11-04', task: '部门例会', status: '迟到', time: '09:12' },
-        { id: 3, date: '2024-11-03', task: '校庆素材整理', status: '正常', time: '08:55' },
-        { id: 4, date: '2024-11-02', task: '宣传片拍摄', status: '缺勤', time: '—' }
+        { id: 1, date: '2024-11-05', task: '运动会开幕式报道', status: 1, time: '08:02' }, // 1正常
+        { id: 2, date: '2024-11-04', task: '部门例会', status: 2, time: '09:12' }, // 2迟到
+        { id: 3, date: '2024-11-03', task: '校庆素材整理', status: 1, time: '08:55' },
+        { id: 4, date: '2024-11-02', task: '宣传片拍摄', status: 3, time: '—' } // 3缺勤
     ]
 }
 
+// 会议状态（1已参加 0待参加）
 export const meetings = [
-    { id: 1, title: '融媒体中心月度例会', time: '2024-11-04 14:00', location: '中心会议室', host: '王主任', status: '已参加' },
-    { id: 2, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议', host: '张洋', status: '已参加' },
-    { id: 3, title: '校庆宣传方案评审会', time: '2024-11-15 15:00', location: '行政楼 302', host: '王主任', status: '待参加' }
+    { id: 1, title: '融媒体中心月度例会', time: '2024-11-04 14:00', location: '中心会议室', host: '王主任', status: 1 },
+    { id: 2, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议', host: '张洋', status: 1 },
+    { id: 3, title: '校庆宣传方案评审会', time: '2024-11-15 15:00', location: '行政楼 302', host: '王主任', status: 0 }
 ]
 
+// 设备申请状态（0待审核 1已通过 3使用中 4已归还）
 export const myDevices = [
-    { id: 1, name: '佳能 EOS R5 单反相机', applyTime: '2024-11-04 09:00', startTime: '2024-11-05 08:00', endTime: '2024-11-05 18:00', status: '已归还' },
-    { id: 2, name: '大疆 Mavic 3 无人机', applyTime: '2024-11-07 15:00', startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00', status: '使用中' },
-    { id: 3, name: '索尼 FX3 摄像机', applyTime: '2024-11-18 10:00', startTime: '2024-11-20 18:00', endTime: '2024-11-20 22:00', status: '待审核' }
+    { id: 1, name: '佳能 EOS R5 单反相机', applyTime: '2024-11-04 09:00', startTime: '2024-11-05 08:00', endTime: '2024-11-05 18:00', status: 4 },
+    { id: 2, name: '大疆 Mavic 3 无人机', applyTime: '2024-11-07 15:00', startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00', status: 3 },
+    { id: 3, name: '索尼 FX3 摄像机', applyTime: '2024-11-18 10:00', startTime: '2024-11-20 18:00', endTime: '2024-11-20 22:00', status: 0 }
 ]
 
 export const messages = [
@@ -501,64 +440,44 @@ export const messages = [
 ]
 
 /* ========== 设备 ========== */
+// 设备状态：0可用 1借出 2维修 3报废
 export const deviceList = [
-    { id: 1, code: 'SJ-001', name: '图形工作站', model: '联想 (i7-12700F/16G)', buyDate: '2025-03-01', status: '可用', remark: '含显示器27寸、键鼠、HDMI线及转换器', stock: 1 },
-
-    // 👇 佳能 R6 拆分
-    { id: 2, code: 'SJ-002', name: '佳能 R6 单反相机 - 1号', model: '佳能 EOS R6', buyDate: '2023-03-01', status: '借出', remark: '含：RF24-105 普通镜头、电池及充电器', stock: 1 },
-    { id: 3, code: 'SJ-003', name: '佳能 R6 单反相机 - 2号', model: '佳能 EOS R6', buyDate: '2023-03-01', status: '可用', remark: '含：RF24-105 普通镜头、电池及充电器', stock: 1 },
-
-    // 👇 佳能 R6 Mark II 拆分
-    { id: 4, code: 'SJ-004', name: '佳能 R6 Mark II 单反 - 1号', model: '佳能 EOS R6 Mark II', buyDate: '2025-03-01', status: '可用', remark: '含：普通镜头、备用电池', stock: 1 },
-    { id: 5, code: 'SJ-005', name: '佳能 R6 Mark II 单反 - 2号', model: '佳能 EOS R6 Mark II', buyDate: '2025-03-01', status: '可用', remark: '含：红圈镜头、备用电池', stock: 1 },
-
-    // 👇 稳定器拆分
-    { id: 6, code: 'SJ-006', name: '大疆 RS5 稳定器 - 1号', model: '大疆如影 RS5 专业套装', buyDate: '2025-03-01', status: '可用', remark: '含：手提转接件、快装板、电池手柄', stock: 1 },
-    { id: 7, code: 'SJ-007', name: '大疆 RS5 稳定器 - 2号', model: '大疆如影 RS5 专业套装', buyDate: '2025-03-01', status: '可用', remark: '含：手提转接件、快装板、电池手柄', stock: 1 },
-
-    // 👇 无人机、摄像机（单件直接列）
-    { id: 8, code: 'SJ-008', name: '无人机', model: '大疆御4 Pro 畅飞套装', buyDate: '2025-03-01', status: '可用', remark: '含：RC遥控*2，螺旋桨*4，电池*3，ND镜，256G卡', stock: 1 },
-    { id: 9, code: 'SJ-009', name: '索尼摄像机', model: '索尼 Z150', buyDate: '2025-03-01', status: '可用', remark: '含：国产电池*2，摄像机包，ECM-VG1麦克风', stock: 1 },
-
-    { id: 10, code: 'SJ-010', name: '麦克风套装', model: '纽曼+MOMA', buyDate: '2025-03-01', status: '维修', remark: '含：接收器，麦克风*4，监听器*3，防风球*2，收纳包*3', stock: 1 },
-    { id: 11, code: 'SJ-011', name: '提词器', model: 'Besview', buyDate: '2025-03-01', status: '可用', remark: '含：主体，升降云台，遮光罩，遥控器，支架，收纳包', stock: 1 },
-
-    // 👇 三脚架拆分
-    { id: 12, code: 'SJ-012', name: '三脚架 - 1号(大)', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '含：快拆、收纳包', stock: 1 },
-    { id: 13, code: 'SJ-013', name: '三脚架 - 2号(大)', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '含：快拆、收纳包', stock: 1 },
-    { id: 14, code: 'SJ-014', name: '三脚架 - 3号(小)', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '含：快拆、收纳包', stock: 1 },
-
-    { id: 15, code: 'SJ-015', name: '补光灯套装', model: 'CINEPEER+100W', buyDate: '2025-03-01', status: '可用', remark: '含：补光灯棒*2，100w补光灯，柔光球罩，电池，适配器', stock: 1 },
-    { id: 16, code: 'SJ-016', name: '反光板', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: '标准反光板', stock: 1 },
-    { id: 17, code: 'SJ-017', name: '手持DV', model: '通用型', buyDate: '2025-03-01', status: '可用', remark: 'DV套装', stock: 1 },
-    { id: 18, code: 'SJ-018', name: '长焦镜头', model: '佳能 F2.8 70-200mm', buyDate: '2023-03-01', status: '可用', remark: '含：遮光罩，镜头盖（红圈）', stock: 1 },
-    { id: 19, code: 'SJ-019', name: '运动相机', model: '大疆 Action 5 Pro', buyDate: '2025-03-01', status: '可用', remark: '含：主机，兔笼，快拆*2，手柄，电池仓，电池*3', stock: 1 },
-    { id: 20, code: 'SJ-020', name: '内存卡', model: '雷克沙 128G', buyDate: '2025-03-01', status: '可用', remark: '128G 高速内存卡', stock: 1 },
-    { id: 21, code: 'SJ-021', name: '无线麦克风', model: '大疆麦克风套装', buyDate: '2025-03-01', status: '可用', remark: '含：麦克风*2，充电仓，数据线*3，防风罩*2，接收器', stock: 1 },
-    { id: 22, code: 'SJ-022', name: '闪光灯套装', model: '神牛', buyDate: '2025-03-01', status: '可用', remark: '含：主灯及电池，收纳包，副闪光灯，充电器，微型底座', stock: 1 },
-
-    // 👇 活动马甲（按你的要求保持数量不拆）
-    { id: 23, code: 'SJ-023', name: '活动马甲', model: '融媒体中心专用', buyDate: '2025-03-01', status: '可用', remark: '共15件', stock: 15 }
+    { id: 1, code: 'SJ-001', name: '图形工作站', model: '联想 (i7-12700F/16G)', buyDate: '2025-03-01', status: 0, remark: '含显示器27寸、键鼠、HDMI线及转换器', stock: 1 },
+    { id: 2, code: 'SJ-002', name: '佳能 R6 单反相机 - 1号', model: '佳能 EOS R6', buyDate: '2023-03-01', status: 1, remark: '含：RF24-105 普通镜头、电池及充电器', stock: 1 },
+    { id: 3, code: 'SJ-003', name: '佳能 R6 单反相机 - 2号', model: '佳能 EOS R6', buyDate: '2023-03-01', status: 0, remark: '含：RF24-105 普通镜头、电池及充电器', stock: 1 },
+    { id: 4, code: 'SJ-004', name: '佳能 R6 Mark II 单反 - 1号', model: '佳能 EOS R6 Mark II', buyDate: '2025-03-01', status: 0, remark: '含：普通镜头、备用电池', stock: 1 },
+    { id: 5, code: 'SJ-005', name: '佳能 R6 Mark II 单反 - 2号', model: '佳能 EOS R6 Mark II', buyDate: '2025-03-01', status: 0, remark: '含：红圈镜头、备用电池', stock: 1 },
+    { id: 6, code: 'SJ-006', name: '大疆 RS5 稳定器 - 1号', model: '大疆如影 RS5 专业套装', buyDate: '2025-03-01', status: 0, remark: '含：手提转接件、快装板、电池手柄', stock: 1 },
+    { id: 7, code: 'SJ-007', name: '大疆 RS5 稳定器 - 2号', model: '大疆如影 RS5 专业套装', buyDate: '2025-03-01', status: 0, remark: '含：手提转接件、快装板、电池手柄', stock: 1 },
+    { id: 8, code: 'SJ-008', name: '无人机', model: '大疆御4 Pro 畅飞套装', buyDate: '2025-03-01', status: 0, remark: '含：RC遥控*2，螺旋桨*4，电池*3，ND镜，256G卡', stock: 1 },
+    { id: 9, code: 'SJ-009', name: '索尼摄像机', model: '索尼 Z150', buyDate: '2025-03-01', status: 0, remark: '含：国产电池*2，摄像机包，ECM-VG1麦克风', stock: 1 },
+    { id: 10, code: 'SJ-010', name: '麦克风套装', model: '纽曼+MOMA', buyDate: '2025-03-01', status: 2, remark: '含：接收器，麦克风*4，监听器*3，防风球*2，收纳包*3', stock: 1 },
+    { id: 11, code: 'SJ-011', name: '提词器', model: 'Besview', buyDate: '2025-03-01', status: 0, remark: '含：主体，升降云台，遮光罩，遥控器，支架，收纳包', stock: 1 },
+    { id: 12, code: 'SJ-012', name: '三脚架 - 1号(大)', model: '通用型', buyDate: '2025-03-01', status: 0, remark: '含：快拆、收纳包', stock: 1 },
+    { id: 13, code: 'SJ-013', name: '三脚架 - 2号(大)', model: '通用型', buyDate: '2025-03-01', status: 0, remark: '含：快拆、收纳包', stock: 1 },
+    { id: 14, code: 'SJ-014', name: '三脚架 - 3号(小)', model: '通用型', buyDate: '2025-03-01', status: 0, remark: '含：快拆、收纳包', stock: 1 },
+    { id: 15, code: 'SJ-015', name: '补光灯套装', model: 'CINEPEER+100W', buyDate: '2025-03-01', status: 0, remark: '含：补光灯棒*2，100w补光灯，柔光球罩，电池，适配器', stock: 1 },
+    { id: 16, code: 'SJ-016', name: '反光板', model: '通用型', buyDate: '2025-03-01', status: 0, remark: '标准反光板', stock: 1 },
+    { id: 17, code: 'SJ-017', name: '手持DV', model: '通用型', buyDate: '2025-03-01', status: 0, remark: 'DV套装', stock: 1 },
+    { id: 18, code: 'SJ-018', name: '长焦镜头', model: '佳能 F2.8 70-200mm', buyDate: '2023-03-01', status: 0, remark: '含：遮光罩，镜头盖（红圈）', stock: 1 },
+    { id: 19, code: 'SJ-019', name: '运动相机', model: '大疆 Action 5 Pro', buyDate: '2025-03-01', status: 0, remark: '含：主机，兔笼，快拆*2，手柄，电池仓，电池*3', stock: 1 },
+    { id: 20, code: 'SJ-020', name: '内存卡', model: '雷克沙 128G', buyDate: '2025-03-01', status: 0, remark: '128G 高速内存卡', stock: 1 },
+    { id: 21, code: 'SJ-021', name: '无线麦克风', model: '大疆麦克风套装', buyDate: '2025-03-01', status: 0, remark: '含：麦克风*2，充电仓，数据线*3，防风罩*2，接收器', stock: 1 },
+    { id: 22, code: 'SJ-022', name: '闪光灯套装', model: '神牛', buyDate: '2025-03-01', status: 0, remark: '含：主灯及电池，收纳包，副闪光灯，充电器，微型底座', stock: 1 },
+    { id: 23, code: 'SJ-023', name: '活动马甲', model: '融媒体中心专用', buyDate: '2025-03-01', status: 0, remark: '共15件', stock: 15 }
 ]
 
-// 自动提取名称，方便任务发布等下拉框使用
 export const deviceNames = deviceList.map(d => d.name)
 
-// export const deviceNames = ['单反相机','摄像机','无人机','稳定器','导播台','麦克风','图形工作站','补光灯']
-
+// 设备申请状态（0待审核 1已通过 3使用中）
 export const deviceApplications = [
-    { id: 1, applicant: '徐钰婷', dept: '新闻部', phone: '18442808818', device: '佳能 EOS R5 单反相机',
-        startTime: '2024-11-05 08:00', endTime: '2024-11-05 18:00', purpose: '运动会开幕式拍摄', taskName: '2024 秋季运动会开幕式报道',
-        status: '已通过', opinion: '同意，注意保管' },
-    { id: 2, applicant: '刘钰珂', dept: '网宣部', phone: '15383666935', device: '大疆 Mavic 3 无人机',
-        startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00', purpose: '校园航拍', taskName: '',
-        status: '待审核', opinion: '' },
-    { id: 3, applicant: '王亚楠', dept: '设计部', phone: '18535400694', device: '索尼 FX3 摄像机',
-        startTime: '2024-11-20 18:00', endTime: '2024-11-20 22:00', purpose: '直播摄像', taskName: '“青春之声”主题直播',
-        status: '使用中', opinion: '' }
+    { id: 1, applicant: '徐钰婷', deptId: 105, phone: '18442808818', device: '佳能 EOS R5 单反相机', startTime: '2024-11-05 08:00', endTime: '2024-11-05 18:00', purpose: '运动会开幕式拍摄', taskName: '2024 秋季运动会开幕式报道', status: 1, opinion: '同意，注意保管' },
+    { id: 2, applicant: '刘钰珂', deptId: 102, phone: '15383666935', device: '大疆 Mavic 3 无人机', startTime: '2024-11-08 09:00', endTime: '2024-11-10 18:00', purpose: '校园航拍', taskName: '', status: 0, opinion: '' },
+    { id: 3, applicant: '王亚楠', deptId: 106, phone: '18535400694', device: '索尼 FX3 摄像机', startTime: '2024-11-20 18:00', endTime: '2024-11-20 22:00', purpose: '直播摄像', taskName: '“青春之声”主题直播', status: 3, opinion: '' }
 ]
 
 /* ========== 上传字段 ========== */
+// 键名依然保留中文或使用 ID 都可以，这里为了方便匹配，可以动态查
 export const uploadFieldMap = {
     '综合部': [
         { key: 'title', label: '材料名称', type: 'input', required: true },
@@ -607,19 +526,17 @@ export const deptOverview = {
         { type: 'evaluation', text: '10 月部门考评尚未发起', time: '2024-11-01 00:00' }
     ],
     recentTasks: [
-        { id: 1, title: '2024 秋季运动会开幕式报道', status: '筹备', startTime: '2024-11-05 08:00' },
-        { id: 2, title: '校园文化节宣传片拍摄', status: '进行中', startTime: '2024-11-08 09:00' }
+        { id: 1, title: '2024 秋季运动会开幕式报道', status: 0, startTime: '2024-11-05 08:00' },
+        { id: 2, title: '校园文化节宣传片拍摄', status: 1, startTime: '2024-11-08 09:00' }
     ]
 }
 
 export const adminMeetings = [
-    { id: 1, title: '融媒体中心全体部长例会', time: '2024-11-04 14:00', location: '中心会议室',
-        host: '王主任', dept: '全中心', records: [] }, // 👈 新增的全中心会议
-    { id: 2, title: '新闻部 11 月第一次例会', time: '2024-11-04 14:00', location: '中心会议室',
-        host: '张洋', dept: '新闻部', records: [] },
-    { id: 3, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议',
-        host: '张洋', dept: '新闻部', records: [] }
+    { id: 1, title: '融媒体中心全体部长例会', time: '2024-11-04 14:00', location: '中心会议室', host: '王主任', deptId: 100, records: [] },
+    { id: 2, title: '新闻部 11 月第一次例会', time: '2024-11-04 14:00', location: '中心会议室', host: '张洋', deptId: 105, records: [] },
+    { id: 3, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议', host: '张洋', deptId: 105, records: [] }
 ]
+
 export const evaluationTemplates = {
     '新闻部': [
         { key: 'news', name: '撰写新闻稿', score: 1, type: 'auto' },
@@ -641,16 +558,14 @@ export const defaultEvaluationTemplate = [
     { key: 'meeting', name: '会议到场', score: 1, type: 'auto' },
     { key: 'extra', name: '临时加派', score: 1, type: 'manual' }
 ]
-// 考评数据（模拟后端返回）
+
+// 考评记录（0不合格 1合格 2良好 3优秀）
 export const evaluations = [
     {
-        id: 1, month: '2024-11', dept: '新闻部', member: '徐钰婷',
-        autoScore: 12.5, manualScore: 2, total: 14.5, level: '优秀', status: '已完成', createdAt: '2024-11-20 10:00',
+        id: 1, month: '2024-11', deptId: 105, member: '徐钰婷',
+        autoScore: 12.5, manualScore: 2, total: 14.5, level: 3, status: 1, createdAt: '2024-11-20 10:00',
         details: {
-            checkinDays: 10,
-            checkinScore: 5,     // 打卡得分
-            taskScore: 5,        // 任务得分
-            meetingScore: 2.5,   // 会议得分
+            checkinDays: 10, checkinScore: 5, taskScore: 5, meetingScore: 2.5,
             taskList: [
                 { title: '2024 秋季运动会开幕式报道', score: 2 },
                 { title: '新生入学教育专题稿件', score: 3 }
@@ -663,11 +578,10 @@ export const evaluations = [
         }
     },
     {
-        id: 2, month: '2024-11', dept: '新闻部', member: '李润琪',
-        autoScore: 8, manualScore: 0, total: 8, level: '良好', status: '已完成', createdAt: '2024-11-20 10:00',
+        id: 2, month: '2024-11', deptId: 105, member: '李润琪',
+        autoScore: 8, manualScore: 0, total: 8, level: 2, status: 1, createdAt: '2024-11-20 10:00',
         details: {
-            checkinDays: 6, checkinScore: 3,
-            taskScore: 3, meetingScore: 2,
+            checkinDays: 6, checkinScore: 3, taskScore: 3, meetingScore: 2,
             taskList: [{ title: '校党委理论学习中心组会议', score: 3 }],
             meetingList: [{ title: '新闻部 11 月第一次例会', score: 2 }],
             extraNote: ''
@@ -675,7 +589,6 @@ export const evaluations = [
     }
 ]
 
-// 考评模板（当前所有部门通用，后期由后端下发）
 export const evaluationTemplate = [
     { key: 'checkin', name: '每日转发打卡', score: 0.5, type: 'auto', desc: '每打卡一次加 0.5 分' },
     { key: 'task', name: '参与任务', score: 1, type: 'auto', desc: '每参与一个任务加 1 分' },
@@ -683,97 +596,71 @@ export const evaluationTemplate = [
     { key: 'manual', name: '部长附加评分', score: 0, type: 'manual', desc: '根据日常表现手动打分' }
 ]
 
-
-
-
-
+// 打卡记录（1已打卡 0未打卡）
 export const checkinRecords = [
-    { id: 1, date: '2026-05-20', dept: '新闻部', member: '徐钰婷', status: '已打卡' },
-    { id: 2, date: '2026-05-20', dept: '新闻部', member: '李润琪', status: '已打卡' }
+    { id: 1, date: '2026-05-20', deptId: 105, member: '徐钰婷', status: 1 },
+    { id: 2, date: '2026-05-20', deptId: 105, member: '李润琪', status: 1 }
 ]
+
+// 申诉状态：0待审批 1已通过 2已拒绝
 export const checkinAppeals = [
-    { id: 1, member: '李润琪', dept: '新闻部', date: '2024-11-05', reason: '当天已转发但系统未记录', status: '待审批', createdAt: '2024-11-06 09:00' },
-    { id: 2, member: '王亚楠', dept: '设计部', date: '2024-11-02', reason: '外出拍摄无法转发', status: '已通过', createdAt: '2024-11-03 10:00' }
+    { id: 1, member: '李润琪', deptId: 105, date: '2024-11-05', reason: '当天已转发但系统未记录', status: 0, createdAt: '2024-11-06 09:00' },
+    { id: 2, member: '王亚楠', deptId: 106, date: '2024-11-02', reason: '外出拍摄无法转发', status: 1, createdAt: '2024-11-03 10:00' }
 ]
+
 export const checkinStats = [
-    { dept: '新闻部', rate: 95, total: 20, normal: 19, absent: 1 },
-    { dept: '网宣部', rate: 88, total: 20, normal: 17, absent: 3 },
-    { dept: '设计部', rate: 92, total: 20, normal: 18, absent: 2 },
-    { dept: '摄制部', rate: 90, total: 20, normal: 18, absent: 2 },
-    { dept: '影音部', rate: 85, total: 20, normal: 17, absent: 3 },
-    { dept: '综合部', rate: 98, total: 20, normal: 19, absent: 1 }
+    { deptId: 105, rate: 95, total: 20, normal: 19, absent: 1 },
+    { deptId: 102, rate: 88, total: 20, normal: 17, absent: 3 },
+    { deptId: 106, rate: 92, total: 20, normal: 18, absent: 2 },
+    { deptId: 104, rate: 90, total: 20, normal: 18, absent: 2 },
+    { deptId: 103, rate: 85, total: 20, normal: 17, absent: 3 },
+    { deptId: 101, rate: 98, total: 20, normal: 19, absent: 1 }
 ]
 
 export const dashboardData = {
     wx: {
         summary: { totalViews: 245000, totalLikes: 8500, totalOriginal: 12, totalCount: 142 },
         trend: [
-            { month: '2026-01', views: 12000, likes: 400 },
-            { month: '2026-02', views: 15000, likes: 500 },
-            { month: '2026-03', views: 80000, likes: 2500 },
-            { month: '2026-04', views: 100000, likes: 3500 },
-            { month: '2026-05', views: 38000, likes: 1600 }
+            { month: '2026-01', views: 12000, likes: 400 }, { month: '2026-02', views: 15000, likes: 500 }, { month: '2026-03', views: 80000, likes: 2500 }, { month: '2026-04', views: 100000, likes: 3500 }, { month: '2026-05', views: 38000, likes: 1600 }
         ],
         list: [
             { id: 1, title: '纳新｜你的热爱，值得一个舞台', type: '原创', date: '2026-03-08', views: 9261, likes: 227, url: 'https://mp.weixin.qq.com/s/3pIMGijOnnvHwxhqkr5mww' },
-            { id: 2, title: '丁香艺术团招新 丨 等你“艺” 起绽放', type: '社团活动', date: '2026-03-01', views: 6642, likes: 86, url: 'https://mp.weixin.qq.com/s/86ata_IwkM85sy8sHDFlXA' },
-            { id: 3, title: '毕业不打烊 音浪正狂欢——毕业生草坪音乐会面向大家征集节目啦~', type: '新闻', date: '2026-04-26', views: 6408, likes: 482, url: 'https://mp.weixin.qq.com/s/sr710qNyJANGzbinIYhBjQ' },
-            { id: 4, title: '社团活动看这里！', type: '社团活动', date: '2026-03-12', views: 4404, likes: 77, url: 'https://mp.weixin.qq.com/s/eezrfANY2kl6c63h5g5fXA' },
-            { id: 5, title: '软件学院成功举办第九届运动会', type: '学院投稿', date: '2026-03-18', views: 4170, likes: 301, url: 'https://mp.weixin.qq.com/s/UE42DDGyXhYgjieHNPu2ew' },
-            { id: 6, title: '“镜头里的中国”摄影作品展征集开始啦，SXAUers快来投稿，一起晒出镜头里的祖国～', type: '新闻', date: '2026-01-22', views: 3496, likes: 19, url: 'https://mp.weixin.qq.com/s/RFNudJDsoW9aGMQqFgJNTg' },
-            { id: 7, title: '我校举办优秀社团展示评选活动', type: '新闻', date: '2026-01-05', views: 3373, likes: 69, url: 'https://mp.weixin.qq.com/s/vrJc9XCqUj3MbLVHzK0pHA' },
-            { id: 8, title: 'SXAUers的年夜饭来啦！', type: '原创', date: '2026-02-10', views: 3093, likes: 25, url: 'https://mp.weixin.qq.com/s/31LKMZ4ZuOL_cHX8hNklMg' },
-            { id: 9, title: '速存！2026年西部计划报名指南看这里🧐', type: '转发', date: '2026-03-10', views: 2910, likes: 29, url: 'https://mp.weixin.qq.com/s/syqpUl29S3_v8wk8YVx2LA' },
-            { id: 10, title: '一周回顾 丨 本周要闻合集来啦（3月15日——3月21日）', type: '一周回顾', date: '2026-03-21', views: 819, likes: 150, url: 'https://mp.weixin.qq.com/s/zESWaDalFxabx7hECVffnw' }
+            { id: 2, title: '丁香艺术团招新 丨 等你“艺” 起绽放', type: '社团活动', date: '2026-03-01', views: 6642, likes: 86, url: 'https://mp.weixin.qq.com/s/86ata_IwkM85sy8sHDFlXA' }
         ]
     },
     yy: {
         summary: { totalViews: 856000, totalLikes: 25000, totalVideos: 33, totalCount: 179 },
         trend: [
-            { month: '2026-01', views: 89000, likes: 1800 },
-            { month: '2026-02', views: 75000, likes: 2100 },
-            { month: '2026-03', views: 120000, likes: 4000 },
-            { month: '2026-04', views: 190000, likes: 5000 },
-            { month: '2026-05', views: 382000, likes: 12100 }
+            { month: '2026-01', views: 89000, likes: 1800 }, { month: '2026-02', views: 75000, likes: 2100 }, { month: '2026-03', views: 120000, likes: 4000 }, { month: '2026-04', views: 190000, likes: 5000 }, { month: '2026-05', views: 382000, likes: 12100 }
         ],
         list: [
             { id: 1, title: '你好，新同学！', type: '迎新', date: '2025-09-11', views: 34044, likes: 300, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 2, title: '执笔书梦 青春诗行', type: '毕业季', date: '2025-06-18', views: 31381, likes: 801, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 3, title: '世界赠予我的', type: '日常', date: '2025-02-16', views: 32285, likes: 1662, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 4, title: '不说再见', type: '毕业季', date: '2025-06-17', views: 27292, likes: 689, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 5, title: '山西农业大学软件学院赴夏县暑期“三下乡”社会实践纪实', type: '三下乡', date: '2025-07-26', views: 23952, likes: 604, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 6, title: '光影绘绿水青山 青春书美丽中国', type: '活动', date: '2025-03-17', views: 22693, likes: 1484, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 7, title: '2025年开学典礼合唱歌曲《歌唱祖国》', type: '典礼', date: '2025-09-14', views: 21913, likes: 372, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 8, title: '“舞出自信 健康相伴”广场舞活动', type: '活动', date: '2025-03-24', views: 15736, likes: 420, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 9, title: '山西农业大学生命科学学院赴上党区、陵川县暑期“三下乡”社会实践纪实', type: '三下乡', date: '2025-07-25', views: 15055, likes: 358, url: 'https://channels.weixin.qq.com/xxx' },
-            { id: 10, title: '世界赠予我的', type: '日常', date: '2025-04-22', views: 14935, likes: 309, url: 'https://channels.weixin.qq.com/xxx' }
+            { id: 2, title: '执笔书梦 青春诗行', type: '毕业季', date: '2025-06-18', views: 31381, likes: 801, url: 'https://channels.weixin.qq.com/xxx' }
         ]
     }
 }
+
 export const announcements = [
-    { id: 1, title: '关于 2024 年秋季运动会宣传工作的通知', author: '王主任', scope: '全体', createdAt: '2024-11-01 09:00',
-        content: '各相关部门：\n\n为做好秋季运动会宣传工作，请新闻部、摄制部提前做好人员安排与设备准备……' },
-    { id: 2, title: '融媒体中心 10 月考评结果公示', author: '王主任', scope: '全体', createdAt: '2024-11-02 15:00',
-        content: '10 月考评结果已出，请各部门部长登录部门管理区查看详情。' }
+    { id: 1, title: '关于 2024 年秋季运动会宣传工作的通知', author: '王主任', scope: '全体', createdAt: '2024-11-01 09:00', content: '各相关部门：\n\n为做好秋季运动会宣传工作，请新闻部、摄制部提前做好人员安排与设备准备……' },
+    { id: 2, title: '融媒体中心 10 月考评结果公示', author: '王主任', scope: '全体', createdAt: '2024-11-02 15:00', content: '10 月考评结果已出，请各部门部长登录部门管理区查看详情。' }
 ]
 
 export const deptProfiles = Object.fromEntries(
-    departments.map(d => [d.name, {
-        intro: d.intro,
-        contact: '0354-6288xxx',
-        logo: '', cover: '', photos: [],
-        members: members.filter(m => m.dept === d.name && m.status === '在岗').map(m => ({ name: m.name, title: m.title }))
+    departments.map(d => [d.id, {
+        intro: d.intro, contact: '0354-6288xxx', logo: '', cover: '', photos: [],
+        members: members.filter(m => m.deptId === d.id && m.status === 1).map(m => ({ name: m.name, title: m.title }))
     }])
 )
 
 /* ========== 筛选工具 ========== */
+// 注意这里前端如果传参也会变成数字
 export const filterTasks = ({ status } = {}) =>
-    !status || status === '全部' ? tasks : tasks.filter(t => t.status === status)
+    status === undefined || status === -1 ? tasks : tasks.filter(t => t.status === status)
 
 export const filterMaterials = (p = {}) => materials.filter(m => {
     if (p.title && !m.title.includes(p.title)) return false
     if (p.content && !(m.content || '').includes(p.content)) return false
-    if (p.department && m.department !== p.department) return false
+    if (p.deptId && m.deptId !== p.deptId) return false
     if (p.leader && m.leaderName !== p.leader) return false
     if (p.startTime && m.createdAt < p.startTime) return false
     if (p.endTime && m.createdAt > p.endTime) return false
@@ -781,25 +668,20 @@ export const filterMaterials = (p = {}) => materials.filter(m => {
 })
 
 /* ========== 管理区菜单配置 ========== */
-// 基础菜单（所有人都有的）
+// 配置如果用数字作为键，前端匹配会更顺畅
 export const baseAdminMenus = [
-    { path: 'overview', label: '概览' },
-    { path: 'members', label: '成员管理' },
-    { path: 'tasks', label: '任务参与' },
-    { path: 'meetings', label: '会议管理' },
-    { path: 'evaluations', label: '考评管理' },
-    { path: 'materials', label: '本部门素材' },
-    { path: 'announcements', label: '公告管理' },
-    { path: 'dept-profile', label: '部门介绍' }
+    { path: 'overview', label: '概览' }, { path: 'members', label: '成员管理' },
+    { path: 'tasks', label: '任务参与' }, { path: 'meetings', label: '会议管理' },
+    { path: 'evaluations', label: '考评管理' }, { path: 'materials', label: '本部门素材' },
+    { path: 'announcements', label: '公告管理' }, { path: 'dept-profile', label: '部门介绍' }
 ]
 
-// 特殊菜单（按部门分配）
 export const specialAdminMenus = {
-    '综合部': [
+    101: [ // 综合部
         { path: 'checkins', label: '打卡管理' },
         { path: 'dashboard', label: '数据看板' }
     ],
-    '摄制部': [
+    104: [ // 摄制部
         { path: 'devices', label: '设备管理' }
     ]
 }
