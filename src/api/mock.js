@@ -528,12 +528,13 @@ export const deptOverview = {
 }
 
 export const adminMeetings = [
-    { id: 1, title: '新闻部 11 月第一次例会', time: '2024-11-04 14:00', location: '中心会议室',
+    { id: 1, title: '融媒体中心全体部长例会', time: '2024-11-04 14:00', location: '中心会议室',
+        host: '王主任', dept: '全中心', records: [] }, // 👈 新增的全中心会议
+    { id: 2, title: '新闻部 11 月第一次例会', time: '2024-11-04 14:00', location: '中心会议室',
         host: '张洋', dept: '新闻部', records: [] },
-    { id: 2, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议',
+    { id: 3, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议',
         host: '张洋', dept: '新闻部', records: [] }
 ]
-
 export const evaluationTemplates = {
     '新闻部': [
         { key: 'news', name: '撰写新闻稿', score: 1, type: 'auto' },
