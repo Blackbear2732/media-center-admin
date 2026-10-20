@@ -36,9 +36,9 @@
 
               <!-- 2. 待确认报名 -->
               <div class="muted" style="margin-bottom:8px; font-weight: 600;">待确认报名</div>
-              <div v-if="row.signups && row.signups.length > 0" style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; margin-bottom: 16px;">
-                <div v-for="s in row.signups" :key="s.name" class="flex-between" style="padding:10px 0;border-bottom:1px dashed var(--border)">
-                  <span>{{ s.name }}（{{ s.dept }}）</span>
+              <div v-if="pendingSignups(row).length > 0" style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; margin-bottom: 16px;">
+                <div v-for="s in pendingSignups(row)" :key="s.name" class="flex-between" style="padding:10px 0;border-bottom:1px dashed var(--border)">
+                  <span>{{ s.name }}（{{ getDeptLabel(s.deptId) }}）</span>
                   <div>
                     <el-button size="small" type="success" plain @click="confirm(row, s)">确认</el-button>
                     <el-button size="small" type="danger" plain @click="reject(row, s)">忽略</el-button>
@@ -78,13 +78,13 @@
         <el-table-column prop="title" label="任务名称" min-width="220" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag size="small" :type="getTaskTagType(row.status)">{{ row.status }}</el-tag>
+            <el-tag size="small" :type="getTaskTagType(row.status)">{{ getTaskStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="startTime" label="开始时间" width="160" />
         <el-table-column label="参与部门" min-width="160">
           <template #default="{ row }">
-            <el-tag v-for="d in row.departments" :key="d" size="small" style="margin-right:4px">{{ d }}</el-tag>
+            <el-tag v-for="id in (row.deptIds || [])" :key="id" size="small" style="margin-right:4px">{{ getDeptLabel(id) }}</el-tag>
           </template>
         </el-table-column>
 
@@ -98,7 +98,7 @@
       </el-table>
     </div>
 
-    <!-- 👇 完整版编辑任务弹窗 -->
+    <!-- 编辑任务弹窗 -->
     <el-dialog v-model="editVisible" title="编辑任务信息" width="700px" :close-on-click-modal="false">
       <el-form :model="editForm" label-width="90px">
         <el-form-item label="任务名称" required>
@@ -106,9 +106,7 @@
         </el-form-item>
         <el-form-item label="任务状态" required>
           <el-select v-model="editForm.status" style="width:200px">
-            <el-option label="筹备" value="筹备" />
-            <el-option label="进行中" value="进行中" />
-            <el-option label="已结束" value="已结束" />
+            <el-option v-for="s in TASK_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="任务时间" required>
@@ -120,7 +118,7 @@
           <el-input v-model="editForm.location" />
         </el-form-item>
         <el-form-item label="任务说明">
-          <el-input v-model="editForm.desc" type="textarea" :rows="3" />
+          <el-input v-model="editForm.description" type="textarea" :rows="3" />
         </el-form-item>
 
         <el-form-item label="任务标签">
@@ -131,20 +129,20 @@
         </el-form-item>
 
         <el-form-item label="参与部门">
-          <el-select v-model="editForm.departments" multiple placeholder="请选择主力部门" style="width:100%">
-            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.name" />
+          <el-select v-model="editForm.deptIds" multiple placeholder="请选择主力部门" style="width:100%">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
         </el-form-item>
 
         <el-form-item label="联动部门">
-          <el-select v-model="editForm.relatedDepts" multiple placeholder="请选择协同部门" style="width:100%">
-            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.name" :disabled="editForm.departments.includes(d.name)" />
+          <el-select v-model="editForm.relatedDeptIds" multiple placeholder="请选择协同部门" style="width:100%">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" :disabled="editForm.deptIds.includes(d.value)" />
           </el-select>
         </el-form-item>
 
         <el-form-item label="关联设备">
-          <el-select v-model="editForm.devices" multiple placeholder="请选择所需设备" style="width:100%">
-            <el-option v-for="(d, i) in availableDevices" :key="i" :label="typeof d === 'string' ? d : d.name" :value="typeof d === 'string' ? d : d.name" />
+          <el-select v-model="editForm.equipmentIds" multiple placeholder="请选择所需设备" style="width:100%">
+            <el-option v-for="d in availableDevices" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -163,10 +161,21 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi, taskApi } from '@/api'
 import { userStore } from '@/store/user'
-import { getTaskTagType } from '@/utils/dict'
+import {
+  ALL_DEPT_ID,
+  DEPARTMENTS_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  getDeptLabel,
+  getTaskStatusLabel,
+  getTaskTagType,
+  isAllDept
+} from '@/utils/dict'
 
 const router = useRouter()
-const dept = userStore.isDirector ? (userStore.adminDept || '') : userStore.dept
+
+// 管理视角部门（主任可切到全中心 100）
+const deptId = userStore.viewDeptId
+
 const list = ref([]), loading = ref(false)
 const deptMembers = ref([])
 
@@ -179,18 +188,23 @@ const adding = reactive({})
 const editVisible = ref(false)
 const savingEdit = ref(false)
 const tagInput = ref('')
-const departments = ref([])
 const availableDevices = ref([])
 
 const editForm = reactive({
-  id: null, title: '', status: '', startTime: '', endTime: '',
-  location: '', desc: '', tags: [], departments: [], relatedDepts: [], devices: []
+  id: null, title: '', status: 0, startTime: '', endTime: '',
+  location: '', description: '', tags: [], deptIds: [], relatedDeptIds: [], equipmentIds: []
 })
 
+// 全中心视角看全部参与人，否则只看本部门参与人
 const deptParticipants = (row) => {
-  const parts = (row.participants || []).filter(p => p.dept === dept)
-  return Array.from(new Map(parts.map(item => [item.name, item])).values())
+  const all = (row.participants || []).filter(p => isAllDept(deptId) || Number(p.deptId) === Number(deptId))
+  return Array.from(new Map(all.map(item => [item.name, item])).values())
 }
+
+// 待确认报名（报名 status 0 = 待确认）
+const pendingSignups = (row) => (row.signups || []).filter(s =>
+  Number(s.status) === 0 && (isAllDept(deptId) || Number(s.deptId) === Number(deptId))
+)
 
 function getAvailableMembers(row) {
   const currentNames = (row.participants || []).map(p => p.name)
@@ -200,8 +214,8 @@ function getAvailableMembers(row) {
 async function load() {
   loading.value = true
   try {
-    list.value = await adminApi.tasks(dept)
-    deptMembers.value = await adminApi.members(dept)
+    list.value = await adminApi.tasks(deptId)
+    deptMembers.value = await adminApi.members(isAllDept(deptId) ? ALL_DEPT_ID : deptId)
 
     list.value.forEach(t => {
       selectedNames[t.id] = []
@@ -215,22 +229,20 @@ async function load() {
 
 // --- 编辑与删除 ---
 async function openEdit(row) {
-  // 每次打开时确保有最新字典
-  if(departments.value.length === 0) departments.value = await taskApi.departments()
-  if(availableDevices.value.length === 0) availableDevices.value = await taskApi.devices()
+  if (!availableDevices.value.length) availableDevices.value = await taskApi.devices()
 
   Object.assign(editForm, {
     id: row.id,
     title: row.title,
-    status: row.status,
+    status: Number(row.status),
     startTime: row.startTime,
     endTime: row.endTime,
     location: row.location,
-    desc: row.desc,
+    description: row.description || '',
     tags: row.tags || [],
-    departments: row.departments || [],
-    relatedDepts: row.relatedDepts || [],
-    devices: row.devices || []
+    deptIds: row.deptIds || [],
+    relatedDeptIds: row.relatedDeptIds || [],
+    equipmentIds: row.equipmentIds || []
   })
   editVisible.value = true
 }
@@ -250,7 +262,7 @@ async function saveEdit() {
     await adminApi.updateTask(editForm.id, { ...editForm })
     ElMessage.success('修改成功')
     editVisible.value = false
-    load() // 刷新列表
+    load()
   } catch (e) {
     ElMessage.error('修改失败')
   } finally {
@@ -271,12 +283,11 @@ async function handleDelete(row) {
   } catch (e) {}
 }
 
-// ... 其他人员管理逻辑保持不变 ...
 async function confirm(row, s) {
   await adminApi.confirmSignup(row.id, s.name)
   row.signups = row.signups.filter(x => x.name !== s.name)
   if (!row.participants.some(p => p.name === s.name)) {
-    row.participants.push({ name: s.name, dept: s.dept || dept })
+    row.participants.push({ name: s.name, deptId: s.deptId })
   }
   ElMessage.success('已确认报名')
 }
@@ -295,8 +306,10 @@ async function addParticipants(row) {
   try {
     for (const name of names) {
       if (!row.participants.some(p => p.name === name)) {
-        await adminApi.addParticipant(row.id, { name, dept })
-        row.participants.push({ name, dept })
+        const member = deptMembers.value.find(m => m.name === name)
+        const memberDeptId = member ? Number(member.deptId) : Number(deptId)
+        await adminApi.addParticipant(row.id, { name, deptId: memberDeptId })
+        row.participants.push({ name, deptId: memberDeptId })
         successCount++
       }
     }
