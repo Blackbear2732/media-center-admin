@@ -6,9 +6,7 @@
           <template #default="{ row }">
             <div style="padding: 8px 24px 16px">
               <div class="muted" style="margin-bottom:8px">本部门参与人</div>
-              <el-tag v-for="p in deptParticipants(row)" :key="p.name" style="margin-right:6px">
-                {{ p.name }}
-              </el-tag>
+              <el-tag :type="getStatusTagType(row.status)" size="small">{{ row.status }}</el-tag>
               <span v-if="!deptParticipants(row).length" class="muted">暂无本部门参与人</span>
 
               <div class="muted" style="margin:12px 0 8px">待确认报名</div>
@@ -56,6 +54,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { getStatusTagType } from '@/utils/dict'
+
 
 const router = useRouter()
 const dept = localStorage.getItem('adminDept') || '新闻部'

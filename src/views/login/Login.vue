@@ -70,19 +70,21 @@ import {useRouter, useRoute} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {authApi} from '@/api'
 import {userStore} from '@/store/user'
+import { MODULE_LABEL } from '@/utils/dict'
 
 const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
 
 const depts = ['综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
+// 可以改成基于字典读取（如果不改也行）：
 const deptHints = {
-  '综合部': '打卡管理',
-  '网宣部': '推文数据',
-  '影音部': '成片上传',
-  '摄制部': '设备管理',
-  '新闻部': '新闻稿件',
-  '设计部': '设计图库'
+  '综合部': MODULE_LABEL.checkin,
+  '网宣部': MODULE_LABEL.article,
+  '影音部': MODULE_LABEL.video,
+  '摄制部': MODULE_LABEL.device,
+  '新闻部': MODULE_LABEL.news,
+  '设计部': MODULE_LABEL.design
 }
 
 async function quickLogin(role, dept) {

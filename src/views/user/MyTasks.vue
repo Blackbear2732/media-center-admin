@@ -6,7 +6,7 @@
     <div class="task-grid" v-loading="loading">
       <div v-for="t in list" :key="t.id" class="task-card surface-card" @click="router.push('/tasks/' + t.id)">
         <div class="task-card-head">
-          <span class="status-dot" :class="dotClass(t.status)"></span>
+          <span class="status-dot" :class="getTaskDotClass(t.status)"></span>
           <span>{{ t.status }}</span>
           <span style="margin-left:auto">{{ t.startTime }}</span>
         </div>
@@ -25,10 +25,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { userApi } from '@/api'
+import { getTaskDotClass } from '@/utils/dict'
 
 const router = useRouter()
 const list = ref([]), loading = ref(false)
-const dotClass = (s) => ({ '筹备': 'dot-prepare', '进行': 'dot-doing', '完成': 'dot-done' }[s] || 'dot-prepare')
 
 onMounted(async () => {
   loading.value = true

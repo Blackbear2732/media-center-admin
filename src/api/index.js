@@ -411,13 +411,3 @@ export const adminApi = {
         })())
         : request.get('/admin/menus', { params: { dept, role } })
 }
-
-/* ================= 通用工具 ================= */
-export const statusTagType = (s) => ({
-    '筹备': 'info', '进行中': 'warning', '已结束': 'success',
-    '正常': 'success', '迟到': 'warning', '缺勤': 'danger',
-    '已归还': 'success', '使用中': 'warning', '待审批': 'info', '待审核': 'info',
-    '已通过': 'success', '已拒绝': 'danger', '审批中': 'warning',
-    '已参加': 'success', '待参加': 'info',
-    '在岗': 'success', '停用': 'info'
-}[s] || 'info')

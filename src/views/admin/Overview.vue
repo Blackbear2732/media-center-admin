@@ -49,7 +49,7 @@
           @click="goTask(t.id)"
       >
         <div class="task-card-head">
-          <span class="status-dot" :class="dotClass(t.status)"></span>
+          <span class="status-dot" :class="getTaskDotClass(t.status)"></span>
           <span>{{ t.status }}</span>
           <span style="margin-left:auto">{{ t.startTime }}</span>
         </div>
@@ -63,6 +63,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { adminApi } from '@/api'
+import { getTaskDotClass } from '@/utils/dict'
 
 const router = useRouter()
 const loading = ref(false)
@@ -75,11 +76,6 @@ const data = ref({
   todos: [],
   recentTasks: []
 })
-
-const dotClass = (s) => {
-  const map = { '筹备': 'dot-prepare', '进行中': 'dot-doing', '已结束': 'dot-done' }
-  return map[s] || 'dot-prepare'
-}
 
 const todoLabel = (t) => {
   const map = { signup: '报名确认', material: '素材归档', evaluation: '考评提醒' }

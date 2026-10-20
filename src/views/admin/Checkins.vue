@@ -37,7 +37,7 @@
         <el-table-column prop="member" label="姓名" width="120" />
         <el-table-column prop="status" label="打卡状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.status === '已打卡' ? 'success' : 'danger'" size="small" effect="dark" round>
+            <el-tag :type="getStatusTagType(row.status)" size="small" effect="dark" round>
               {{ row.status }}
             </el-tag>
           </template>
@@ -69,6 +69,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { getStatusTagType } from '@/utils/dict'
 
 const date = ref(new Date().toISOString().split('T')[0])
 const dept = ref('全部')

@@ -129,7 +129,7 @@
         </div>
         <div class="task-list">
           <div v-for="t in tasks" :key="t.id" class="task-row surface-card" @click="goTask(t)">
-            <span class="status-dot" :class="dotClass(t.status)"></span>
+            <span class="status-dot" :class="getTaskDotClass(t.status)"></span>
             <div class="task-row-main">
               <div class="task-row-title">{{ t.title }}</div>
               <div class="task-row-meta">{{ t.startTime }} · {{ t.location }}</div>
@@ -176,8 +176,6 @@ const formatNumber = (num) => {
   if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
   return num
 }
-
-
 const deptGradients = [
   'linear-gradient(135deg,#3d7aab,#6fa8d4)',
   'linear-gradient(135deg,#e8833a,#f2b279)',
@@ -192,12 +190,6 @@ const videoGradients = [
   'linear-gradient(135deg,#4a8a7a,#7fc4b0)',
   'linear-gradient(135deg,#7a4a8a,#b07fc4)'
 ]
-const dotClass = (s) => ({
-  '筹备': 'dot-prepare',
-  '进行中': 'dot-doing',
-  '已结束': 'dot-done'
-}[s] || 'dot-prepare')
-
 function goWorkspace() { router.push(isLogin.value ? '/tasks' : '/login') }
 function goTask(t) { router.push(isLogin.value ? '/tasks/' + t.id : '/login') }
 function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }) }

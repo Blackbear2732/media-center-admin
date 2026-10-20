@@ -82,16 +82,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { messageApi } from '@/api'
 import { userStore } from '@/store/user'
+import { getRoleLabel } from '@/utils/dict'
 
 const route = useRoute()
 const router = useRouter()
 const msgCount = ref(0)
 
-const roleLabel = computed(() => {
-  if (userStore.isDirector) return '中心主任'
-  if (userStore.isMinister) return '部长'
-  return '部员'
-})
+const roleLabel = computed(() => getRoleLabel(userStore.role))
 
 async function updateMsgCount() {
   if (!userStore.isLogin) {

@@ -42,14 +42,10 @@
           <el-table-column prop="buyDate" label="购买日期" width="120" />
           <el-table-column prop="status" label="当前状态" width="120">
             <template #default="{ row }">
-              <el-tag
-                  :type="{ '可用': 'success', '借出': 'warning', '维修': 'danger', '报废': 'info' }[row.status]"
-                  size="small"
-                  effect="dark"
-                  round
-              >
+              <el-tag :type="getStatusTagType(row.status)" size="small" effect="dark" round>
                 {{ row.status }}
               </el-tag>
+
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注" min-width="140" />
@@ -74,9 +70,10 @@
           <el-table-column prop="purpose" label="用途" min-width="140" show-overflow-tooltip />
           <el-table-column prop="status" label="审核状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="{ '待审核': 'info', '已通过': 'success', '已拒绝': 'danger' }[row.status]" size="small">
+              <el-tag :type="getStatusTagType(row.status)" size="small" effect="dark" round>
                 {{ row.status }}
               </el-tag>
+
             </template>
           </el-table-column>
           <el-table-column label="操作" width="180" fixed="right">
@@ -101,9 +98,10 @@
           <el-table-column prop="endTime" label="结束" width="140" />
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.status === '使用中' ? 'warning' : 'success'" size="small">
+              <el-tag :type="getStatusTagType(row.status)" size="small" effect="dark" round>
                 {{ row.status }}
               </el-tag>
+
             </template>
           </el-table-column>
         </el-table>
@@ -139,6 +137,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { getStatusTagType } from '@/utils/dict'
+
 
 const tabs = ['设备档案', '申请审核', '使用记录']
 const active = ref('设备档案')
