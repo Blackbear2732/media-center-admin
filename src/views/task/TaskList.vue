@@ -13,16 +13,16 @@
     </div>
 
     <div class="filter-pills" style="margin-top: 24px; margin-bottom: 32px;">
-      <span v-for="s in tabs" :key="s" class="pill" :class="{ active: active === s }" @click="changeTab(s)" style="padding: 8px 20px;">
-        {{ s }}
+      <span v-for="s in TASK_STATUS_FILTER_OPTIONS" :key="s.value" class="pill" :class="{ active: activeStatus === s.value }" @click="changeTab(s.value)" style="padding: 8px 20px;">
+        {{ s.label }}
       </span>
     </div>
 
     <div class="task-grid" v-loading="loading">
-      <div v-for="t in list" :key="t.id" class="task-card surface-card" @click="router.push('/tasks/' + t.id)" @click.stop="router.push('/tasks/' + t.id)">
+      <div v-for="t in list" :key="t.id" class="task-card surface-card" @click="router.push('/tasks/' + t.id)">
         <div class="task-card-head">
           <span class="status-dot" :class="getTaskDotClass(t.status)"></span>
-          <span>{{ t.status }}</span>
+          <span>{{ getTaskStatusLabel(t.status) }}</span>
           <span style="margin-left:auto">{{ t.startTime }}</span>
         </div>
         <h3>{{ t.title }}</h3>
@@ -30,7 +30,7 @@
           <span>📍</span> <span>{{ t.location }}</span>
         </div>
         <div class="task-card-tags">
-          <span v-for="d in t.departments" :key="d" class="tag-soft">{{ d }}</span>
+          <span v-for="id in (t.deptIds || [])" :key="id" class="tag-soft">{{ getDeptLabel(id) }}</span>
         </div>
         <div class="task-card-foot">
           <div class="avatars" style="margin-right: 12px;">
@@ -45,32 +45,31 @@
 </template>
 
 <script setup>
-import {ref, onMounted} from 'vue'
-import {useRouter} from 'vue-router'
-import {taskApi} from '@/api'
-import {userStore} from '@/store/user'
-import { getTaskDotClass } from '@/utils/dict'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { taskApi } from '@/api'
+import { userStore } from '@/store/user'
+import { getDeptLabel, getTaskDotClass, getTaskStatusLabel, TASK_STATUS_FILTER_OPTIONS } from '@/utils/dict'
 
 const router = useRouter()
-const tabs = ['全部', '筹备', '进行中', '已结束']
-const active = ref('全部')
+const activeStatus = ref(-1) // -1 表示全部
 const list = ref([])
 const loading = ref(false)
 
 async function load() {
-  // ...
-  const params = { status: active.value }
-
-  // 👇 必须确保只有普通部员才传 dept 参数，主任绝对不要传！
-  if (userStore.isMember) {
-    params.dept = userStore.dept
+  loading.value = true
+  try {
+    const params = { status: activeStatus.value }
+    // 主任看全中心，部长/部员只看本部门
+    if (!userStore.isDirector) params.deptId = userStore.deptId
+    list.value = await taskApi.list(params)
+  } finally {
+    loading.value = false
   }
-
-  list.value = await taskApi.list(params)
 }
 
-function changeTab(s) {
-  active.value = s
+function changeTab(status) {
+  activeStatus.value = status
   load()
 }
 
