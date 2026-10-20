@@ -1,4 +1,5 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+// 👇 1. 把 createWebHashHistory 换成 createWebHistory
+import { createRouter, createWebHistory } from 'vue-router'
 import BasicLayout from '@/layout/BasicLayout.vue'
 
 const routes = [
@@ -48,7 +49,7 @@ const routes = [
     { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
-const router = createRouter({ history: createWebHashHistory(), routes })
+const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to, from, next) => {
     document.title = `${to.meta.title || ''} - 山西农业大学青年融媒体中心`
