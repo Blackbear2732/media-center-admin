@@ -451,9 +451,9 @@ export const myDevices = [
 ]
 
 export const messages = [
-    { id: 1, title: '任务指派通知', content: '您已被指派参与「2024 秋季运动会开幕式报道」任务，请及时查看。', time: '2024-11-04 10:20', read: false },
-    { id: 2, title: '素材传输完成', content: '「校园文化节宣传片」成片已由影音部上传，可前往任务详情查看。', time: '2024-11-10 18:35', read: false },
-    { id: 3, title: '设备审核通过', content: '您申请的「大疆 Mavic 3 无人机」已审批通过，请按时领取。', time: '2024-11-07 16:00', read: true }
+    { id: 1, title: '任务指派通知', content: '您已被指派参与「2024 秋季运动会开幕式报道」任务，请及时查看。', time: '2024-11-04 10:20', isRead: 0 },
+    { id: 2, title: '素材传输完成', content: '「校园文化节宣传片」成片已由影音部上传，可前往任务详情查看。', time: '2024-11-10 18:35', isRead: 0 },
+    { id: 3, title: '设备审核通过', content: '您申请的「大疆 Mavic 3 无人机」已审批通过，请按时领取。', time: '2024-11-07 16:00', isRead: 1 }
 ]
 
 /* ========== 设备 ========== */
