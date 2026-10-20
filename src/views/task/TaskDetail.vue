@@ -229,18 +229,24 @@ const myParticipantStatus = computed(() => {
   return 'none'
 })
 
-// 计算可添加的成员（排除已参与和已报名的）
+// 计算可添加的成员（排除已参与的）
 const availableMembers = computed(() => {
   const currentNames = (task.value.participants || []).map(p => p.name)
-  const targetDept = userStore.isDirector ? (userStore.adminDept || '新闻部') : userStore.dept
+
+  // 👇 修复：如果是主任，返回所有部门未参与的人；如果是部长，只返回本部门未参与的人
+  if (userStore.isDirector) {
+    return (deptMembers.value || []).filter(m => !currentNames.includes(m.name))
+  }
+
   return (deptMembers.value || []).filter(m =>
-      m.dept === targetDept && !currentNames.includes(m.name)
+      m.dept === userStore.dept && !currentNames.includes(m.name)
   )
 })
 
 async function loadMembers() {
   if (!userStore.canManage) return
   try {
+    // 主任传空字符串拉取全部，部长传自己的部门
     const targetDept = userStore.isDirector ? '' : userStore.dept
     const res = await adminApi.members(targetDept)
     deptMembers.value = Array.isArray(res) ? res : []

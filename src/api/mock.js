@@ -80,7 +80,7 @@ export const accounts = {
     director: {
         token: 'mock-director', role: 'director', label: '中心主任',
         user: {
-            studentNo: '2023000001', name: '张钧益', nickname: '钧益', dept: '综合部',
+            studentNo: '2023000001', name: '张钧益', nickname: '钧益', dept: '全中心',
             college: '—', className: '—', grade: '2023级',
             phone: '13800000003', email: 'wang@example.com', title: '中心主任',
             gender: '男', politicalStatus: '中共党员'

@@ -40,26 +40,14 @@ export const homeApi = {
 export const authApi = {
     login: (payload = {}) => USE_MOCK
         ? delay((() => {
-            const role = payload.role || 'member'
-
-            // 如果是部长登录，直接从成员列表中精准查找
-            if (role === 'minister' && payload.dept) {
+            const key = payload.role || 'member'
+            if (key === 'minister' && payload.dept) {
                 const m = mock.members.find(x => x.dept === payload.dept && x.title.includes('部长'))
                 if (m) {
-                    return {
-                        token: 'mock-minister-' + Date.now(),
-                        role: 'minister',
-                        label: '部长',
-                        user: {
-                            ...m,
-                            nickname: m.name,
-                            email: `minister_${m.dept}@example.com`
-                        }
-                    }
+                    return { token: 'mock-minister', role: 'minister', label: '部长', user: { ...m } }
                 }
             }
-            // 普通部员和主任走默认配置
-            const acc = mock.accounts?.[role] || mock.accounts?.member
+            const acc = mock.accounts?.[key] || mock.accounts?.member
             if (!acc) return null
             return { token: acc.token + '-' + Date.now(), role: acc.role, label: acc.label, user: acc.user }
         })())

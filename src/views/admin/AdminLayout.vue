@@ -6,6 +6,7 @@
         <p class="muted">{{ roleLabel }} · {{ dept ? `当前部门：${dept}` : '全中心视角' }}</p>
       </div>
       <div class="admin-actions">
+        <!-- 主任可以切换部门 -->
         <el-select v-if="userStore.isDirector" v-model="dept" style="width:150px" @change="changeDept">
           <el-option v-for="d in deptList" :key="d" :label="d === '' ? '全部部门' : d" :value="d" />
         </el-select>
@@ -27,47 +28,87 @@
     </div>
 
     <div class="admin-body">
-      <!-- 👇 加上 :key="dept" -->
-      <div class="admin-body">
-        <router-view :key="dept" />
-      </div>
+      <!-- 加了 :key="dept"，切换部门时强制刷新子页面 -->
+      <router-view :key="dept" />
     </div>
   </div>
 </template>
 
 <script setup>
-import {ref, computed, onMounted} from 'vue'
-import {useRoute, useRouter} from 'vue-router'
-import {adminApi} from '@/api'
-import {userStore} from '@/store/user'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { userStore } from '@/store/user'
 
 const route = useRoute()
 const router = useRouter()
 
 const deptList = ['', '综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
 const roleLabel = computed(() => userStore.isDirector ? '中心主任' : '部长')
+
+// 当前选中的部门
 const dept = computed({
   get: () => userStore.adminDept,
   set: (val) => userStore.setAdminDept(val)
 })
 
-const menus = ref([])
+// 👇 补全报错缺失的基础菜单数组
+const baseMenus = [
+  { path: 'overview', label: '概览' },
+  { path: 'members', label: '成员管理' },
+  { path: 'tasks', label: '任务参与' },
+  { path: 'meetings', label: '会议管理' },
+  { path: 'evaluations', label: '考评管理' },
+  { path: 'materials', label: '本部门素材' },
+  { path: 'announcements', label: '公告管理' },
+  { path: 'dept-profile', label: '部门介绍' }
+]
 
-async function loadMenus() {
-  const res = await adminApi.getMenus(dept.value, userStore.role)
-  menus.value = res || []
-}
+// 动态组合菜单
+const menus = computed(() => {
+  const list = [...baseMenus]
+
+  // 综合部 或 全中心视角，加上打卡和数据看板
+  if (dept.value === '综合部' || dept.value === '') {
+    list.push({ path: 'checkins', label: '打卡管理' })
+    list.push({ path: 'dashboard', label: '数据看板' })
+  }
+
+  // 摄制部 或 全中心视角，加上设备管理
+  if (dept.value === '摄制部' || dept.value === '') {
+    list.push({ path: 'devices', label: '设备管理' })
+  }
+
+  // 主任专属的模块配置
+  if (userStore.isDirector) {
+    list.push({ path: 'module-config', label: '模块配置' })
+  }
+
+  return list
+})
 
 function changeDept(val) {
   userStore.setAdminDept(val)
-  loadMenus()
-  router.push('/admin/overview')
+  // 切换部门后，如果当前停留在专属页面，跳回概览，防止报错
+  const currentPath = route.path.split('/').pop()
+  const hasPermission = menus.value.some(m => m.path === currentPath)
+  if (!hasPermission && currentPath !== 'overview') {
+    router.push('/admin/overview')
+  }
 }
 
 onMounted(() => {
   if (userStore.isMinister) {
     userStore.setAdminDept(userStore.dept)
   }
-  loadMenus()
 })
 </script>
+
+<style scoped>
+.admin-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 18px; }
+.admin-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; }
+.admin-head p { margin: 6px 0 0; }
+.admin-actions { display: flex; align-items: center; gap: 10px; }
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.admin-tabs .pill { text-decoration: none; }
+.admin-body { min-height: 300px; }
+</style>

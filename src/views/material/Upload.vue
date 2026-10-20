@@ -90,8 +90,8 @@ async function init() {
   loading.value = true
   try {
     const u = await userApi.profile()
-    // 修复：之前写的是 u.department，正确字段是 u.dept
-    department.value = u?.dept || u?.department || '综合部'
+// 主任没有具体部门的业务上传，默认给个综合部的通用表单
+    department.value = u?.dept === '全中心' ? '综合部' : (u?.dept || '综合部')
 
     // 修复：确保回退到综合部
     const fieldData = await materialApi.uploadFields(department.value)

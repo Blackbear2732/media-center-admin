@@ -33,6 +33,11 @@ export const userStore = reactive({
     get isDirector() {
         return this.role === 'director'
     },
+    // 👇 新增：是否是全局视角（主任特有）
+    get isCenter() {
+        return this.isDirector || this.dept === '全中心'
+    },
+
     // 只要不是普通部员，就具备管理权限
     get canManage() {
         return this.isMinister || this.isDirector
@@ -45,6 +50,9 @@ export const userStore = reactive({
     get name() {
         return this.userInfo.name || '未登录'
     },
+
+
+
 
     // ================= 提供动作方法 =================
 

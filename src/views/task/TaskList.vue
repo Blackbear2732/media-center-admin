@@ -58,16 +58,15 @@ const list = ref([])
 const loading = ref(false)
 
 async function load() {
-  loading.value = true
-  try {
-    const params = {status: active.value}
-    if (userStore.isMember) {
-      params.dept = userStore.dept
-    }
-    list.value = await taskApi.list(params)
-  } finally {
-    loading.value = false
+  // ...
+  const params = { status: active.value }
+
+  // 👇 必须确保只有普通部员才传 dept 参数，主任绝对不要传！
+  if (userStore.isMember) {
+    params.dept = userStore.dept
   }
+
+  list.value = await taskApi.list(params)
 }
 
 function changeTab(s) {
