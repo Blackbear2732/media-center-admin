@@ -249,12 +249,36 @@ export const adminApi = {
 
     // D-03 成员详情
     memberDetail: (id) => USE_MOCK
-        ? delay({
-            tasks: mock.tasks.slice(0, 2),
-            checkins: mock.attendance.records.slice(0, 3),
-            meetings: mock.meetings.slice(0, 2),
-            evaluations: mock.evaluations.filter(e => e.member === mock.members.find(m => m.id === id)?.name)
-        })
+        ? delay((() => {
+            // 1. 先找到这个成员
+            const member = mock.members.find(m => String(m.id) === String(id))
+            const memberName = member ? member.name : ''
+
+            // 2. 遍历全局 tasks，筛选出包含该成员参与的任务
+            const userTasks = mock.tasks.filter(t =>
+                (t.participants || []).some(p => p.name === memberName)
+            )
+
+            // 3. 过滤考评记录
+            const userEvaluations = mock.evaluations.filter(e => e.member === memberName)
+
+            // 4. 模拟打卡和会议记录（基于名字动态生成几条，显得真实）
+            const userCheckins = memberName ? [
+                { id: 1, date: '2024-11-05', task: '日常推文转发', status: '正常' },
+                { id: 2, date: '2024-11-04', task: '日常推文转发', status: '正常' }
+            ] : []
+
+            const userMeetings = memberName ? [
+                { id: 1, title: `${member?.dept || ''} 11月例会`, time: '2024-11-04 14:00', status: '已参加' }
+            ] : []
+
+            return {
+                tasks: userTasks,
+                checkins: userCheckins,
+                meetings: userMeetings,
+                evaluations: userEvaluations
+            }
+        })())
         : request.get(`/admin/members/${id}/detail`),
 
     // D-04/D-10 任务参与管理
@@ -356,7 +380,11 @@ export const adminApi = {
     // 发起考评
     createEvaluation: (data) => USE_MOCK
         ? delay((() => {
+            // 确保 mock.evaluations 存在
+            if (!mock.evaluations) mock.evaluations = []
+
             data.members.forEach((m, idx) => {
+                // 生成一条真实的考评记录存入数组
                 mock.evaluations.unshift({
                     id: Date.now() + idx,
                     month: data.month,
@@ -365,10 +393,10 @@ export const adminApi = {
                     autoScore: m.autoScore,
                     manualScore: m.manualScore,
                     total: m.autoScore + m.manualScore,
-                    level: m.level, // 👈 接收前端传来的评定等级
+                    level: m.level || '合格',
                     status: '已完成',
                     createdAt: new Date().toLocaleString(),
-                    details: { checkinDays: 10, taskCount: 2, meetingCount: 1, extraNote: m.extraNote }
+                    details: { extraNote: m.extraNote || '' }
                 })
             })
             return { success: true }

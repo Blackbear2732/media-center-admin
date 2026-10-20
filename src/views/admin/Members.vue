@@ -122,16 +122,38 @@
           <el-descriptions-item label="电话">{{ current.phone }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="sec-title" style="font-size:14px">任务参与</div>
-        <div v-for="t in detail.tasks" :key="t.id" class="flex-between" style="padding:8px 0;border-bottom:1px dashed var(--border)">
-          <span>{{ t.title }}</span><span class="muted">{{ t.status }}</span>
+        <!-- 任务参与 -->
+        <div class="sec-title" style="font-size:14px; margin-top: 24px;">任务参与 ({{ detail.tasks?.length || 0 }})</div>
+        <div v-if="detail.tasks && detail.tasks.length > 0">
+          <div v-for="t in detail.tasks" :key="t.id" class="flex-between" style="padding:10px 0;border-bottom:1px dashed var(--border)">
+            <div>
+              <div style="font-weight: 500; font-size: 14px;">{{ t.title }}</div>
+              <div class="muted" style="font-size: 12px; margin-top: 4px;">{{ t.startTime }} · {{ t.location }}</div>
+            </div>
+            <el-tag size="small" :type="t.status === '已结束' ? 'success' : 'warning'">{{ t.status }}</el-tag>
+          </div>
         </div>
+        <el-empty v-else description="暂无参与任务" :image-size="50" />
 
-        <div class="sec-title" style="font-size:14px">打卡记录</div>
-        <div v-for="c in detail.checkins" :key="c.id" class="flex-between" style="padding:8px 0;border-bottom:1px dashed var(--border)">
-          <span>{{ c.date }} · {{ c.task }}</span><span class="muted">{{ c.status }}</span>
+        <!-- 会议记录 -->
+        <div class="sec-title" style="font-size:14px; margin-top: 20px;">会议记录</div>
+        <div v-if="detail.meetings && detail.meetings.length > 0">
+          <div v-for="m in detail.meetings" :key="m.id" class="flex-between" style="padding:8px 0;border-bottom:1px dashed var(--border)">
+            <span style="font-size: 13px;">{{ m.title }}</span>
+            <el-tag size="small" type="success" effect="plain">{{ m.status }}</el-tag>
+          </div>
         </div>
-        <el-empty v-if="!detail.tasks?.length && !detail.checkins?.length" description="暂无数据" :image-size="50" />
+        <el-empty v-else description="暂无会议记录" :image-size="50" />
+
+        <!-- 考评记录 -->
+        <div class="sec-title" style="font-size:14px; margin-top: 20px;">考评记录</div>
+        <div v-if="detail.evaluations && detail.evaluations.length > 0">
+          <div v-for="e in detail.evaluations" :key="e.id" class="flex-between" style="padding:8px 0;border-bottom:1px dashed var(--border)">
+            <span>{{ e.month }} 月度考评</span>
+            <span style="font-weight: 600; color: var(--brand);">总分 {{ e.total }} ({{ e.level }})</span>
+          </div>
+        </div>
+        <el-empty v-else description="暂无考评记录" :image-size="50" />
       </div>
     </el-drawer>
   </div>
