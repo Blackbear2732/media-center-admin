@@ -540,3 +540,44 @@ body {
     color: var(--text-sub);
     white-space: nowrap;
 }
+
+
+/* ========================================================
+   移动端全局响应式适配 (Media Queries)
+   ======================================================== */
+
+/* 针对平板和手机：隐藏横向溢出，防止左右晃动 */
+body { overflow-x: hidden; }
+
+@media (max-width: 768px) {
+    /* 1. 主容器内边距减小 */
+    .main-inner { padding: 12px !important; }
+
+    /* 2. 强制覆盖 Element Plus 的左右分栏，让它们全变成上下堆叠 (针对 el-col) */
+    .el-col { max-width: 100% !important; flex: 0 0 100% !important; }
+
+    /* 3. 表格横向滚动，防止撑破屏幕 */
+    .el-table {
+        width: 100% !important;
+        overflow-x: auto;
+    }
+
+    /* 4. 首页数据面板改为单列 */
+    .data-panels { grid-template-columns: 1fr !important; gap: 16px !important; }
+
+    /* 5. 卡片网格改为单列 */
+    .task-grid, .dept-grid, .video-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* 6. 弹窗宽度占满手机屏幕 */
+    .el-dialog {
+        width: 90% !important;
+        margin-top: 5vh !important;
+    }
+}
+
+/* 针对更小屏幕（如 iPhone SE），调整卡片最小宽度 */
+@media (max-width: 375px) {
+    .task-grid { grid-template-columns: minmax(100%, 1fr) !important; }
+}
