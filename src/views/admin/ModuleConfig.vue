@@ -12,23 +12,37 @@
       </div>
 
       <el-table :data="tableData" border stripe>
-        <el-table-column prop="dept" label="部门名称" width="180" />
+        <el-table-column prop="deptId" label="部门名称" width="180">
+          <template #default="{ row }">{{ getDeptLabel(row.deptId) }}</template>
+        </el-table-column>
 
-        <el-table-column label="打卡管理（综合部专属）" align="center">
+        <el-table-column :label="`${MODULE_LABEL.checkin}（${getDeptLabel(CHECKIN_DEPT_ID)}专属）`" align="center">
           <template #default="{ row }">
-            <el-switch v-model="row.hasCheckin" :disabled="row.dept !== '综合部'" @change="(val) => toggleModule(row, 'checkin', val)" />
+            <el-switch
+                v-model="row.hasCheckin"
+                :disabled="row.deptId !== CHECKIN_DEPT_ID"
+                @change="(val) => toggleModule(row, 'checkin', val)"
+            />
           </template>
         </el-table-column>
 
-        <el-table-column label="数据看板（综合部专属）" align="center">
+        <el-table-column :label="`${MODULE_LABEL.dashboard}（${getDeptLabel(CHECKIN_DEPT_ID)}专属）`" align="center">
           <template #default="{ row }">
-            <el-switch v-model="row.hasDashboard" :disabled="row.dept !== '综合部'" @change="(val) => toggleModule(row, 'dashboard', val)" />
+            <el-switch
+                v-model="row.hasDashboard"
+                :disabled="row.deptId !== CHECKIN_DEPT_ID"
+                @change="(val) => toggleModule(row, 'dashboard', val)"
+            />
           </template>
         </el-table-column>
 
-        <el-table-column label="设备管理（摄制部专属）" align="center">
+        <el-table-column :label="`${MODULE_LABEL.device}（${getDeptLabel(DEVICE_DEPT_ID)}专属）`" align="center">
           <template #default="{ row }">
-            <el-switch v-model="row.hasDevice" :disabled="row.dept !== '摄制部'" @change="(val) => toggleModule(row, 'device', val)" />
+            <el-switch
+                v-model="row.hasDevice"
+                :disabled="row.deptId !== DEVICE_DEPT_ID"
+                @change="(val) => toggleModule(row, 'device', val)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -40,21 +54,26 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { DEPARTMENTS_OPTIONS, MODULE_LABEL, getDeptLabel } from '@/utils/dict'
+
+// 打卡/看板归属综合部，设备管理归属摄制部
+const CHECKIN_DEPT_ID = 101
+const DEVICE_DEPT_ID = 104
 
 const loading = ref(false)
 const saving = ref(false)
 const tableData = ref([])
-const depts = ['综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
 
 async function load() {
   loading.value = true
   try {
-    const res = await Promise.all(depts.map(d => adminApi.getDeptModules(d)))
-    tableData.value = depts.map((dept, index) => {
+    const depts = DEPARTMENTS_OPTIONS
+    const res = await Promise.all(depts.map(d => adminApi.getDeptModules(d.value)))
+    tableData.value = depts.map((d, index) => {
       const mods = res[index] || []
       return {
-        dept,
-        modules: mods,
+        deptId: d.value,
+        modules: [...mods],
         hasCheckin: mods.includes('checkin'),
         hasDashboard: mods.includes('dashboard'),
         hasDevice: mods.includes('device')
@@ -79,7 +98,7 @@ async function saveAll() {
   saving.value = true
   try {
     for (const row of tableData.value) {
-      await adminApi.saveDeptModules(row.dept, row.modules)
+      await adminApi.saveDeptModules(row.deptId, row.modules)
     }
     ElMessage.success('模块配置已更新，重新进入管理区即可生效')
   } catch (e) {
