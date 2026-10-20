@@ -130,7 +130,8 @@ async function updateMsgCount() {
   }
   try {
     const msgs = await messageApi.list()
-    msgCount.value = Array.isArray(msgs) ? msgs.filter(m => !m.read).length : 0
+    // is_read：0 未读 / 1 已读
+    msgCount.value = Array.isArray(msgs) ? msgs.filter(m => Number(m.isRead) === 0).length : 0
   } catch (e) {}
 }
 
