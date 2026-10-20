@@ -125,6 +125,15 @@ export const SIGNUP_STATUS_MAP = { 0: '待确认', 1: '已确认', 2: '已拒绝
 /* ==========================================
  * 6. 素材类型（biz_material.type：1新闻稿 2推文图片 3海报设计图 4视频素材 5视频成片 6原创推文）
  * ========================================== */
+export const MATERIAL_TYPE = {
+    NEWS: 1,
+    IMAGE: 2,
+    POSTER: 3,
+    VIDEO_RAW: 4,
+    VIDEO_FINAL: 5,
+    ARTICLE: 6
+}
+
 export const MATERIAL_TYPE_MAP = {
     1: '新闻稿',
     2: '推文图片',
@@ -152,6 +161,8 @@ export const getMaterialTypeTagType = (type) => ({
 /* ==========================================
  * 7. 设备状态（biz_equipment.status）
  * ========================================== */
+export const DEVICE_STATUS = { AVAILABLE: 0, LENT: 1, REPAIR: 2, SCRAPPED: 3 }
+
 export const DEVICE_STATUS_MAP = { 0: '可用', 1: '借出', 2: '维修', 3: '报废' }
 export const DEVICE_STATUS_OPTIONS = Object.keys(DEVICE_STATUS_MAP).map(key => ({
     value: Number(key),
@@ -180,6 +191,8 @@ export const CHECKIN_STATUS_MAP = { 0: '未打卡', 1: '已打卡' }
 export const getCheckinStatusType = (status) => (Number(status) === 1 ? 'success' : 'danger')
 
 // 个人考勤明细（正常 / 迟到 / 缺勤）
+export const ATTENDANCE_STATUS = { NONE: 0, NORMAL: 1, LATE: 2, ABSENT: 3 }
+
 export const ATTENDANCE_STATUS_MAP = { 0: '未打卡', 1: '正常', 2: '迟到', 3: '缺勤' }
 export const getAttendanceStatusType = (status) => ({
     0: 'info', 1: 'success', 2: 'warning', 3: 'danger'
