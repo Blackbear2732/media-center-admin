@@ -19,7 +19,7 @@
     </div>
 
     <div class="task-grid" v-loading="loading">
-      <div v-for="t in list" :key="t.id" class="task-card surface-card" @click="router.push('/tasks/' + t.id)">
+      <div v-for="t in list" :key="t.id" class="task-card surface-card" @click="router.push('/tasks/' + t.id)" @click.stop="router.push('/tasks/' + t.id)">
         <div class="task-card-head">
           <span class="status-dot" :class="getTaskDotClass(t.status)"></span>
           <span>{{ t.status }}</span>

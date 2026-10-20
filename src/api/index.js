@@ -253,12 +253,24 @@ export const adminApi = {
     tasks: (dept) => USE_MOCK
         ? delay(mock.tasks.filter(t => t.departments.includes(dept) || t.relatedDepts?.includes(dept)))
         : request.get('/admin/tasks', { params: { dept } }),
+
+    // 添加参与人
     addParticipant: (taskId, data) => USE_MOCK
         ? delay({ success: true })
         : request.post(`/admin/tasks/${taskId}/participants`, data),
+
+    // 👇 新增：移除参与人
+    removeParticipant: (taskId, name) => USE_MOCK
+        ? delay({ success: true })
+        : request.delete(`/admin/tasks/${taskId}/participants`, { data: { name } }),
+
+    // 确认报名
     confirmSignup: (taskId, name) => USE_MOCK
         ? delay({ success: true })
         : request.put(`/admin/tasks/${taskId}/signups/${name}/confirm`),
+
+
+
 
     // D-05 会议管理
     meetings: (dept) => USE_MOCK
@@ -411,3 +423,6 @@ export const adminApi = {
         })())
         : request.get('/admin/menus', { params: { dept, role } })
 }
+// 兼容旧代码（如果不小心在哪个页面还留着 statusTagType 引用，也不会报错）
+import { getTaskTagType } from '@/utils/dict'
+export const statusTagType = getTaskTagType
