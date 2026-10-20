@@ -5,7 +5,7 @@
       <button class="pill active" @click="openCreate">+ 发起月度考评</button>
     </div>
 
-    <!-- 按月份分类折叠展示 -->
+    <!-- 按月份分类展示 -->
     <el-collapse v-model="activeMonths">
       <el-collapse-item v-for="month in groupedMonths" :key="month" :name="month">
         <template #title>
@@ -18,19 +18,12 @@
         <el-table :data="groupedList[month]" stripe>
           <el-table-column prop="dept" label="部门" width="100" />
           <el-table-column prop="member" label="考评对象" width="120" />
-          <el-table-column prop="autoScore" label="系统自动分" width="120">
-            <template #default="{ row }">
-              <span style="color: var(--brand); font-weight: 600;">{{ row.autoScore }}</span>
-            </template>
+          <el-table-column prop="autoScore" label="自动得分" width="120">
+            <template #default="{ row }"><span style="color: var(--brand); font-weight: 600;">{{ row.autoScore }}</span></template>
           </el-table-column>
           <el-table-column prop="manualScore" label="手动附加分" width="120" />
           <el-table-column prop="total" label="总分" width="100">
-            <template #default="{ row }">
-              <span style="color: var(--accent); font-weight: 700; font-size: 16px;">{{ row.total }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default><el-tag type="success" size="small">已完成</el-tag></template>
+            <template #default="{ row }"><span style="color: var(--accent); font-weight: 700; font-size: 16px;">{{ row.total }}</span></template>
           </el-table-column>
           <el-table-column label="操作" width="150">
             <template #default="{ row }">
@@ -44,16 +37,14 @@
     <el-empty v-if="list.length === 0" description="暂无考评记录" />
 
     <!-- 发起考评弹窗 -->
-    <el-dialog v-model="createVisible" title="发起月度考评" width="760px">
-      <el-form label-width="100px">
+    <el-dialog v-model="createVisible" title="发起月度考评" width="800px" :close-on-click-modal="false">
+      <el-form label-width="100px" style="margin-bottom: 20px;">
         <el-form-item label="考评月份">
-          <el-date-picker v-model="form.month" type="month" value-format="YYYY-MM" placeholder="选择月份" />
+          <el-date-picker v-model="form.month" type="month" value-format="YYYY-MM" placeholder="选择月份" @change="loadPreview" />
         </el-form-item>
-
         <el-form-item label="考评对象">
           <div style="width: 100%; background: #fafbfc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
-            <div class="muted" style="margin-bottom: 8px;">默认选中：{{ userStore.isDirector ? '全体部长' : '本部门全体部员' }}</div>
-            <el-checkbox-group v-model="form.selectedMembers">
+            <el-checkbox-group v-model="form.selectedMembers" @change="loadPreview">
               <el-checkbox v-for="m in candidates" :key="m.name" :label="m.name" border size="small" style="margin-bottom: 8px;">
                 {{ m.name }}
               </el-checkbox>
@@ -62,33 +53,45 @@
         </el-form-item>
       </el-form>
 
-      <div class="flex-between" style="margin:10px 0;">
-        <b>考评项及算分规则</b>
-        <span class="muted" style="font-size:12px;">系统已根据打卡、任务记录自动计算基础分</span>
-      </div>
+      <!-- 单人算分明细列表 -->
+      <el-table :data="previewList" border size="small" v-loading="previewLoading" max-height="400">
+        <el-table-column prop="name" label="姓名" width="100" fixed="left" />
 
-      <el-table :data="template" size="small" border>
-        <el-table-column prop="name" label="考评项" width="160" />
-        <el-table-column prop="desc" label="算分规则" min-width="200" />
-        <el-table-column label="计分类型" width="100" align="center">
+        <el-table-column label="基础自动分 (打卡/任务/会议)" width="200">
           <template #default="{ row }">
-            <el-tag :type="row.type === 'auto' ? 'info' : 'warning'" size="small">
-              {{ row.type === 'auto' ? '自动' : '手动' }}
-            </el-tag>
+            <el-tooltip content="系统根据本月打卡、会议、任务参与自动计算" placement="top">
+              <span style="font-weight: 600; color: var(--brand);">{{ row.autoScore }} 分</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="任务附加分" width="120">
+          <template #default="{ row }">
+            <span style="color: var(--accent);">+{{ row.taskExtraScore }} 分</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="手动附加分 (可编辑)" width="140">
+          <template #default="{ row }">
+            <el-input-number v-model="row.manualScore" :min="0" :step="0.5" size="small" style="width: 100px;" />
+          </template>
+        </el-table-column>
+
+        <el-table-column label="手动加分理由" min-width="180">
+          <template #default="{ row }">
+            <el-input v-model="row.reason" placeholder="如：全勤奖励" size="small" />
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 这里为了演示，直接给所有人填一个统一的手动分。真实情况应该是列表里一人一行去填 -->
-      <div style="margin-top: 16px; background: #fdf1e6; padding: 16px; border-radius: 8px;">
-        <div style="font-weight: 600; margin-bottom: 8px;">给本次选中的所有人员附加手动分</div>
-        <el-input-number v-model="form.commonManualScore" :min="0" :step="0.5" />
-        <el-input v-model="form.commonNote" placeholder="手动加分明细（如：全勤奖励）" style="width: 300px; margin-left: 12px;" />
-      </div>
-
       <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submitEvaluation">确认发起考评</el-button>
+        <div class="flex-between">
+          <span class="muted">提示：会自动汇总每个人本月的任务附加分</span>
+          <div>
+            <el-button @click="createVisible = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="submitEvaluation">确认发起考评</el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
 
@@ -97,7 +100,7 @@
       <div v-if="currentEval" v-loading="detailLoading">
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
           <div class="surface-card" style="flex:1; padding: 16px; text-align: center;">
-            <div class="muted">系统自动分</div>
+            <div class="muted">自动得分</div>
             <div style="font-size: 24px; font-weight: 700; color: var(--brand);">{{ currentEval.autoScore }}</div>
           </div>
           <div class="surface-card" style="flex:1; padding: 16px; text-align: center;">
@@ -110,16 +113,19 @@
           </div>
         </div>
 
-        <div class="sec-title" style="font-size: 14px;">打卡明细（系统自动算分）</div>
+        <div class="sec-title" style="font-size: 14px;">打卡明细</div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
           <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="c.status === '已打卡' ? 'success' : 'danger'" size="small">
             {{ c.date }} {{ c.status }}
           </el-tag>
         </div>
 
-        <div class="sec-title" style="font-size: 14px;">任务参与（系统自动算分）</div>
+        <div class="sec-title" style="font-size: 14px;">任务参与及加分</div>
         <div v-for="t in detailData.taskList" :key="t.title" class="flex-between" style="padding: 8px 0; border-bottom: 1px dashed var(--border);">
-          <span>{{ t.title }}</span>
+          <div>
+            <span>{{ t.title }}</span>
+            <span v-if="t.extraScore" class="muted" style="margin-left: 8px;">(任务附加分：+{{ t.extraScore }})</span>
+          </div>
           <span class="muted">{{ t.role }}</span>
         </div>
 
@@ -136,27 +142,25 @@ import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 
-const loading = ref(false), saving = ref(false), detailLoading = ref(false)
+const loading = ref(false), saving = ref(false), detailLoading = ref(false), previewLoading = ref(false)
 const list = ref([])
-const activeMonths = ref([]) // 默认展开的月份
+const activeMonths = ref([])
 
-// 发起考评相关
 const createVisible = ref(false)
-const template = ref([])
-const candidates = ref([]) // 可选人员
+const candidates = ref([])
 const form = reactive({
   month: '',
-  selectedMembers: [],
-  commonManualScore: 0,
-  commonNote: ''
+  selectedMembers: []
 })
 
-// 明细相关
+// 预览数据
+const previewList = ref([])
+
+// 明细数据
 const detailVisible = ref(false)
 const currentEval = ref(null)
 const detailData = ref({ checkinList: [], taskList: [] })
 
-// 按月份分组计算
 const groupedList = computed(() => {
   const groups = {}
   list.value.forEach(item => {
@@ -166,18 +170,13 @@ const groupedList = computed(() => {
   return groups
 })
 
-// 获取排序后的月份数组
-const groupedMonths = computed(() => {
-  return Object.keys(groupedList.value).sort().reverse()
-})
+const groupedMonths = computed(() => Object.keys(groupedList.value).sort().reverse())
 
 async function load() {
   loading.value = true
   try {
-    // 主任看全部，部长看本部门
     const res = await adminApi.evaluations(userStore.isDirector ? '' : userStore.dept)
     list.value = res || []
-    // 默认展开最新的一个月
     if (groupedMonths.value.length > 0) {
       activeMonths.value = [groupedMonths.value[0]]
     }
@@ -187,48 +186,72 @@ async function load() {
 }
 
 async function openCreate() {
-  form.month = new Date().toISOString().slice(0, 7) // 默认当前月
+  form.month = new Date().toISOString().slice(0, 7)
 
-  // 获取模板
-  template.value = await adminApi.evaluationTemplate()
-
-  // 获取候选人员
   if (userStore.isDirector) {
-    // 主任默认选全体部长
     const allMembers = await adminApi.members('')
     candidates.value = allMembers.filter(m => m.title.includes('部长'))
-    form.selectedMembers = candidates.value.map(m => m.name) // 默认全选
   } else {
-    // 部长默认选本部门部员
     const deptMembers = await adminApi.members(userStore.dept)
     candidates.value = deptMembers.filter(m => !m.title.includes('部长'))
-    form.selectedMembers = candidates.value.map(m => m.name) // 默认全选
   }
 
-  form.commonManualScore = 0
-  form.commonNote = ''
+  // 默认全选
+  form.selectedMembers = candidates.value.map(m => m.name)
   createVisible.value = true
+  loadPreview()
+}
+
+// 加载预览数据
+async function loadPreview() {
+  if (form.selectedMembers.length === 0) {
+    previewList.value = []
+    return
+  }
+  previewLoading.value = true
+  try {
+    // 真实场景下，这里应该去请求后端：POST /api/admin/evaluations/preview
+    // 后端根据月份和选中的姓名，把打卡、任务次数查出来。
+    // 这里我们 Mock 一份数据：
+    previewList.value = form.selectedMembers.map(name => {
+      const memberInfo = candidates.value.find(m => m.name === name)
+      // 模拟随机的基础分 (打卡+会议+基本任务)
+      const autoScore = Math.floor(Math.random() * 8) + 6 // 6~13分
+      // 模拟这个人本月的任务附加分（真实场景是去查 task_participant 表里的 extra_score 汇总）
+      const taskExtraScore = Math.random() > 0.5 ? 2 : 0
+
+      return {
+        name,
+        dept: memberInfo?.dept,
+        autoScore,
+        taskExtraScore, // 任务里加的分
+        manualScore: 0, // 默认0，等待输入
+        reason: ''
+      }
+    })
+  } finally {
+    previewLoading.value = false
+  }
 }
 
 async function submitEvaluation() {
   if (!form.month) return ElMessage.warning('请选择月份')
-  if (form.selectedMembers.length === 0) return ElMessage.warning('请至少选择一个考评对象')
+  if (previewList.value.length === 0) return ElMessage.warning('请选择考评对象')
 
   saving.value = true
   try {
-    // 构造提交给后端的数据
     const submitData = {
       month: form.month,
-      members: form.selectedMembers.map(name => {
-        const memberInfo = candidates.value.find(m => m.name === name)
-        // 自动分由后端查表得出，这里 mock 一个随机基础分 (打卡 5~15分 + 任务 2~5分)
-        const autoScore = Math.floor(Math.random() * 10) + 7
+      members: previewList.value.map(row => {
+        // 总分 = 基础自动分 + 任务附加分 + 手动附加分
+        const finalAutoScore = row.autoScore + row.taskExtraScore
+
         return {
-          name,
-          dept: memberInfo.dept,
-          autoScore: autoScore,
-          manualScore: form.commonManualScore,
-          extraNote: form.commonNote
+          name: row.name,
+          dept: row.dept,
+          autoScore: finalAutoScore,
+          manualScore: row.manualScore,
+          extraNote: row.reason
         }
       })
     }
@@ -236,7 +259,7 @@ async function submitEvaluation() {
     await adminApi.createEvaluation(submitData)
     ElMessage.success('考评已发起')
     createVisible.value = false
-    load() // 刷新列表
+    load()
   } finally {
     saving.value = false
   }
