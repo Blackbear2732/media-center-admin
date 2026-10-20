@@ -1,5 +1,6 @@
 import request from './request'
 import * as mock from './mock'
+import { ALL_DEPT_ID, isAllDept } from '@/utils/dict'
 
 // 是否使用 Mock 数据（后端接口就绪后改为 false）
 const USE_MOCK = true
@@ -18,36 +19,55 @@ const delay = (data, ms = 200) => new Promise(resolve => setTimeout(() => {
 // 统一封装：mock 走 mockFn，否则走真实 axios 请求
 const pick = (real, mockFn) => (...args) => USE_MOCK ? mockFn(...args) : real(...args)
 
+// 任务是否属于某个部门（参与部门 或 联动部门）；全中心视角恒为 true
+const taskInDept = (task, deptId) => {
+    if (isAllDept(deptId)) return true
+    const id = Number(deptId)
+    return (task.deptIds || []).includes(id) || (task.relatedDeptIds || []).includes(id)
+}
+
+// 当前登录人信息
+const me = () => mock.currentUser()
+
+// 素材类型按上传部门决定（对应 biz_material.type）
+const MATERIAL_TYPE_BY_DEPT = {
+    101: 2, // 综合部 → 推文图片/材料
+    102: 6, // 网宣部 → 原创推文
+    103: 5, // 影音部 → 视频成片
+    104: 4, // 摄制部 → 视频素材
+    105: 1, // 新闻部 → 新闻稿
+    106: 3  // 设计部 → 海报设计图
+}
+
 /* ================= 首页 F-01 ================= */
 export const homeApi = {
     centerInfo:   pick(() => request.get('/center'),              () => delay(mock.centerInfo)),
     departments:  pick(() => request.get('/departments'),         () => delay(mock.departments)),
     latestTasks:  pick(() => request.get('/tasks/latest'),        () => {
-        const user = mock.currentUser()
-        const role = localStorage.getItem('role') || 'member'
-        let tasks = mock.tasks
-        if (role !== 'director') {
-            tasks = tasks.filter(t => t.departments.includes(user.dept) || t.relatedDepts?.includes(user.dept))
-        }
-        return delay(tasks.slice(0, 4))
+        const user = me()
+        const role = mock.currentRole()
+        const deptId = role === 2 ? ALL_DEPT_ID : user.deptId
+        const list = role === 2
+            ? mock.tasks
+            : mock.tasks.filter(t => taskInDept(t, deptId))
+        return delay(list.slice(0, 4))
     }),
     latestVideos: pick(() => request.get('/videos/latest'),       () => delay(mock.videos))
 }
 
 /* ================= 登录认证 ================= */
 export const authApi = {
+    // 入参：{ role: 0|1|2, deptId: 101~106 }（接入若依后改为 { username, password }）
     login: (payload = {}) => USE_MOCK
         ? delay((() => {
-            const key = payload.role || 'member'
-            if (key === 'minister' && payload.dept) {
-                const m = mock.members.find(x => x.dept === payload.dept && x.title.includes('部长'))
-                if (m) {
-                    return { token: 'mock-minister', role: 'minister', label: '部长', user: { ...m } }
-                }
-            }
-            const acc = mock.accounts?.[key] || mock.accounts?.member
+            const acc = mock.findAccount(payload.role, payload.deptId)
             if (!acc) return null
-            return { token: acc.token + '-' + Date.now(), role: acc.role, label: acc.label, user: acc.user }
+            return {
+                token: `${acc.token}-${Date.now()}`,
+                role: acc.role,
+                label: acc.label,
+                user: { ...acc.user }
+            }
         })())
         : request.post('/auth/login', payload),
     logout: pick(() => request.post('/auth/logout'), () => delay({ success: true }))
@@ -55,10 +75,17 @@ export const authApi = {
 
 /* ================= 个人区 F-02 ~ F-06 ================= */
 export const userApi = {
-    profile:        pick(() => request.get('/user/profile'),          () => delay(mock.currentUser())),
+    profile:        pick(() => request.get('/user/profile'),          () => delay(me())),
     updateProfile:  pick(d => request.put('/user/profile', d),        () => delay({ success: true })),
     updatePassword: pick(d => request.put('/user/password', d),       () => delay({ success: true })),
-    myTasks:        pick(() => request.get('/user/tasks'),            () => delay(mock.tasks.slice(0, 3))),
+    myTasks:        pick(() => request.get('/user/tasks'),            () => {
+        const user = me()
+        const list = mock.tasks.filter(t =>
+            (t.participants || []).some(p => p.name === user.name) ||
+            taskInDept(t, user.deptId)
+        )
+        return delay(list)
+    }),
     attendance:     pick(() => request.get('/user/attendance'),       () => delay(mock.attendance)),
     appeal:         pick(d => request.post('/user/attendance/appeal', d), () => delay({ success: true })),
     myMeetings:     pick(() => request.get('/user/meetings'),         () => delay(mock.meetings)),
@@ -66,24 +93,21 @@ export const userApi = {
 
     // 部员查看个人考评
     myEvaluations: () => USE_MOCK
-        ? delay((() => {
-            const user = mock.currentUser()
-            return (mock.evaluations || []).filter(e => e.member === user.name)
-        })())
+        ? delay((mock.evaluations || []).filter(e => e.member === me().name))
         : request.get('/user/evaluations'),
 }
 
 /* ================= 消息 F-07 ================= */
 export const messageApi = {
     list: pick(() => request.get('/messages'), () => {
-        const role = localStorage.getItem('role') || 'member'
+        const role = mock.currentRole()
         let msgs = mock.messages || []
-        if (role === 'minister') {
+        if (role === 1) {
             msgs = msgs.filter(m => m.id === 1 || m.id === 3)
-        } else if (role === 'director') {
+        } else if (role === 2) {
             msgs = msgs.filter(m => m.id === 2)
         }
-        return delay(JSON.parse(JSON.stringify(msgs)))
+        return delay(msgs)
     }),
     markRead: pick(
         id => request.put(`/messages/${id}/read`),
@@ -104,40 +128,42 @@ export const messageApi = {
 
 /* ================= 任务 F-08 ~ F-10 ================= */
 export const taskApi = {
+    // 入参：{ status: -1|0|1|2, deptId?: number }
     list: pick(
         p => request.get('/tasks', { params: p }),
         p => {
-            const user = mock.currentUser()
-            const role = localStorage.getItem('role') || 'member'
+            const role = mock.currentRole()
+            const deptId = p?.deptId ?? (role === 2 ? ALL_DEPT_ID : me().deptId)
             let result = mock.tasks
 
-            if (role !== 'director') {
-                result = result.filter(t =>
-                    t.departments.includes(user.dept) || t.relatedDepts?.includes(user.dept)
-                )
+            if (!isAllDept(deptId)) {
+                result = result.filter(t => taskInDept(t, deptId))
             }
-            if (p?.status && p.status !== '全部') {
-                result = result.filter(t => t.status === p.status)
+            if (p?.status !== undefined && p?.status !== null && Number(p.status) !== -1) {
+                result = result.filter(t => Number(t.status) === Number(p.status))
             }
             return delay(result)
         }
     ),
-    detail:      pick(id => request.get(`/tasks/${id}`),id => delay(mock.tasks.find(t => String(t.id) === String(id)) || mock.tasks[0])),
+    detail:      pick(id => request.get(`/tasks/${id}`), id => delay(mock.tasks.find(t => String(t.id) === String(id)) || mock.tasks[0])),
     create: pick(
         d => request.post('/tasks', d),
         (data) => {
+            const user = me()
             const newTask = {
                 ...data,
                 id: Date.now(),
-                status: '筹备',
+                status: 0,                 // 0-筹备中
+                publishDeptId: user.deptId,
                 participants: [],
-                signups: []
+                signups: [],
+                equipmentIds: data.equipmentIds || []
             }
             mock.tasks.unshift(newTask)
             return delay({ success: true, id: newTask.id })
         }
     ),
-    materials:   pick(id => request.get(`/tasks/${id}/materials`),id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
+    materials:   pick(id => request.get(`/tasks/${id}/materials`), id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
     departments: pick(() => request.get('/departments'), () => delay(mock.departments)),
 
     // 部员报名
@@ -147,40 +173,38 @@ export const taskApi = {
             if (task) {
                 if (!task.signups) task.signups = []
                 if (!task.signups.some(s => s.name === data.name)) {
-                    task.signups.push({ name: data.name, dept: data.dept, status: '待确认' })
+                    task.signups.push({ name: data.name, deptId: Number(data.deptId), status: 0 }) // 0-待确认
                 }
             }
             return { success: true }
         })())
         : request.post(`/tasks/${taskId}/signup`, data),
 
-    devices:     pick(() => request.get('/devices/names'),() => delay(mock.deviceList))
+    devices:     pick(() => request.get('/devices'), () => delay(mock.deviceList))
 }
 
 /* ================= 素材 F-11 ~ F-13 ================= */
 export const materialApi = {
+    // 入参：{ title, content, deptId, leaderName, startTime, endTime }
     search: pick(
         p => request.get('/materials', { params: p }),
         p => {
-            const user = mock.currentUser()
-            const role = localStorage.getItem('role') || 'member'
+            const user = me()
+            const role = mock.currentRole()
             let result = mock.filterMaterials(p)
 
-            if (role !== 'director') {
-                if (role === 'minister') {
-                    result = result.filter(m => m.department === user.dept)
-                } else {
-                    const myTasks = mock.tasks.filter(t =>
-                        t.participants?.some(part => part.name === user.name) ||
-                        t.departments.includes(user.dept)
-                    ).map(t => t.id)
+            if (role === 1) {
+                result = result.filter(m => Number(m.deptId) === Number(user.deptId))
+            } else if (role === 0) {
+                const myTaskIds = mock.tasks
+                    .filter(t => (t.participants || []).some(part => part.name === user.name) || taskInDept(t, user.deptId))
+                    .map(t => String(t.id))
 
-                    result = result.filter(m =>
-                        m.author === user.name ||
-                        m.sharedDepts?.includes(user.dept) ||
-                        myTasks.includes(m.taskId)
-                    )
-                }
+                result = result.filter(m =>
+                    m.author === user.name ||
+                    (m.sharedDeptIds || []).includes(Number(user.deptId)) ||
+                    myTaskIds.includes(String(m.taskId))
+                )
             }
             return delay(result)
         }
@@ -191,24 +215,26 @@ export const materialApi = {
         return delay(m.versions)
     }),
     recordExtract: pick(id => request.post(`/materials/${id}/extract`), () => delay({ success: true })),
-    uploadFields:  pick(dept => request.get('/upload/fields', { params: { department: dept } }),
-        dept => delay(mock.uploadFieldMap[dept] || mock.uploadFieldMap['综合部'])),
+    uploadFields:  pick(deptId => request.get('/upload/fields', { params: { deptId } }),
+        deptId => delay(mock.uploadFieldMap[Number(deptId)] || mock.uploadFieldMap[101])),
 
     // 素材上传（加入内存）
     upload:        pick(d => request.post('/upload', d), (data) => {
+        const user = me()
+        const deptId = Number(data.deptId) || Number(user.deptId)
         const newMaterial = {
             id: Date.now(),
             title: data.title,
-            type: data.department === '新闻部' ? '新闻稿' : '其他',
-            department: data.department,
-            author: mock.currentUser().name,
+            type: MATERIAL_TYPE_BY_DEPT[deptId] || 1,
+            deptId,
+            author: user.name,
             createdAt: new Date().toLocaleString(),
             taskId: data.taskId,
             content: data.content || '',
             netdiskUrl: data.netdiskUrl || '',
             netdiskCode: data.netdiskCode || '',
-            sharedDepts: data.sharedDepts || [],
-            versions: [{ version: 'v1', updatedAt: new Date().toLocaleString(), size: '未知', author: mock.currentUser().name }],
+            sharedDeptIds: (data.sharedDeptIds || []).map(Number),
+            versions: [{ version: 'v1', updatedAt: new Date().toLocaleString(), size: '未知', author: user.name }],
             extracts: []
         }
         mock.materials.unshift(newMaterial)
@@ -222,17 +248,20 @@ export const deviceApi = {
 
     // 申请设备（加入内存）
     apply:          pick(d => request.post('/device-applications', d), (data) => {
+        const user = me()
         const newApp = {
             id: Date.now(),
-            applicant: mock.currentUser().name,
-            dept: mock.currentUser().dept,
-            phone: mock.currentUser().phone || '',
+            applicant: user.name,
+            deptId: Number(user.deptId),
+            phone: user.phone || '',
+            equipmentId: Number(data.deviceId),
             device: data.deviceName,
+            applyNum: data.applyNum || 1,
             startTime: data.startTime,
             endTime: data.endTime,
             purpose: data.purpose,
             taskName: '',
-            status: '待审核',
+            status: 0, // 0-待审核
             opinion: ''
         }
         mock.deviceApplications.unshift(newApp)
@@ -245,37 +274,41 @@ export const deviceApi = {
 /* ================= 部门管理区 (部长/主任) ================= */
 export const adminApi = {
     // D-01 部门概览
-    overview: (dept) => USE_MOCK
+    overview: (deptId) => USE_MOCK
         ? delay((() => {
-            const isAll = !dept || dept === '全部部门'
-            const filteredMembers = isAll ? (mock.members || []) : (mock.members || []).filter(m => m.dept === dept)
-            const activeCount = filteredMembers.filter(m => m.status === '在岗').length
+            const all = isAllDept(deptId)
+            const filteredMembers = all
+                ? (mock.members || [])
+                : (mock.members || []).filter(m => Number(m.deptId) === Number(deptId))
+            const activeCount = filteredMembers.filter(m => Number(m.status) === 1).length
 
             let todos = []
-            if (dept === '综合部') {
+            if (Number(deptId) === 101) {
                 todos = [{ type: 'checkin', text: '今日打卡名单尚未核对，请及时处理', time: '2024-11-05 08:00' }]
-            } else if (dept === '摄制部') {
+            } else if (Number(deptId) === 104) {
                 todos = [{ type: 'device', text: '张三 申请借用「佳能相机」，待审核', time: '2024-11-04 09:12' }]
             } else {
                 todos = [{ type: 'signup', text: '陈存灿 报名「秋季运动会」任务，待确认', time: '2024-11-04 09:12' }]
             }
-            if (isAll) todos.unshift({ type: 'global', text: '全中心 10 月份考评未发起', time: '2024-11-01' })
+            if (all) todos.unshift({ type: 'global', text: '全中心 10 月份考评未发起', time: '2024-11-01' })
 
             return {
                 ...mock.deptOverview,
                 memberCount: filteredMembers.length,
-                activeCount: activeCount,
-                todos: todos,
-                taskCount: isAll ? mock.tasks.length : mock.tasks.filter(t => t.departments.includes(dept) || t.relatedDepts?.includes(dept)).length,
-                materialCount: isAll ? mock.materials.length : mock.materials.filter(m => m.department === dept).length
+                activeCount,
+                todos,
+                taskCount: all ? mock.tasks.length : mock.tasks.filter(t => taskInDept(t, deptId)).length,
+                materialCount: all ? mock.materials.length : mock.materials.filter(m => Number(m.deptId) === Number(deptId)).length
             }
         })())
-        : request.get('/admin/overview', { params: { dept } }),
+        : request.get('/admin/overview', { params: { deptId } }),
 
     // D-02 成员管理
-    members: (dept) => USE_MOCK
-        ? delay(dept ? (mock.members || []).filter(m => m.dept === dept) : (mock.members || []))
-        : request.get('/admin/members', { params: { dept } }),
+    members: (deptId) => USE_MOCK
+        ? delay(isAllDept(deptId)
+            ? (mock.members || [])
+            : (mock.members || []).filter(m => Number(m.deptId) === Number(deptId)))
+        : request.get('/admin/members', { params: { deptId } }),
 
     // 保存成员（加入内存）
     saveMember: (data) => USE_MOCK
@@ -285,9 +318,11 @@ export const adminApi = {
                 if (target) Object.assign(target, data)
             } else {
                 mock.members.unshift({
+                    role: 0,
+                    status: 1, // 1-在岗
+                    deptId: 101,
                     ...data,
                     id: Date.now(),
-                    status: '在岗',
                     email: `${data.name}@example.com`
                 })
             }
@@ -295,10 +330,11 @@ export const adminApi = {
         })())
         : (data.id ? request.put(`/admin/members/${data.id}`, data) : request.post('/admin/members', data)),
 
+    // status：1-在岗 0-停用
     toggleMember: (id, status) => USE_MOCK
         ? delay((() => {
             const target = mock.members.find(m => String(m.id) === String(id))
-            if (target) target.status = status
+            if (target) target.status = Number(status)
             return { success: true }
         })())
         : request.put(`/admin/members/${id}/status`, { status }),
@@ -313,12 +349,12 @@ export const adminApi = {
             const userEvaluations = (mock.evaluations || []).filter(e => e.member === memberName)
 
             const userCheckins = memberName ? [
-                { id: 1, date: '2024-11-05', task: '日常推文转发', status: '正常' },
-                { id: 2, date: '2024-11-04', task: '日常推文转发', status: '正常' }
+                { id: 1, date: '2024-11-05', task: '日常推文转发', status: 1 },
+                { id: 2, date: '2024-11-04', task: '日常推文转发', status: 1 }
             ] : []
 
             const userMeetings = memberName ? [
-                { id: 1, title: `${member?.dept || ''} 11月例会`, time: '2024-11-04 14:00', status: '已参加' }
+                { id: 1, title: `${member?.title || ''} 11月例会`, time: '2024-11-04 14:00', status: 1 }
             ] : []
 
             return { tasks: userTasks, checkins: userCheckins, meetings: userMeetings, evaluations: userEvaluations }
@@ -326,9 +362,11 @@ export const adminApi = {
         : request.get(`/admin/members/${id}/detail`),
 
     // D-04/D-10 任务参与管理
-    tasks: (dept) => USE_MOCK
-        ? delay(mock.tasks.filter(t => t.departments.includes(dept) || t.relatedDepts?.includes(dept)))
-        : request.get('/admin/tasks', { params: { dept } }),
+    tasks: (deptId) => USE_MOCK
+        ? delay(isAllDept(deptId)
+            ? mock.tasks
+            : mock.tasks.filter(t => taskInDept(t, deptId)))
+        : request.get('/admin/tasks', { params: { deptId } }),
 
     addParticipant: (taskId, data) => USE_MOCK
         ? delay((() => {
@@ -336,7 +374,7 @@ export const adminApi = {
             if (task) {
                 if (!task.participants) task.participants = []
                 if (!task.participants.some(p => p.name === data.name)) {
-                    task.participants.push({ name: data.name, dept: data.dept })
+                    task.participants.push({ name: data.name, deptId: Number(data.deptId) })
                 }
             }
             return { success: true }
@@ -361,7 +399,7 @@ export const adminApi = {
                 const signup = (task.signups || []).find(s => s.name === name)
                 if (signup) {
                     if (!task.participants.some(p => p.name === signup.name)) {
-                        task.participants.push({ name: signup.name, dept: signup.dept })
+                        task.participants.push({ name: signup.name, deptId: signup.deptId })
                     }
                     task.signups = task.signups.filter(s => s.name !== name)
                 }
@@ -386,19 +424,22 @@ export const adminApi = {
         })())
         : request.delete(`/admin/tasks/${id}`),
 
-    // D-05 会议管理
-    meetings: (dept) => USE_MOCK
-        ? delay(mock.adminMeetings.filter(m => m.dept === dept || m.dept === '全中心'))
-        : request.get('/admin/meetings', { params: { dept } }),
+    // D-05 会议管理（deptId 100 为全中心会议）
+    meetings: (deptId) => USE_MOCK
+        ? delay(isAllDept(deptId)
+            ? mock.adminMeetings
+            : mock.adminMeetings.filter(m => Number(m.deptId) === Number(deptId) || Number(m.deptId) === ALL_DEPT_ID))
+        : request.get('/admin/meetings', { params: { deptId } }),
 
     // 创建会议（加入内存）
     createMeeting: (data) => USE_MOCK
         ? delay((() => {
-            mock.adminMeetings.unshift({ ...data, id: Date.now(), records: [] })
+            mock.adminMeetings.unshift({ ...data, deptId: Number(data.deptId), id: Date.now(), records: [] })
             return { success: true }
         })())
         : request.post('/admin/meetings', data),
 
+    // records: [{ memberId, name, deptId, status: 1到场 2迟到 3请假 4缺席 }]
     saveMeetingRecords: (id, records) => USE_MOCK
         ? delay((() => {
             const target = mock.adminMeetings.find(m => String(m.id) === String(id))
@@ -408,9 +449,11 @@ export const adminApi = {
         : request.put(`/admin/meetings/${id}/records`, { records }),
 
     // D-06/07/08 考评管理
-    evaluations: (dept) => USE_MOCK
-        ? delay(dept ? mock.evaluations.filter(e => e.dept === dept) : mock.evaluations)
-        : request.get('/admin/evaluations', { params: { dept } }),
+    evaluations: (deptId) => USE_MOCK
+        ? delay(isAllDept(deptId)
+            ? mock.evaluations
+            : mock.evaluations.filter(e => Number(e.deptId) === Number(deptId)))
+        : request.get('/admin/evaluations', { params: { deptId } }),
 
     evaluationTemplate: () => USE_MOCK
         ? delay(mock.evaluationTemplate)
@@ -421,56 +464,45 @@ export const adminApi = {
             return memberNames.map(name => {
                 const memberInfo = mock.members.find(m => m.name === name)
 
-                // 1. 算打卡分（每次 0.5 分）
-                // 去 mock.checkinRecords 里找这个人当月的打卡记录
+                // 1. 打卡分（每次 0.5 分，status 1 为已打卡）
                 const checkinCount = (mock.checkinRecords || []).filter(
-                    r => r.member === name && r.date.startsWith(month) && r.status === '已打卡'
+                    r => r.member === name && r.date.startsWith(month) && Number(r.status) === 1
                 ).length
                 const checkinScore = checkinCount * 0.5
 
-                // 2. 算会议分（每次 1 分）
-                // 去 mock.adminMeetings 里找记录
+                // 2. 会议分（每次 1 分，status 1 为到场）
                 let meetingCount = 0
                 ;(mock.adminMeetings || []).forEach(m => {
-                    if (m.records) {
-                        const record = m.records.find(r => r.name === name && r.status === '到场')
-                        if (record) meetingCount++
-                    }
+                    if (m.records && m.records.some(r => r.name === name && Number(r.status) === 1)) meetingCount++
                 })
                 const meetingScore = meetingCount * 1
 
-                // 3. 算任务基础参与分（每次 1 分）
+                // 3. 任务基础参与分（每次 1 分）
                 const taskCount = mock.tasks.filter(t =>
                     t.participants && t.participants.some(p => p.name === name)
                 ).length
                 const taskBaseScore = taskCount * 1
 
-                // 4. 算任务附加分（你之前加的 20 分）
+                // 4. 任务附加分
                 let taskExtraScore = 0
                 mock.tasks.forEach(t => {
                     const p = (t.participants || []).find(x => x.name === name)
-                    if (p && p.extraScore) {
-                        taskExtraScore += p.extraScore
-                    }
+                    if (p && p.extraScore) taskExtraScore += p.extraScore
                 })
-
-                // 基础总分 = 打卡 + 会议 + 任务基础
-                const baseAutoScore = checkinScore + meetingScore + taskBaseScore
 
                 return {
                     name,
-                    dept: memberInfo?.dept || '',
-                    autoScore: baseAutoScore,
-                    taskExtraScore: taskExtraScore,
+                    deptId: memberInfo?.deptId || 100,
+                    autoScore: checkinScore + meetingScore + taskBaseScore,
+                    taskExtraScore,
                     manualScore: 0,
-                    level: '合格',
+                    level: 1, // 1-合格
                     reason: ''
                 }
             })
         })())
         : request.post('/admin/evaluations/preview', { month, memberNames }),
 
-    // 发起考评（修复了报错，并加入内存）
     // 发起考评（自动联动真实明细并入库）
     createEvaluation: (data) => USE_MOCK
         ? delay((() => {
@@ -478,56 +510,52 @@ export const adminApi = {
                 const name = m.name
                 const month = data.month
 
-                // 1. 提取真实的打卡明细
+                // 1. 打卡明细
                 const userCheckins = (mock.checkinRecords || []).filter(
-                    r => r.member === name && r.date.startsWith(month) && r.status === '已打卡'
+                    r => r.member === name && r.date.startsWith(month) && Number(r.status) === 1
                 )
                 const checkinDays = userCheckins.length
                 const checkinScore = checkinDays * 0.5
 
-                // 2. 提取真实的会议明细
+                // 2. 会议明细
                 const userMeetingList = []
                 ;(mock.adminMeetings || []).forEach(meeting => {
-                    const record = (meeting.records || []).find(r => r.name === name && r.status === '到场')
-                    if (record) {
-                        userMeetingList.push({ title: meeting.title, score: 1 })
-                    }
+                    const record = (meeting.records || []).find(r => r.name === name && Number(r.status) === 1)
+                    if (record) userMeetingList.push({ title: meeting.title, score: 1 })
                 })
                 const meetingScore = userMeetingList.length * 1
 
-                // 3. 提取真实的任务明细
+                // 3. 任务明细
                 const userTaskList = []
                 let taskBaseScore = 0
                 let taskExtraScore = 0
                 mock.tasks.forEach(t => {
                     const p = (t.participants || []).find(x => x.name === name)
                     if (p) {
-                        userTaskList.push({ title: t.title, score: 1 }) // 基础参与分1
+                        userTaskList.push({ title: t.title, score: 1 })
                         taskBaseScore += 1
-                        if (p.extraScore) {
-                            taskExtraScore += p.extraScore // 任务额外附加分
-                        }
+                        if (p.extraScore) taskExtraScore += p.extraScore
                     }
                 })
 
                 mock.evaluations.unshift({
                     id: Date.now() + idx,
-                    month: month,
-                    dept: m.dept,
+                    month,
+                    deptId: Number(m.deptId) || Number(mock.members.find(x => x.name === name)?.deptId) || 101,
                     member: name,
-                    autoScore: m.autoScore, // 前端算好的（基础分+任务附加分）
-                    manualScore: m.manualScore, // 部长填的
+                    autoScore: m.autoScore,          // 基础自动分 + 任务附加分
+                    manualScore: m.manualScore,      // 部长填的
                     total: m.autoScore + m.manualScore,
-                    level: m.level || '合格',
-                    status: '已完成',
+                    level: Number(m.level ?? 1),     // 0不合格 1合格 2良好 3优秀
+                    status: 1,                       // 1-已发布
                     createdAt: new Date().toLocaleString(),
                     details: {
                         extraNote: m.extraNote || '',
-                        checkinDays: checkinDays,
-                        checkinScore: checkinScore,
+                        checkinDays,
+                        checkinScore,
                         taskScore: taskBaseScore,
-                        taskExtraScore: taskExtraScore, // 👈 这里单独存任务附加分
-                        meetingScore: meetingScore,
+                        taskExtraScore,
+                        meetingScore,
                         taskList: userTaskList,
                         meetingList: userMeetingList
                     }
@@ -540,9 +568,9 @@ export const adminApi = {
     memberEvalDetail: (memberName, month) => USE_MOCK
         ? delay({
             checkinList: [
-                { date: `${month}-01`, status: '已打卡' },
-                { date: `${month}-02`, status: '已打卡' },
-                { date: `${month}-03`, status: '未打卡' }
+                { date: `${month}-01`, status: 1 },
+                { date: `${month}-02`, status: 1 },
+                { date: `${month}-03`, status: 0 }
             ],
             taskList: [
                 { title: '2024 秋季运动会开幕式报道', role: '参与人' },
@@ -552,9 +580,11 @@ export const adminApi = {
         : request.get('/admin/evaluations/detail', { params: { memberName, month } }),
 
     // D-09 本部门素材
-    materials: (dept) => USE_MOCK
-        ? delay(mock.materials.filter(m => m.department === dept))
-        : request.get('/admin/materials', { params: { dept } }),
+    materials: (deptId) => USE_MOCK
+        ? delay(isAllDept(deptId)
+            ? mock.materials
+            : mock.materials.filter(m => Number(m.deptId) === Number(deptId)))
+        : request.get('/admin/materials', { params: { deptId } }),
 
     // D-11 公告管理
     announcements: () => USE_MOCK ? delay(mock.announcements) : request.get('/admin/announcements'),
@@ -566,7 +596,7 @@ export const adminApi = {
                 const target = mock.announcements.find(a => a.id === data.id)
                 if (target) Object.assign(target, data)
             } else {
-                mock.announcements.unshift({ ...data, id: Date.now(), createdAt: new Date().toLocaleString() })
+                mock.announcements.unshift({ ...data, scope: Number(data.scope) || 1, id: Date.now(), createdAt: new Date().toLocaleString() })
             }
             return { success: true }
         })())
@@ -581,16 +611,21 @@ export const adminApi = {
         })())
         : request.delete(`/admin/announcements/${id}`),
 
-    // D-12 部门介绍设置
-    deptProfile: (dept) => USE_MOCK ? delay(mock.deptProfiles[dept]) : request.get('/admin/dept-profile', { params: { dept } }),
+    // D-12 部门介绍设置（键为 deptId）
+    deptProfile: (deptId) => USE_MOCK ? delay(mock.deptProfiles[Number(deptId)] || mock.deptProfiles[101]) : request.get('/admin/dept-profile', { params: { deptId } }),
 
     // 保存部门介绍（加入内存）
-    saveDeptProfile: (dept, data) => USE_MOCK
+    saveDeptProfile: (deptId, data) => USE_MOCK
         ? delay((() => {
-            if (mock.deptProfiles[dept]) Object.assign(mock.deptProfiles[dept], data)
+            const key = Number(deptId)
+            if (mock.deptProfiles[key]) {
+                Object.assign(mock.deptProfiles[key], data)
+            } else {
+                mock.deptProfiles[key] = { ...data }
+            }
             return { success: true }
         })())
-        : request.put('/admin/dept-profile', { dept, ...data }),
+        : request.put('/admin/dept-profile', { deptId, ...data }),
 
     // D-13/D-17 数据看板
     dashboard: () => USE_MOCK ? delay(mock.dashboardData) : request.get('/admin/dashboard'),
@@ -602,26 +637,27 @@ export const adminApi = {
         return request.post('/admin/dashboard/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     })(),
 
-    // D-14 打卡记录
+    // D-14 打卡记录（deptId 传 0 / 100 表示全部）
     checkins: (params) => USE_MOCK
         ? delay((() => {
-            const { date, dept } = params || {}
-            let targetMembers = (mock.members || []).filter(m => m.status === '在岗')
-            targetMembers = targetMembers.filter(m => !m.title.includes('部长') && m.title !== '中心主任')
+            const { date, deptId } = params || {}
+            let targetMembers = (mock.members || []).filter(m => Number(m.status) === 1)
+            // 打卡只针对部员（role 0）
+            targetMembers = targetMembers.filter(m => Number(m.role) === 0)
 
-            if (dept && dept !== '全部') {
-                targetMembers = targetMembers.filter(m => m.dept === dept)
+            if (!isAllDept(deptId)) {
+                targetMembers = targetMembers.filter(m => Number(m.deptId) === Number(deptId))
             }
 
             return targetMembers.map((m) => {
-                const record = (mock.checkinRecords || []).find(r => r.date === date && r.dept === m.dept && r.member === m.name)
+                const record = (mock.checkinRecords || []).find(r => r.date === date && Number(r.deptId) === Number(m.deptId) && r.member === m.name)
                 return {
                     id: record ? record.id : `temp-${m.id}-${date}`,
                     date,
-                    dept: m.dept,
+                    deptId: m.deptId,
                     member: m.name,
                     studentNo: m.studentNo,
-                    status: record ? record.status : '未打卡'
+                    status: record ? Number(record.status) : 0 // 0-未打卡
                 }
             })
         })())
@@ -629,16 +665,16 @@ export const adminApi = {
 
     markCheckin: (id, status, record) => USE_MOCK
         ? delay((() => {
-            const target = (mock.checkinRecords || []).find(r => r.id === id)
+            const target = (mock.checkinRecords || []).find(r => String(r.id) === String(id))
             if (target) {
-                target.status = status
+                target.status = Number(status)
             } else if (record) {
                 mock.checkinRecords.push({
                     id: Date.now(),
                     date: record.date,
-                    dept: record.dept,
+                    deptId: Number(record.deptId),
                     member: record.member,
-                    status
+                    status: Number(status)
                 })
             }
             return { success: true }
@@ -648,11 +684,11 @@ export const adminApi = {
     // D-15 综合部：打卡申诉审批
     checkinAppeals: () => USE_MOCK ? delay(mock.checkinAppeals) : request.get('/admin/checkins/appeals'),
 
-    // 审批申诉（加入内存）
+    // 审批申诉（0待审批 1已通过 2已拒绝）
     reviewAppeal: (id, status) => USE_MOCK
         ? delay((() => {
             const target = mock.checkinAppeals.find(a => String(a.id) === String(id))
-            if (target) target.status = status
+            if (target) target.status = Number(status)
             return { success: true }
         })())
         : request.put(`/admin/checkins/appeals/${id}`, { status }),
@@ -672,7 +708,7 @@ export const adminApi = {
                 const target = mock.deviceList.find(d => d.id === data.id)
                 if (target) Object.assign(target, data)
             } else {
-                mock.deviceList.unshift({ ...data, id: Date.now() })
+                mock.deviceList.unshift({ status: 0, stock: 1, ...data, id: Date.now() })
             }
             return { success: true }
         })())
@@ -681,19 +717,18 @@ export const adminApi = {
     // D-19 摄制部：设备申请审核
     deviceApplications: () => USE_MOCK ? delay(mock.deviceApplications) : request.get('/admin/device-applications'),
 
-    // 👇 新增：更新任务关联的设备清单
-    updateTaskDevices: (taskId, devices) => USE_MOCK
+    // 更新任务关联的设备清单（equipmentIds）
+    updateTaskDevices: (taskId, equipmentIds) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(taskId))
             if (task) {
-                task.devices = devices
+                task.equipmentIds = (equipmentIds || []).map(Number)
             }
             return { success: true }
         })())
-        : request.put(`/admin/tasks/${taskId}/devices`, { devices }),
+        : request.put(`/admin/tasks/${taskId}/devices`, { equipmentIds }),
 
-
-    // 审核设备（加入内存）
+    // 审核设备（0待审核 1已通过 2已拒绝 3使用中 4已归还）
     reviewDevice: (id, data) => USE_MOCK
         ? delay((() => {
             const target = mock.deviceApplications.find(d => String(d.id) === String(id))
@@ -703,26 +738,33 @@ export const adminApi = {
         : request.put(`/admin/device-applications/${id}`, data),
 
     // 获取部门专属模块配置
-    getDeptModules: (dept) => USE_MOCK
-        ? delay(mock.deptModuleConfig[dept] || [])
-        : request.get('/admin/dept-modules', { params: { dept } }),
+    getDeptModules: (deptId) => USE_MOCK
+        ? delay(mock.deptModuleConfig[Number(deptId)] || [])
+        : request.get('/admin/dept-modules', { params: { deptId } }),
 
-    // 获取管理区菜单
-    getMenus: (dept, role) => USE_MOCK
+    // 保存部门模块配置
+    saveDeptModules: (deptId, modules) => USE_MOCK
+        ? delay((() => {
+            mock.deptModuleConfig[Number(deptId)] = [...modules]
+            return { success: true }
+        })())
+        : request.put('/admin/dept-modules', { deptId, modules }),
+
+    // 获取管理区菜单（role：0部员 1部长 2主任）
+    getMenus: (deptId, role) => USE_MOCK
         ? delay((() => {
             let menus = [...mock.baseAdminMenus]
-            if (role === 'director') {
+            if (Number(role) === 2) {
                 const allSpecial = Object.values(mock.specialAdminMenus).flat()
                 const uniqueSpecial = Array.from(new Set(allSpecial.map(m => m.path)))
                     .map(path => allSpecial.find(m => m.path === path))
                 menus = [...menus, ...uniqueSpecial]
-            } else if (dept) {
-                const deptSpecial = mock.specialAdminMenus[dept] || []
-                menus = [...menus, ...deptSpecial]
+            } else if (deptId) {
+                menus = [...menus, ...(mock.specialAdminMenus[Number(deptId)] || [])]
             }
             return menus
         })())
-        : request.get('/admin/menus', { params: { dept, role } }),
+        : request.get('/admin/menus', { params: { deptId, role } }),
 
     // 为任务参与人打附加分
     updateTaskScore: (taskId, memberName, score, reason) => USE_MOCK
@@ -740,6 +782,5 @@ export const adminApi = {
         : request.put(`/admin/tasks/${taskId}/score`, { memberName, score, reason }),
 }
 
-// 兼容旧代码
-import { getTaskTagType } from '@/utils/dict'
-export const statusTagType = getTaskTagType
+// 兼容旧代码：标签颜色统一从字典取
+export { getTaskTagType as statusTagType } from '@/utils/dict'
