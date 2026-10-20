@@ -1,6 +1,6 @@
 import request from './request'
 import * as mock from './mock'
-import { ALL_DEPT_ID, isAllDept } from '@/utils/dict'
+import { ALL_DEPT_ID, ROLE, isAllDept } from '@/utils/dict'
 
 // 是否使用 Mock 数据（后端接口就绪后改为 false）
 const USE_MOCK = true
@@ -46,8 +46,8 @@ export const homeApi = {
     latestTasks:  pick(() => request.get('/tasks/latest'),        () => {
         const user = me()
         const role = mock.currentRole()
-        const deptId = role === 2 ? ALL_DEPT_ID : user.deptId
-        const list = role === 2
+        const deptId = role === ROLE.DIRECTOR ? ALL_DEPT_ID : user.deptId
+        const list = role === ROLE.DIRECTOR
             ? mock.tasks
             : mock.tasks.filter(t => taskInDept(t, deptId))
         return delay(list.slice(0, 4))
@@ -102,9 +102,9 @@ export const messageApi = {
     list: pick(() => request.get('/messages'), () => {
         const role = mock.currentRole()
         let msgs = mock.messages || []
-        if (role === 1) {
+        if (role === ROLE.MINISTER) {
             msgs = msgs.filter(m => m.id === 1 || m.id === 3)
-        } else if (role === 2) {
+        } else if (role === ROLE.DIRECTOR) {
             msgs = msgs.filter(m => m.id === 2)
         }
         return delay(msgs)
@@ -113,14 +113,14 @@ export const messageApi = {
         id => request.put(`/messages/${id}/read`),
         (id) => {
             const msg = mock.messages.find(m => m.id === id)
-            if (msg) msg.read = true
+            if (msg) msg.isRead = 1
             return delay({ success: true })
         }
     ),
     markAllRead: pick(
         () => request.put('/messages/read-all'),
         () => {
-            mock.messages.forEach(m => m.read = true)
+            mock.messages.forEach(m => m.isRead = 1)
             return delay({ success: true })
         }
     )
@@ -133,7 +133,7 @@ export const taskApi = {
         p => request.get('/tasks', { params: p }),
         p => {
             const role = mock.currentRole()
-            const deptId = p?.deptId ?? (role === 2 ? ALL_DEPT_ID : me().deptId)
+            const deptId = p?.deptId ?? (role === ROLE.DIRECTOR ? ALL_DEPT_ID : me().deptId)
             let result = mock.tasks
 
             if (!isAllDept(deptId)) {
@@ -193,9 +193,9 @@ export const materialApi = {
             const role = mock.currentRole()
             let result = mock.filterMaterials(p)
 
-            if (role === 1) {
+            if (role === ROLE.MINISTER) {
                 result = result.filter(m => Number(m.deptId) === Number(user.deptId))
-            } else if (role === 0) {
+            } else if (role === ROLE.MEMBER) {
                 const myTaskIds = mock.tasks
                     .filter(t => (t.participants || []).some(part => part.name === user.name) || taskInDept(t, user.deptId))
                     .map(t => String(t.id))
@@ -754,7 +754,7 @@ export const adminApi = {
     getMenus: (deptId, role) => USE_MOCK
         ? delay((() => {
             let menus = [...mock.baseAdminMenus]
-            if (Number(role) === 2) {
+            if (Number(role) === ROLE.DIRECTOR) {
                 const allSpecial = Object.values(mock.specialAdminMenus).flat()
                 const uniqueSpecial = Array.from(new Set(allSpecial.map(m => m.path)))
                     .map(path => allSpecial.find(m => m.path === path))
@@ -781,6 +781,3 @@ export const adminApi = {
         })())
         : request.put(`/admin/tasks/${taskId}/score`, { memberName, score, reason }),
 }
-
-// 兼容旧代码：标签颜色统一从字典取
-export { getTaskTagType as statusTagType } from '@/utils/dict'
