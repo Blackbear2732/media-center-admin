@@ -41,7 +41,7 @@
         <el-card shadow="never" class="surface-card">
           <template #header>
             <div class="flex-between">
-              <b>素材</b>
+              <b>素材区域（上传即展示）</b>
               <el-button size="small" :loading="matLoading" @click="loadMaterials">
                 <el-icon><Refresh /></el-icon> 刷新
               </el-button>
@@ -79,29 +79,34 @@
         </el-card>
       </el-col>
 
-      <!-- 右侧：参与人员面板 -->
+      <!-- 右侧：人员管理面板 -->
       <el-col :span="9">
         <el-card shadow="never" class="surface-card">
           <template #header>
             <div class="flex-between">
               <b>参与人（{{ (task.participants || []).length }}）</b>
-              <!-- 管理身份标识 -->
               <span v-if="userStore.canManage" class="tag-soft" style="font-size: 11px;">可管理</span>
             </div>
           </template>
 
-          <!-- 所有角色都能看到的：已确认参与人列表 -->
+          <!-- 已确认参与人列表 -->
           <div v-for="p in (task.participants || [])" :key="p.name" class="flex-between" style="padding:8px 0;border-bottom:1px solid #f0f2f5">
-            <span><el-avatar :size="26" style="margin-right:8px">{{ p.name.slice(0,1) }}</el-avatar>{{ p.name }}</span>
-            <div>
-              <el-tag size="small" type="info" style="margin-right: 8px;">{{ p.dept }}</el-tag>
-              <!-- 只有管理者能移除人员 -->
-              <el-button
-                  v-if="userStore.canManage && canManageDept(p.dept)"
-                  link type="danger"
-                  size="small"
-                  @click="handleRemove(p)"
-              >移除</el-button>
+            <span>
+              <el-avatar :size="26" style="margin-right:8px">{{ p.name.slice(0,1) }}</el-avatar>
+              {{ p.name }}
+              <!-- 展示这个人在该任务中获得的任务附加分 -->
+              <el-tag v-if="p.extraScore" type="warning" size="small" effect="plain" style="margin-left: 8px;">
+                附加分 +{{ p.extraScore }}
+              </el-tag>
+            </span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <el-tag size="small" type="info">{{ p.dept }}</el-tag>
+
+              <!-- 管理者操作按钮：打分、移除 -->
+              <template v-if="canManageDept(p.dept)">
+                <el-button link type="primary" size="small" @click="openScoreDialog(p)">打分</el-button>
+                <el-button link type="danger" size="small" @click="handleRemove(p)">移除</el-button>
+              </template>
             </div>
           </div>
           <el-empty v-if="!task.participants || task.participants.length === 0" description="暂无参与人" :image-size="50" />
@@ -123,7 +128,7 @@
             <!-- 添加人员 -->
             <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
               <div class="muted" style="margin-bottom:8px; font-weight: 600;">添加人员</div>
-              <el-select v-model="selectedMember" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;">
+              <el-select v-model="selectedMember" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;" filterable>
                 <el-option v-for="m in availableMembers" :key="m.id" :label="`${m.name} (${m.dept})`" :value="m.name" />
               </el-select>
               <el-button type="primary" size="small" style="width: 100%;" @click="handleAddParticipant">添加到任务</el-button>
@@ -152,11 +157,30 @@
     </el-row>
 
     <el-empty v-else-if="!loading" description="未找到该任务" />
+
+    <!-- 任务附加分打分弹窗 -->
+    <el-dialog v-model="scoreVisible" title="任务表现附加分" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="参与人">
+          <span style="font-weight: 600; color: var(--brand);">{{ scoreForm.memberName }}</span>
+        </el-form-item>
+        <el-form-item label="附加分">
+          <el-input-number v-model="scoreForm.score" :min="0" :step="0.5" />
+        </el-form-item>
+        <el-form-item label="加分理由">
+          <el-input v-model="scoreForm.reason" type="textarea" :rows="2" placeholder="如：临时救场表现突出" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="scoreVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingScore" @click="saveScore">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { taskApi, adminApi } from '@/api'
@@ -170,8 +194,14 @@ const task = ref({})
 const materials = ref([]), opened = ref([])
 let timer = null
 
+// --- 人员管理逻辑 ---
 const selectedMember = ref('')
 const deptMembers = ref([])
+
+// --- 打分逻辑 ---
+const scoreVisible = ref(false)
+const savingScore = ref(false)
+const scoreForm = reactive({ memberName: '', score: 0, reason: '' })
 
 // 判断是否可管理特定部门
 const canManageDept = (dept) => {
@@ -189,17 +219,13 @@ const pendingSignups = computed(() => {
   return signups
 })
 
-// 判断当前登录部员的状态（已参与 / 待审核 / 未报名）
+// 判断当前登录部员的状态
 const myParticipantStatus = computed(() => {
   const myName = userStore.name
-  // 是否已在参与人列表
   const isJoined = (task.value.participants || []).some(p => p.name === myName)
   if (isJoined) return 'joined'
-
-  // 是否在待审核列表
   const isPending = (task.value.signups || []).some(s => s.name === myName)
   if (isPending) return 'pending'
-
   return 'none'
 })
 
@@ -223,10 +249,12 @@ async function loadMembers() {
   }
 }
 
+// ---------------- 业务操作 ----------------
+
+// 部员报名
 async function handleSignup() {
   try {
     await taskApi.signup(task.value.id, { name: userStore.name, dept: userStore.dept })
-    // 将当前用户推入待审核列表
     if (!task.value.signups) task.value.signups = []
     task.value.signups.push({ name: userStore.name, dept: userStore.dept })
     ElMessage.success('报名成功，请等待部长确认')
@@ -235,6 +263,7 @@ async function handleSignup() {
   }
 }
 
+// 管理者：添加成员
 async function handleAddParticipant() {
   if (!selectedMember.value) return ElMessage.warning('请选择要添加的成员')
   const member = deptMembers.value.find(m => m.name === selectedMember.value)
@@ -246,6 +275,7 @@ async function handleAddParticipant() {
   ElMessage.success('添加成功')
 }
 
+// 管理者：移除成员
 async function handleRemove(p) {
   await ElMessageBox.confirm(`确认将「${p.name}」移出该任务吗？`, '提示', { type: 'warning' })
   await adminApi.removeParticipant(task.value.id, p.name)
@@ -253,6 +283,7 @@ async function handleRemove(p) {
   ElMessage.success('已移除')
 }
 
+// 管理者：确认报名
 async function handleConfirm(s) {
   await adminApi.confirmSignup(task.value.id, s.name)
   task.value.signups = task.value.signups.filter(x => x.name !== s.name)
@@ -260,11 +291,41 @@ async function handleConfirm(s) {
   ElMessage.success('已确认报名')
 }
 
+// 管理者：拒绝报名
 function handleReject(s) {
   task.value.signups = task.value.signups.filter(x => x.name !== s.name)
   ElMessage.info('已拒绝该报名')
 }
 
+// 管理者：打开打分弹窗
+function openScoreDialog(p) {
+  scoreForm.memberName = p.name
+  scoreForm.score = p.extraScore || 0
+  scoreForm.reason = p.scoreReason || ''
+  scoreVisible.value = true
+}
+
+// 管理者：保存打分
+async function saveScore() {
+  if (scoreForm.score < 0) return ElMessage.warning('分数不能为负')
+  savingScore.value = true
+  try {
+    await adminApi.updateTaskScore(task.value.id, scoreForm.memberName, scoreForm.score, scoreForm.reason)
+
+    // 更新本地视图
+    const p = task.value.participants.find(x => x.name === scoreForm.memberName)
+    if (p) {
+      p.extraScore = scoreForm.score
+      p.scoreReason = scoreForm.reason
+    }
+    scoreVisible.value = false
+    ElMessage.success('任务附加分已保存')
+  } finally {
+    savingScore.value = false
+  }
+}
+
+// ---------------- 数据加载 ----------------
 async function loadTask() {
   loading.value = true
   try {
@@ -276,6 +337,7 @@ async function loadTask() {
     }
   } catch (e) {
     console.error('加载任务失败', e)
+    ElMessage.error('加载任务失败')
   } finally {
     loading.value = false
   }
