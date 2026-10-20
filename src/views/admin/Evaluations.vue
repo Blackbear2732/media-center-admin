@@ -51,7 +51,6 @@
                 <template #default="{ row }"><span class="score-total">{{ row.total }}</span></template>
               </el-table-column>
 
-              <!-- 👇 新增：评定等级 -->
               <el-table-column prop="level" label="评定等级" width="110" align="center">
                 <template #default="{ row }">
                   <el-tag :type="getLevelType(row.level)" size="small" effect="dark" round>
@@ -74,7 +73,7 @@
     </div>
 
     <!-- 发起考评弹窗 -->
-    <el-dialog v-model="createVisible" title="发起月度考评" width="900px" :close-on-click-modal="false">
+    <el-dialog v-model="createVisible" title="发起月度考评" width="950px" :close-on-click-modal="false">
       <el-form label-width="100px" style="margin-bottom: 20px;">
         <el-form-item label="考评月份">
           <el-date-picker v-model="form.month" type="month" value-format="YYYY-MM" placeholder="选择月份" @change="loadPreview" />
@@ -90,23 +89,63 @@
         </el-form-item>
       </el-form>
 
-      <el-table :data="previewList" border size="small" v-loading="previewLoading" max-height="400" :header-cell-style="{ background: '#f8fafc' }">
+      <div class="flex-between" style="margin-bottom: 8px;">
+        <b>分数预览与评定</b>
+        <span class="muted" style="font-size: 12px; color: var(--accent);">
+          💡 提示：修改手动分后，点击「当前总分」表头即可自动按高分到低分重新排序
+        </span>
+      </div>
+
+      <!-- 发起考评的预览表格 -->
+      <el-table
+          :data="previewList"
+          border
+          size="small"
+          v-loading="previewLoading"
+          max-height="400"
+          :header-cell-style="{ background: '#f8fafc' }"
+          :default-sort="{ prop: 'currentTotal', order: 'descending' }"
+      >
         <el-table-column prop="name" label="姓名" width="90" fixed="left" />
-        <el-table-column label="自动得分" width="100" align="center">
+
+        <el-table-column label="基础自动分" width="110" align="center">
           <template #default="{ row }">
             <el-tooltip content="根据本月打卡、会议、任务参与自动计算" placement="top">
               <span style="font-weight: 600; color: var(--brand); cursor: pointer;">{{ row.autoScore }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
+
         <el-table-column label="任务附加分" width="110" align="center">
           <template #default="{ row }"><span style="color: var(--accent);">+{{ row.taskExtraScore }}</span></template>
         </el-table-column>
+
         <el-table-column label="手动附加分" width="130" align="center">
-          <template #default="{ row }"><el-input-number v-model="row.manualScore" :min="0" :step="0.5" size="small" style="width: 90px;" /></template>
+          <template #default="{ row }">
+            <el-input-number
+                v-model="row.manualScore"
+                :min="0"
+                :step="0.5"
+                size="small"
+                style="width: 90px;"
+                @change="handleScoreChange(row)"
+            />
+          </template>
         </el-table-column>
 
-        <!-- 👇 新增：发起时评定等级 -->
+        <!-- 👇 真实绑定 currentTotal 属性，并且支持排序 -->
+        <el-table-column
+            prop="currentTotal"
+            label="当前总分"
+            width="110"
+            align="center"
+            sortable
+        >
+          <template #default="{ row }">
+            <span style="font-weight: 700; color: var(--brand-deep); font-size: 15px;">{{ row.currentTotal }}</span>
+          </template>
+        </el-table-column>
+
         <el-table-column label="评定等级" width="120" align="center">
           <template #default="{ row }">
             <el-select v-model="row.level" size="small" placeholder="请选择">
@@ -125,7 +164,7 @@
 
       <template #footer>
         <div class="flex-between">
-          <span class="muted">提示：提交后考评结果将直接入库并展示给成员</span>
+          <span class="muted">提示：提交后将直接入库并通知成员</span>
           <div>
             <el-button @click="createVisible = false">取消</el-button>
             <el-button type="primary" :loading="saving" @click="submitEvaluation">确认发起考评</el-button>
@@ -177,7 +216,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, User } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
@@ -193,25 +232,20 @@ const detailVisible = ref(false)
 const currentEval = ref(null)
 const detailData = ref({ checkinList: [], taskList: [] })
 
-// 按月份分组，并对每个月的内部数据进行总分降序排序
 const groupedList = computed(() => {
   const groups = {}
   list.value.forEach(item => {
     if (!groups[item.month]) groups[item.month] = []
     groups[item.month].push(item)
   })
-
-  // 对每个月的数据进行降序排序
   Object.keys(groups).forEach(month => {
     groups[month].sort((a, b) => b.total - a.total)
   })
-
   return groups
 })
 
 const groupedMonths = computed(() => Object.keys(groupedList.value).sort().reverse())
 
-// 等级对应 Tag 颜色
 const getLevelType = (level) => {
   const map = { '优秀': 'danger', '良好': 'warning', '合格': 'primary', '不合格': 'info' }
   return map[level] || 'info'
@@ -261,7 +295,8 @@ async function loadPreview() {
         autoScore,
         taskExtraScore,
         manualScore: 0,
-        level: '合格', // 默认等级
+        currentTotal: autoScore + taskExtraScore, // 👈 初始化计算总分
+        level: '合格',
         reason: ''
       }
     })
@@ -270,11 +305,31 @@ async function loadPreview() {
   }
 }
 
+// 👇 每次修改输入框，立刻同步计算 currentTotal
+function handleScoreChange(row) {
+  row.currentTotal = row.autoScore + row.taskExtraScore + row.manualScore
+}
+
 async function submitEvaluation() {
   if (!form.month) return ElMessage.warning('请选择月份')
   if (previewList.value.length === 0) return ElMessage.warning('请选择考评对象')
-  saving.value = true
+
   try {
+    await ElMessageBox.confirm(
+        `<div style="line-height: 1.8;">
+        <p>即将对 <b>${form.month}</b> 的 <b>${previewList.value.length}</b> 名成员正式发起考评。</p>
+        <p style="color: #f56c6c; font-size: 13px; margin-top: 8px;">⚠️ 提交后结果将直接入库并通知成员，不可再修改。</p>
+      </div>`,
+        '最终确认',
+        {
+          confirmButtonText: '确认无误，正式发起',
+          cancelButtonText: '返回检查',
+          type: 'warning',
+          dangerouslyUseHTMLString: true,
+        }
+    )
+
+    saving.value = true
     const submitData = {
       month: form.month,
       members: previewList.value.map(row => ({
@@ -286,10 +341,15 @@ async function submitEvaluation() {
         extraNote: row.reason
       }))
     }
+
     await adminApi.createEvaluation(submitData)
     ElMessage.success('考评已发起')
     createVisible.value = false
     load()
+
+  } catch (error) {
+    if (error === 'cancel') return
+    ElMessage.error('发起考评失败')
   } finally {
     saving.value = false
   }
@@ -310,103 +370,29 @@ onMounted(load)
 </script>
 
 <style scoped>
-/* 顶部标题区 */
-.page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-.page-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  letter-spacing: 0.5px;
-}
+/* 省略之前相同的样式（你可以保留你原来的 CSS 部分） */
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
+.page-header h2 { margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.5px; }
 .page-header p { margin: 0; }
-
-/* 月份卡片列表 */
 .month-list { display: flex; flex-direction: column; gap: 16px; }
-
 :deep(.custom-collapse) { border: none; background: transparent; }
-:deep(.custom-collapse .el-collapse-item) {
-  background: #fff;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-:deep(.custom-collapse .el-collapse-item__header) {
-  border-bottom: 1px solid transparent;
-  padding: 0 24px;
-  height: 64px;
-  background: #fff;
-  transition: all 0.2s;
-}
+:deep(.custom-collapse .el-collapse-item) { background: #fff; border-radius: 14px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 16px; }
+:deep(.custom-collapse .el-collapse-item__header) { border-bottom: 1px solid transparent; padding: 0 24px; height: 64px; background: #fff; transition: all 0.2s; }
 :deep(.custom-collapse .el-collapse-item__header:hover) { background: #fafbfc; }
 :deep(.custom-collapse .el-collapse-item__wrap) { border-bottom: none; background: #fff; }
 :deep(.custom-collapse .el-collapse-item__content) { padding: 0; }
-
 .month-title-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
 .month-title { display: flex; align-items: center; gap: 12px; }
 .month-meta { display: flex; align-items: center; gap: 16px; font-size: 13px; }
-
 .table-wrapper { padding: 0; border-top: 1px solid var(--border); }
-
-/* 排名样式 */
-.rank-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #f1f5f9;
-  color: #64748b;
-  font-weight: 600;
-  font-size: 12px;
-}
-.rank-num.top-3 {
-  background: #fdf3d8;
-  color: #b8860b;
-  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.2);
-}
-
-.dept-label {
-  display: inline-block;
-  padding: 2px 8px;
-  background: #f1f5f9;
-  color: #64748b;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.score-auto {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 28px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  border-radius: 6px;
-  font-weight: 600;
-}
+.rank-num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #f1f5f9; color: #64748b; font-weight: 600; font-size: 12px; }
+.rank-num.top-3 { background: #fdf3d8; color: #b8860b; box-shadow: 0 2px 6px rgba(184, 134, 11, 0.2); }
+.dept-label { display: inline-block; padding: 2px 8px; background: #f1f5f9; color: #64748b; border-radius: 6px; font-size: 12px; }
+.score-auto { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 28px; background: var(--brand-soft); color: var(--brand); border-radius: 6px; font-weight: 600; }
 .score-manual { color: var(--accent); font-weight: 500; }
 .score-total { font-size: 18px; font-weight: 700; color: var(--brand-deep); }
-
-/* 弹窗内统计卡片 */
-.stat-card {
-  flex: 1;
-  background: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-}
+.stat-card { flex: 1; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
 .stat-card .num { font-size: 28px; font-weight: 700; margin-top: 8px; }
-.stat-card.total-card {
-  background: linear-gradient(135deg, var(--brand), #4a86b8);
-  border: none;
-}
+.stat-card.total-card { background: linear-gradient(135deg, var(--brand), #4a86b8); border: none; }
 .stat-card.total-card .muted { color: rgba(255,255,255,0.8); }
 </style>
