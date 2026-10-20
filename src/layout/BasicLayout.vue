@@ -48,7 +48,7 @@
                 <div class="avatar">{{ (userStore.name || '?').slice(0, 1) }}</div>
                 <div class="user-meta">
                   <span class="user-name">{{ userStore.name }}</span>
-                  <span class="user-role">{{ roleLabel }} · {{ userStore.dept }}</span>
+                  <span class="user-role">{{ roleLabel }} · {{ userStore.deptLabel }}</span>
                 </div>
                 <el-icon :size="12"><ArrowDown /></el-icon>
               </div>
@@ -111,7 +111,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { messageApi, authApi } from '@/api'
+import { messageApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
 import { Menu } from '@element-plus/icons-vue'
