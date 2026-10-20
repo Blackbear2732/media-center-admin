@@ -26,11 +26,11 @@
         <el-table-column prop="task" label="关联任务/事项" min-width="200" />
         <el-table-column prop="time" label="打卡时间" width="120" />
         <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }"><el-tag :type="statusTagType(row.status)" size="small">{{ row.status }}</el-tag></template>
+          <template #default="{ row }"><el-tag :type="getAttendanceStatusType(row.status)" size="small">{{ ATTENDANCE_STATUS_MAP[row.status] }}</el-tag></template>
         </el-table-column>
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
-            <el-button link type="primary" :disabled="row.status === '正常'" @click="openAppeal(row)">申诉</el-button>
+            <el-button link type="primary" :disabled="Number(row.status) === ATTENDANCE_STATUS.NORMAL" @click="openAppeal(row)">申诉</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -59,7 +59,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { userApi, statusTagType } from '@/api'
+import { userApi } from '@/api'
+import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP, getAttendanceStatusType } from '@/utils/dict'
 
 const data = ref({ rate: 0, total: 0, normal: 0, late: 0, absent: 0, records: [] })
 const loading = ref(false), appealVisible = ref(false), submitting = ref(false)
