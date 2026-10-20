@@ -37,7 +37,7 @@
         <el-table-column prop="status" label="打卡状态" width="120">
           <template #default="{ row }">
             <el-tag :type="getCheckinStatusType(row.status)" size="small" effect="dark" round>
-              {{ CHECKIN_STATUS_MAP[row.status] }}
+              {{ getCheckinStatusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -71,9 +71,9 @@ import { adminApi } from '@/api'
 import {
   ALL_DEPT_ID,
   CHECKIN_STATUS,
-  CHECKIN_STATUS_MAP,
   CHECKIN_STATUS_OPTIONS,
   DEPARTMENTS_OPTIONS,
+  getCheckinStatusLabel,
   getCheckinStatusType,
   getDeptLabel
 } from '@/utils/dict'
@@ -105,7 +105,7 @@ async function mark(row, status) {
   try {
     await adminApi.markCheckin(row.id, status, row)
     row.status = status
-    ElMessage.success(`已标记为${CHECKIN_STATUS_MAP[status]}`)
+    ElMessage.success(`已标记为${getCheckinStatusLabel(status)}`)
   } catch (e) {
     console.error(e)
   }
