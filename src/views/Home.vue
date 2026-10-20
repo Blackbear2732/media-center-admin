@@ -3,8 +3,10 @@
     <section class="hero">
       <div class="hero-content">
         <div class="hero-logos">
-          <img src="/image/logo/school.png" alt="校徽" />
+
           <img src="/image/logo/league.png" alt="团徽" />
+          <img src="/image/logo/school.png" alt="校徽" />
+
           <img src="/image/logo/media.png" alt="融媒Logo" />
         </div>
         <div class="hero-eyebrow">SHANXI AGRICULTURAL UNIVERSITY · YOUTH MEDIA CENTER</div>

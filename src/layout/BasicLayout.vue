@@ -5,8 +5,9 @@
         <!-- Logo 区域 -->
         <div class="brand" @click="router.push('/')">
           <div class="brand-logos">
-            <img src="/image/logo/school.png" alt="校徽" class="brand-icon" />
+
             <img src="/image/logo/league.png" alt="团徽" class="brand-icon" />
+            <img src="/image/logo/school.png" alt="校徽" class="brand-icon" />
             <div class="divider"></div>
             <img src="/image/logo/media.png" alt="融媒Logo" class="brand-icon media-icon" />
           </div>
