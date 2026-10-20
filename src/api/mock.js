@@ -459,7 +459,7 @@ export const deviceList = [
     { id: 4, code: 'SJ-004', name: '智云稳定器', model: 'CRANE 3S', buyDate: '2022-11-11', status: '维修', remark: '云台异响', stock: 4 }
 ]
 
-export const deviceNames = ['单反相机','摄像机','无人机','稳定器','导播台','麦克风','图形工作站','补光灯']
+// export const deviceNames = ['单反相机','摄像机','无人机','稳定器','导播台','麦克风','图形工作站','补光灯']
 
 export const deviceApplications = [
     { id: 1, applicant: '徐钰婷', dept: '新闻部', phone: '18442808818', device: '佳能 EOS R5 单反相机',
