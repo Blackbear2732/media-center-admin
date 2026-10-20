@@ -136,7 +136,7 @@
               <div class="task-row-title">{{ t.title }}</div>
               <div class="task-row-meta">{{ t.startTime }} · {{ t.location }}</div>
             </div>
-            <span class="tag-soft">{{ t.status }}</span>
+            <span class="tag-soft">{{ getTaskStatusLabel(t.status) }}</span>
             <el-icon class="task-arrow"><ArrowRight /></el-icon>
           </div>
         </div>
@@ -162,9 +162,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { homeApi ,adminApi} from '@/api'
+import { homeApi, adminApi } from '@/api'
 // 顶部引入
-import { getTaskDotClass } from '@/utils/dict'
+import { getTaskDotClass, getTaskStatusLabel } from '@/utils/dict'
 
 const router = useRouter()
 const loading = ref(false)
