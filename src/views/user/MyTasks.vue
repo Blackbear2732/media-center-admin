@@ -7,13 +7,13 @@
       <div v-for="t in list" :key="t.id" class="task-card surface-card" @click="router.push('/tasks/' + t.id)">
         <div class="task-card-head">
           <span class="status-dot" :class="getTaskDotClass(t.status)"></span>
-          <span>{{ t.status }}</span>
+          <span>{{ getTaskStatusLabel(t.status) }}</span>
           <span style="margin-left:auto">{{ t.startTime }}</span>
         </div>
         <h3>{{ t.title }}</h3>
         <div class="task-card-meta">📍 {{ t.location }}</div>
         <div class="task-card-tags">
-          <span v-for="d in t.departments" :key="d" class="tag-soft">{{ d }}</span>
+          <span v-for="id in (t.deptIds || [])" :key="id" class="tag-soft">{{ getDeptLabel(id) }}</span>
         </div>
       </div>
     </div>
@@ -25,7 +25,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { userApi } from '@/api'
-import { getTaskDotClass } from '@/utils/dict'
+import { getDeptLabel, getTaskDotClass, getTaskStatusLabel } from '@/utils/dict'
 
 const router = useRouter()
 const list = ref([]), loading = ref(false)
