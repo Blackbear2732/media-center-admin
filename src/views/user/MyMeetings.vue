@@ -9,7 +9,7 @@
         <el-table-column prop="host" label="主持人" width="110" />
         <el-table-column prop="status" label="参会状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="getMeetingJoinStatusType(row.status)" size="small">{{ MEETING_JOIN_STATUS_MAP[row.status] }}</el-tag>
+            <el-tag :type="getMeetingJoinStatusType(row.status)" size="small">{{ getMeetingJoinStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -20,7 +20,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { userApi } from '@/api'
-import { MEETING_JOIN_STATUS_MAP, getMeetingJoinStatusType } from '@/utils/dict'
+import { getMeetingJoinStatusLabel, getMeetingJoinStatusType } from '@/utils/dict'
 
 const list = ref([]), loading = ref(false)
 onMounted(async () => {
