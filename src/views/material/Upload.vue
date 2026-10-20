@@ -4,7 +4,7 @@
       <template v-if="!loading">
         <div class="flex-between" style="margin-bottom: 20px;">
           <h2 style="margin: 0; font-size: 22px;">素材统一上传</h2>
-          <span class="tag-soft">当前部门：{{ department || '未分配' }}</span>
+          <span class="tag-soft">当前部门：{{ deptId ? getDeptLabel(deptId) : '未分配' }}</span>
         </div>
         <el-alert type="info" :closable="false" class="mb"
                   title="表单字段根据当前登录人的所属部门动态生成，不同部门上传内容不同。" />
@@ -28,8 +28,8 @@
           </el-form-item>
 
           <el-form-item label="共享部门">
-            <el-select v-model="form.sharedDepts" multiple placeholder="选择可见部门（可多选）" style="width:100%">
-              <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.name" />
+            <el-select v-model="form.sharedDeptIds" multiple placeholder="选择可见部门（可多选）" style="width:100%">
+              <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
             </el-select>
             <div class="muted" style="margin-top:4px">任务参与人默认可见；此处勾选后，被共享部门也可查看</div>
           </el-form-item>
@@ -53,20 +53,23 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { userApi, materialApi, taskApi, homeApi } from '@/api'
+import { userApi, materialApi, taskApi } from '@/api'
+import { DEPARTMENTS_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 
-const department = ref('')
+const deptId = ref(null)
 const fields = ref([])
 const tasks = ref([])
-const departments = ref([])
 const loading = ref(false)
 const submitting = ref(false)
-const form = reactive({ taskId: null, sharedDepts: [], remark: '' })
+const form = reactive({ taskId: null, sharedDeptIds: [], remark: '' })
+
+// 主任没有具体部门的业务上传，默认给综合部（101）的通用表单
+const DEFAULT_UPLOAD_DEPT_ID = 101
 
 function reset() {
   Object.keys(form).forEach(k => {
     if (k === 'taskId') form[k] = null
-    else if (k === 'sharedDepts') form[k] = []
+    else if (k === 'sharedDeptIds') form[k] = []
     else form[k] = ''
   })
 }
@@ -78,7 +81,7 @@ async function submit() {
 
   submitting.value = true
   try {
-    await materialApi.upload({ ...form, department: department.value })
+    await materialApi.upload({ ...form, deptId: deptId.value })
     ElMessage.success('上传成功')
     reset()
   } finally {
@@ -90,19 +93,14 @@ async function init() {
   loading.value = true
   try {
     const u = await userApi.profile()
-// 主任没有具体部门的业务上传，默认给个综合部的通用表单
-    department.value = u?.dept === '全中心' ? '综合部' : (u?.dept || '综合部')
+    deptId.value = isAllDept(u?.deptId) ? DEFAULT_UPLOAD_DEPT_ID : Number(u?.deptId || DEFAULT_UPLOAD_DEPT_ID)
 
-    // 修复：确保回退到综合部
-    const fieldData = await materialApi.uploadFields(department.value)
+    const fieldData = await materialApi.uploadFields(deptId.value)
     fields.value = Array.isArray(fieldData) ? fieldData : []
     fields.value.forEach(f => { if (!(f.key in form)) form[f.key] = '' })
 
     const taskData = await taskApi.list({})
     tasks.value = Array.isArray(taskData) ? taskData : []
-
-    const deptData = await homeApi.departments()
-    departments.value = Array.isArray(deptData) ? deptData : []
   } catch (e) {
     console.error('上传页初始化失败:', e)
     ElMessage.error('页面加载失败，请刷新重试')
