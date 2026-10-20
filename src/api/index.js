@@ -141,14 +141,14 @@ export const taskApi = {
             return delay(result)
         }
     ),
-    detail:      pick(id => request.get(`/tasks/${id}`),            id => delay(mock.tasks.find(t => String(t.id) === String(id)) || mock.tasks[0])),
-    create:      pick(d => request.post('/tasks', d),               () => delay({ success: true, id: 99 })),
-    materials:   pick(id => request.get(`/tasks/${id}/materials`),  id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
-    departments: pick(() => request.get('/departments'),            () => delay(mock.departments)),
+    detail:      pick(id => request.get(`/tasks/${id}`),id => delay(mock.tasks.find(t => String(t.id) === String(id)) || mock.tasks[0])),
+    create:      pick(d => request.post('/tasks', d),() => delay({ success: true, id: 99 })),
+    materials:   pick(id => request.get(`/tasks/${id}/materials`),id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
+    departments: pick(() => request.get('/departments'), () => delay(mock.departments)),
     signup: (taskId, data) => USE_MOCK
         ? delay({ success: true })
         : request.post(`/tasks/${taskId}/signup`, data),
-    devices:     pick(() => request.get('/devices/names'),          () => delay(mock.deviceNames))
+    devices:     pick(() => request.get('/devices/names'),() => delay(mock.deviceList))
 }
 
 /* ================= 素材 F-11 ~ F-13 ================= */
@@ -428,7 +428,10 @@ export const adminApi = {
     checkinStats: () => USE_MOCK ? delay(mock.checkinStats) : request.get('/admin/checkins/stats'),
 
     // D-18 摄制部：设备档案管理
-    devices: () => USE_MOCK ? delay(mock.deviceList) : request.get('/admin/devices'),
+    // 获取设备列表（兼容 mock 和真实后端）
+    devices: () => USE_MOCK
+        ? delay(mock.deviceList || []) // 防止 undefined
+        : request.get('/admin/devices'), // 真实接口路径
     saveDevice: (data) => USE_MOCK
         ? delay({ success: true })
         : (data.id ? request.put(`/admin/devices/${data.id}`, data) : request.post('/admin/devices', data)),
