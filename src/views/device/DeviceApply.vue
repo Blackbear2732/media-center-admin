@@ -19,7 +19,7 @@
                         :type="getDeviceStatusType(d.status)"
                         size="small" effect="dark" round
                     >
-                      {{ DEVICE_STATUS_MAP[d.status] }}
+                      {{ getDeviceStatusLabel(d.status) }}
                     </el-tag>
                   </div>
                 </div>
@@ -40,7 +40,7 @@
                 <el-option
                     v-for="d in deviceList"
                     :key="d.id"
-                    :label="d.name + (d.status !== DEVICE_STATUS.AVAILABLE ? `（当前${DEVICE_STATUS_MAP[d.status]}）` : `（库存${d.stock}）`)"
+                    :label="d.name + (d.status !== DEVICE_STATUS.AVAILABLE ? `（当前${getDeviceStatusLabel(d.status)}）` : `（库存${d.stock}）`)"
                     :value="d.id"
                     :disabled="d.status !== DEVICE_STATUS.AVAILABLE || d.stock <= 0"
                 />
@@ -82,7 +82,7 @@
             <el-table-column prop="endTime" label="结束时间" width="150" />
             <el-table-column prop="status" label="状态" width="90">
               <template #default="{ row }">
-                <el-tag :type="getApplyStatusType(row.status)" size="small">{{ APPLY_STATUS_MAP[row.status] }}</el-tag>
+                <el-tag :type="getApplyStatusType(row.status)" size="small">{{ getApplyStatusLabel(row.status) }}</el-tag>
               </template>
             </el-table-column>
           </el-table>
@@ -98,10 +98,10 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { deviceApi } from '@/api'
 import {
-  APPLY_STATUS_MAP,
   DEVICE_STATUS,
-  DEVICE_STATUS_MAP,
+  getApplyStatusLabel,
   getApplyStatusType,
+  getDeviceStatusLabel,
   getDeviceStatusType
 } from '@/utils/dict'
 
