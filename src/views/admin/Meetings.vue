@@ -13,10 +13,10 @@
         <el-table-column prop="time" label="时间" width="150" />
         <el-table-column prop="location" label="地点" width="140" />
         <el-table-column prop="host" label="主持人" width="100" />
-        <el-table-column prop="dept" label="所属部门" width="120">
+        <el-table-column prop="deptId" label="所属部门" width="120">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.dept === '全中心' ? 'danger' : 'info'" effect="plain">
-              {{ row.dept }}
+            <el-tag size="small" :type="isAllDept(row.deptId) ? 'danger' : 'info'" effect="plain">
+              {{ getDeptLabel(row.deptId) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -42,11 +42,11 @@
           <el-input v-model="form.location" placeholder="请输入会议地点" />
         </el-form-item>
         <el-form-item label="所属部门">
-          <el-input v-model="form.dept" disabled />
+          <el-input :model-value="getDeptLabel(form.deptId)" disabled />
         </el-form-item>
         <el-form-item label="参会对象">
           <span style="color: var(--brand); font-weight: 500;">
-            {{ userStore.isDirector && !targetDept ? '全体部长' : '本部门全体成员' }}
+            {{ isAllDept(form.deptId) ? '全体部长' : `${getDeptLabel(form.deptId)}全体成员` }}
           </span>
         </el-form-item>
       </el-form>
@@ -68,14 +68,11 @@
         <div v-for="m in currentMembers" :key="m.id" class="roll-row">
           <div class="roll-user-info">
             <span class="name">{{ m.name }}</span>
-            <span class="title muted">({{ m.title }})</span>
+            <span class="title muted">({{ getRoleLabel(m.role) }})</span>
           </div>
           <div class="roll-actions">
             <el-radio-group v-model="rollState[m.id]" size="small">
-              <el-radio-button label="到场" />
-              <el-radio-button label="迟到" />
-              <el-radio-button label="请假" />
-              <el-radio-button label="缺席" />
+              <el-radio-button v-for="s in MEETING_STATUS_OPTIONS" :key="s.value" :label="s.value">{{ s.label }}</el-radio-button>
             </el-radio-group>
           </div>
         </div>
@@ -98,35 +95,44 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
+import {
+  ALL_DEPT_ID,
+  MEETING_STATUS,
+  MEETING_STATUS_OPTIONS,
+  ROLE,
+  getDeptLabel,
+  getRoleLabel,
+  isAllDept
+} from '@/utils/dict'
 
 const loading = ref(false), saving = ref(false), savingRoll = ref(false)
 const list = ref([]), allMembers = ref([])
 const createVisible = ref(false), rollVisible = ref(false)
 const current = ref(null)
 
-// 当前选择的部门（主任为空代表全中心）
-const targetDept = computed(() => userStore.isDirector ? (userStore.adminDept || '') : userStore.dept)
+// 当前视角部门（主任可为全中心 100）
+const targetDeptId = computed(() => userStore.viewDeptId)
 
-const form = reactive({ title: '', time: '', location: '', dept: '' })
+const form = reactive({ title: '', time: '', location: '', deptId: ALL_DEPT_ID })
 const rollState = reactive({})
 
 // 动态计算当前会议的参会名单
 const currentMembers = computed(() => {
   if (!current.value) return []
-  // 如果是全中心会议，只点名全体部长
-  if (current.value.dept === '全中心') {
-    return allMembers.value.filter(m => m.title.includes('部长'))
+  // 全中心会议只点名全体部长
+  if (isAllDept(current.value.deptId)) {
+    return allMembers.value.filter(m => Number(m.role) === ROLE.MINISTER)
   }
-  // 如果是部门会议，点名该部门的所有在岗部员
-  return allMembers.value.filter(m => m.dept === current.value.dept && m.status === '在岗')
+  // 部门会议点名该部门在岗成员
+  return allMembers.value.filter(m => Number(m.deptId) === Number(current.value.deptId) && Number(m.status) === 1)
 })
 
 async function load() {
   loading.value = true
   try {
-    list.value = await adminApi.meetings(targetDept.value)
-    // 这里拉取全量成员，方便后续过滤
-    const res = await adminApi.members('')
+    list.value = await adminApi.meetings(targetDeptId.value)
+    // 拉取全量成员，方便后续按会议部门过滤
+    const res = await adminApi.members(ALL_DEPT_ID)
     allMembers.value = Array.isArray(res) ? res : []
   } catch (e) {
     console.error('加载会议数据失败', e)
@@ -139,14 +145,8 @@ function openCreate() {
   form.title = ''
   form.time = ''
   form.location = ''
-
-  // 如果主任在全中心视角，发起的就是全体部长会议
-  if (userStore.isDirector && !targetDept.value) {
-    form.dept = '全中心'
-  } else {
-    form.dept = targetDept.value
-  }
-
+  // 主任在全中心视角发起的就是全体部长会议
+  form.deptId = targetDeptId.value
   createVisible.value = true
 }
 
@@ -162,12 +162,12 @@ async function createMeeting() {
       time: form.time,
       location: form.location,
       host: userStore.name,
-      dept: form.dept,
+      deptId: form.deptId,
       records: []
     }
     await adminApi.createMeeting(newMeeting)
-    // 如果当前是在全中心视角，新建的会议要能显示出来
-    if (targetDept.value === '' || targetDept.value === form.dept) {
+    // 当前视角能覆盖到该会议时才插入列表
+    if (isAllDept(targetDeptId.value) || Number(targetDeptId.value) === Number(form.deptId)) {
       list.value.unshift(newMeeting)
     }
     ElMessage.success('会议已创建')
@@ -181,9 +181,9 @@ async function createMeeting() {
 
 function openRoll(row) {
   current.value = row
-  // 初始化点名状态
+  // 默认全部到场
   currentMembers.value.forEach(m => {
-    rollState[m.id] = '到场'
+    rollState[m.id] = MEETING_STATUS.PRESENT
   })
   rollVisible.value = true
 }
@@ -194,6 +194,7 @@ async function saveRoll() {
     const records = currentMembers.value.map(m => ({
       memberId: m.id,
       name: m.name,
+      deptId: m.deptId,
       status: rollState[m.id]
     }))
     await adminApi.saveMeetingRecords(current.value.id, records)
