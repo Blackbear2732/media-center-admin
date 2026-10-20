@@ -16,10 +16,10 @@
                   <div style="display: flex; gap: 6px; align-items: center;">
                     <span class="muted" style="font-size: 12px;">库存: {{ d.stock }}</span>
                     <el-tag
-                        :type="{ '可用': 'success', '借出': 'warning', '维修': 'danger', '报废': 'info' }[d.status]"
+                        :type="getDeviceStatusType(d.status)"
                         size="small" effect="dark" round
                     >
-                      {{ d.status }}
+                      {{ DEVICE_STATUS_MAP[d.status] }}
                     </el-tag>
                   </div>
                 </div>
@@ -40,9 +40,9 @@
                 <el-option
                     v-for="d in deviceList"
                     :key="d.id"
-                    :label="d.name + (d.status !== '可用' ? `（当前${d.status}）` : `（库存${d.stock}）`)"
+                    :label="d.name + (d.status !== DEVICE_STATUS.AVAILABLE ? `（当前${DEVICE_STATUS_MAP[d.status]}）` : `（库存${d.stock}）`)"
                     :value="d.id"
-                    :disabled="d.status !== '可用' || d.stock <= 0"
+                    :disabled="d.status !== DEVICE_STATUS.AVAILABLE || d.stock <= 0"
                 />
               </el-select>
             </el-form-item>
@@ -82,7 +82,7 @@
             <el-table-column prop="endTime" label="结束时间" width="150" />
             <el-table-column prop="status" label="状态" width="90">
               <template #default="{ row }">
-                <el-tag :type="getStatusType(row.status)" size="small">{{ row.status }}</el-tag>
+                <el-tag :type="getApplyStatusType(row.status)" size="small">{{ APPLY_STATUS_MAP[row.status] }}</el-tag>
               </template>
             </el-table-column>
           </el-table>
@@ -97,6 +97,13 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { deviceApi } from '@/api'
+import {
+  APPLY_STATUS_MAP,
+  DEVICE_STATUS,
+  DEVICE_STATUS_MAP,
+  getApplyStatusType,
+  getDeviceStatusType
+} from '@/utils/dict'
 
 const deviceList = ref([])
 const applications = ref([])
@@ -116,11 +123,6 @@ const maxStock = computed(() => {
 // 切换设备时重置数量为 1
 function handleDeviceChange() {
   form.applyNum = 1
-}
-
-function getStatusType(status) {
-  const map = { '可用': 'success', '借出': 'warning', '维修': 'danger', '报废': 'info', '已通过': 'success', '审批中': 'warning', '待审核': 'info', '已归还': 'success', '使用中': 'warning', '已拒绝': 'danger' }
-  return map[status] || 'info'
 }
 
 async function loadDevices() {
