@@ -555,22 +555,21 @@ export const defaultEvaluationTemplate = [
     { key: 'meeting', name: '会议到场', score: 1, type: 'auto' },
     { key: 'extra', name: '临时加派', score: 1, type: 'manual' }
 ]
-
-// 考评记录（包含月份、自动分明细）
+// 考评数据（模拟后端返回）
 export const evaluations = [
     {
         id: 1, month: '2024-11', dept: '新闻部', member: '徐钰婷',
-        autoScore: 12.5, manualScore: 2, total: 14.5, status: '已完成', createdAt: '2024-11-20 10:00',
+        autoScore: 12.5, manualScore: 2, total: 14.5, level: '优秀', status: '已完成', createdAt: '2024-11-20 10:00',
         details: { checkinDays: 10, taskCount: 2, meetingCount: 1, extraNote: '排版质量高，加2分' }
     },
     {
         id: 2, month: '2024-11', dept: '新闻部', member: '李润琪',
-        autoScore: 8, manualScore: 0, total: 8, status: '已完成', createdAt: '2024-11-20 10:00',
+        autoScore: 8, manualScore: 0, total: 8, level: '合格', status: '已完成', createdAt: '2024-11-20 10:00',
         details: { checkinDays: 6, taskCount: 2, meetingCount: 0, extraNote: '' }
     },
     {
         id: 3, month: '2024-10', dept: '新闻部', member: '徐钰婷',
-        autoScore: 15, manualScore: 1, total: 16, status: '已完成', createdAt: '2024-10-31 18:00',
+        autoScore: 15, manualScore: 1, total: 16, level: '优秀', status: '已完成', createdAt: '2024-10-31 18:00',
         details: { checkinDays: 12, taskCount: 3, meetingCount: 2, extraNote: '全勤奖励' }
     }
 ]

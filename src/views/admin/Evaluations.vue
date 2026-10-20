@@ -1,43 +1,80 @@
 <template>
   <div v-loading="loading">
-    <div class="flex-between" style="margin-bottom:16px;">
-      <div class="muted">共 {{ list.length }} 条考评记录</div>
-      <button class="pill active" @click="openCreate">+ 发起月度考评</button>
+    <!-- 顶部工具栏 -->
+    <div class="page-header">
+      <div class="header-left">
+        <h2>考评管理</h2>
+        <p class="muted">共 {{ list.length }} 条考评记录 · 已按总分从高到低排序</p>
+      </div>
+      <button class="pill active" @click="openCreate" style="padding: 10px 20px;">
+        <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发起月度考评
+      </button>
     </div>
 
     <!-- 按月份分类展示 -->
-    <el-collapse v-model="activeMonths">
-      <el-collapse-item v-for="month in groupedMonths" :key="month" :name="month">
-        <template #title>
-          <div class="flex-between" style="width: 100%; padding-right: 20px;">
-            <span style="font-weight: 600; font-size: 15px;">{{ month }} 月度考评</span>
-            <span class="muted" style="font-size: 12px;">{{ groupedList[month].length }} 人已考评</span>
+    <div class="month-list">
+      <el-collapse v-model="activeMonths" class="custom-collapse">
+        <el-collapse-item v-for="month in groupedMonths" :key="month" :name="month">
+          <template #title>
+            <div class="month-title-bar">
+              <div class="month-title">
+                <span class="tag-soft" style="font-size: 14px; padding: 4px 12px;">{{ month }}</span>
+                <span style="font-weight: 600; font-size: 16px; margin-left: 12px;">月度考评汇总</span>
+              </div>
+              <div class="month-meta">
+                <span class="muted"><el-icon><User /></el-icon> {{ groupedList[month].length }} 人已评估</span>
+              </div>
+            </div>
+          </template>
+
+          <div class="table-wrapper">
+            <el-table :data="groupedList[month]" stripe style="width: 100%" :header-cell-style="{ background: '#f8fafc', color: '#606266', fontWeight: '600' }">
+              <el-table-column type="index" label="排名" width="70" align="center">
+                <template #default="{ $index }">
+                  <span class="rank-num" :class="{ 'top-3': $index < 3 }">{{ $index + 1 }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="dept" label="所属部门" width="120">
+                <template #default="{ row }"><span class="dept-label">{{ row.dept }}</span></template>
+              </el-table-column>
+              <el-table-column prop="member" label="考评对象" width="120">
+                <template #default="{ row }"><div style="font-weight: 500;">{{ row.member }}</div></template>
+              </el-table-column>
+
+              <el-table-column prop="autoScore" label="自动得分" width="110" align="center">
+                <template #default="{ row }"><span class="score-auto">{{ row.autoScore }}</span></template>
+              </el-table-column>
+              <el-table-column prop="manualScore" label="手动附加分" width="110" align="center">
+                <template #default="{ row }"><span class="score-manual">+{{ row.manualScore }}</span></template>
+              </el-table-column>
+              <el-table-column prop="total" label="综合总分" width="120" align="center" sortable>
+                <template #default="{ row }"><span class="score-total">{{ row.total }}</span></template>
+              </el-table-column>
+
+              <!-- 👇 新增：评定等级 -->
+              <el-table-column prop="level" label="评定等级" width="110" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="getLevelType(row.level)" size="small" effect="dark" round>
+                    {{ row.level || '未评级' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="操作" min-width="120" align="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="viewDetail(row)">
+                    <el-icon><Document /></el-icon> 查看明细
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
           </div>
-        </template>
-
-        <el-table :data="groupedList[month]" stripe>
-          <el-table-column prop="dept" label="部门" width="100" />
-          <el-table-column prop="member" label="考评对象" width="120" />
-          <el-table-column prop="autoScore" label="自动得分" width="120">
-            <template #default="{ row }"><span style="color: var(--brand); font-weight: 600;">{{ row.autoScore }}</span></template>
-          </el-table-column>
-          <el-table-column prop="manualScore" label="手动附加分" width="120" />
-          <el-table-column prop="total" label="总分" width="100">
-            <template #default="{ row }"><span style="color: var(--accent); font-weight: 700; font-size: 16px;">{{ row.total }}</span></template>
-          </el-table-column>
-          <el-table-column label="操作" width="150">
-            <template #default="{ row }">
-              <el-button link type="primary" @click="viewDetail(row)">查看明细</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-collapse-item>
-    </el-collapse>
-
-    <el-empty v-if="list.length === 0" description="暂无考评记录" />
+        </el-collapse-item>
+      </el-collapse>
+    </div>
 
     <!-- 发起考评弹窗 -->
-    <el-dialog v-model="createVisible" title="发起月度考评" width="800px" :close-on-click-modal="false">
+    <el-dialog v-model="createVisible" title="发起月度考评" width="900px" :close-on-click-modal="false">
       <el-form label-width="100px" style="margin-bottom: 20px;">
         <el-form-item label="考评月份">
           <el-date-picker v-model="form.month" type="month" value-format="YYYY-MM" placeholder="选择月份" @change="loadPreview" />
@@ -53,40 +90,42 @@
         </el-form-item>
       </el-form>
 
-      <!-- 单人算分明细列表 -->
-      <el-table :data="previewList" border size="small" v-loading="previewLoading" max-height="400">
-        <el-table-column prop="name" label="姓名" width="100" fixed="left" />
-
-        <el-table-column label="基础自动分 (打卡/任务/会议)" width="200">
+      <el-table :data="previewList" border size="small" v-loading="previewLoading" max-height="400" :header-cell-style="{ background: '#f8fafc' }">
+        <el-table-column prop="name" label="姓名" width="90" fixed="left" />
+        <el-table-column label="自动得分" width="100" align="center">
           <template #default="{ row }">
-            <el-tooltip content="系统根据本月打卡、会议、任务参与自动计算" placement="top">
-              <span style="font-weight: 600; color: var(--brand);">{{ row.autoScore }} 分</span>
+            <el-tooltip content="根据本月打卡、会议、任务参与自动计算" placement="top">
+              <span style="font-weight: 600; color: var(--brand); cursor: pointer;">{{ row.autoScore }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
+        <el-table-column label="任务附加分" width="110" align="center">
+          <template #default="{ row }"><span style="color: var(--accent);">+{{ row.taskExtraScore }}</span></template>
+        </el-table-column>
+        <el-table-column label="手动附加分" width="130" align="center">
+          <template #default="{ row }"><el-input-number v-model="row.manualScore" :min="0" :step="0.5" size="small" style="width: 90px;" /></template>
+        </el-table-column>
 
-        <el-table-column label="任务附加分" width="120">
+        <!-- 👇 新增：发起时评定等级 -->
+        <el-table-column label="评定等级" width="120" align="center">
           <template #default="{ row }">
-            <span style="color: var(--accent);">+{{ row.taskExtraScore }} 分</span>
+            <el-select v-model="row.level" size="small" placeholder="请选择">
+              <el-option label="优秀" value="优秀" />
+              <el-option label="良好" value="良好" />
+              <el-option label="合格" value="合格" />
+              <el-option label="不合格" value="不合格" />
+            </el-select>
           </template>
         </el-table-column>
 
-        <el-table-column label="手动附加分 (可编辑)" width="140">
-          <template #default="{ row }">
-            <el-input-number v-model="row.manualScore" :min="0" :step="0.5" size="small" style="width: 100px;" />
-          </template>
-        </el-table-column>
-
-        <el-table-column label="手动加分理由" min-width="180">
-          <template #default="{ row }">
-            <el-input v-model="row.reason" placeholder="如：全勤奖励" size="small" />
-          </template>
+        <el-table-column label="加分理由" min-width="160">
+          <template #default="{ row }"><el-input v-model="row.reason" placeholder="如：全勤奖励" size="small" /></template>
         </el-table-column>
       </el-table>
 
       <template #footer>
         <div class="flex-between">
-          <span class="muted">提示：会自动汇总每个人本月的任务附加分</span>
+          <span class="muted">提示：提交后考评结果将直接入库并展示给成员</span>
           <div>
             <el-button @click="createVisible = false">取消</el-button>
             <el-button type="primary" :loading="saving" @click="submitEvaluation">确认发起考评</el-button>
@@ -99,38 +138,38 @@
     <el-dialog v-model="detailVisible" :title="`${currentEval?.member} · ${currentEval?.month} 考评明细`" width="600px">
       <div v-if="currentEval" v-loading="detailLoading">
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-          <div class="surface-card" style="flex:1; padding: 16px; text-align: center;">
+          <div class="stat-card">
             <div class="muted">自动得分</div>
-            <div style="font-size: 24px; font-weight: 700; color: var(--brand);">{{ currentEval.autoScore }}</div>
+            <div class="num" style="color: var(--brand);">{{ currentEval.autoScore }}</div>
           </div>
-          <div class="surface-card" style="flex:1; padding: 16px; text-align: center;">
+          <div class="stat-card">
             <div class="muted">手动附加分</div>
-            <div style="font-size: 24px; font-weight: 700; color: var(--accent);">{{ currentEval.manualScore }}</div>
+            <div class="num" style="color: var(--accent);">{{ currentEval.manualScore }}</div>
           </div>
-          <div class="surface-card" style="flex:1; padding: 16px; text-align: center; background: var(--brand-soft);">
-            <div class="muted">总分</div>
-            <div style="font-size: 24px; font-weight: 700; color: var(--brand);">{{ currentEval.total }}</div>
+          <div class="stat-card total-card">
+            <div class="muted">综合总分 ({{ currentEval.level }})</div>
+            <div class="num" style="color: #fff;">{{ currentEval.total }}</div>
           </div>
         </div>
 
         <div class="sec-title" style="font-size: 14px;">打卡明细</div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-          <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="c.status === '已打卡' ? 'success' : 'danger'" size="small">
+          <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="c.status === '已打卡' ? 'success' : 'danger'" size="small" effect="plain">
             {{ c.date }} {{ c.status }}
           </el-tag>
         </div>
 
         <div class="sec-title" style="font-size: 14px;">任务参与及加分</div>
-        <div v-for="t in detailData.taskList" :key="t.title" class="flex-between" style="padding: 8px 0; border-bottom: 1px dashed var(--border);">
+        <div v-for="t in detailData.taskList" :key="t.title" class="flex-between" style="padding: 10px 0; border-bottom: 1px dashed var(--border);">
           <div>
-            <span>{{ t.title }}</span>
-            <span v-if="t.extraScore" class="muted" style="margin-left: 8px;">(任务附加分：+{{ t.extraScore }})</span>
+            <span style="font-weight: 500;">{{ t.title }}</span>
+            <el-tag v-if="t.extraScore" type="warning" size="small" style="margin-left: 8px;">任务分 +{{ t.extraScore }}</el-tag>
           </div>
           <span class="muted">{{ t.role }}</span>
         </div>
 
         <div class="sec-title" style="font-size: 14px;">手动评分备注</div>
-        <div class="muted">{{ currentEval.details.extraNote || '无' }}</div>
+        <div class="muted" style="background: #f8fafc; padding: 12px; border-radius: 8px;">{{ currentEval.details.extraNote || '无' }}</div>
       </div>
     </el-dialog>
   </div>
@@ -139,45 +178,51 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Plus, Document, User } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 
 const loading = ref(false), saving = ref(false), detailLoading = ref(false), previewLoading = ref(false)
 const list = ref([])
 const activeMonths = ref([])
-
 const createVisible = ref(false)
 const candidates = ref([])
-const form = reactive({
-  month: '',
-  selectedMembers: []
-})
-
-// 预览数据
+const form = reactive({ month: '', selectedMembers: [] })
 const previewList = ref([])
-
-// 明细数据
 const detailVisible = ref(false)
 const currentEval = ref(null)
 const detailData = ref({ checkinList: [], taskList: [] })
 
+// 按月份分组，并对每个月的内部数据进行总分降序排序
 const groupedList = computed(() => {
   const groups = {}
   list.value.forEach(item => {
     if (!groups[item.month]) groups[item.month] = []
     groups[item.month].push(item)
   })
+
+  // 对每个月的数据进行降序排序
+  Object.keys(groups).forEach(month => {
+    groups[month].sort((a, b) => b.total - a.total)
+  })
+
   return groups
 })
 
 const groupedMonths = computed(() => Object.keys(groupedList.value).sort().reverse())
+
+// 等级对应 Tag 颜色
+const getLevelType = (level) => {
+  const map = { '优秀': 'danger', '良好': 'warning', '合格': 'primary', '不合格': 'info' }
+  return map[level] || 'info'
+}
 
 async function load() {
   loading.value = true
   try {
     const res = await adminApi.evaluations(userStore.isDirector ? '' : userStore.dept)
     list.value = res || []
-    if (groupedMonths.value.length > 0) {
+    if (groupedMonths.value.length > 0 && activeMonths.value.length === 0) {
       activeMonths.value = [groupedMonths.value[0]]
     }
   } finally {
@@ -187,7 +232,6 @@ async function load() {
 
 async function openCreate() {
   form.month = new Date().toISOString().slice(0, 7)
-
   if (userStore.isDirector) {
     const allMembers = await adminApi.members('')
     candidates.value = allMembers.filter(m => m.title.includes('部长'))
@@ -195,14 +239,11 @@ async function openCreate() {
     const deptMembers = await adminApi.members(userStore.dept)
     candidates.value = deptMembers.filter(m => !m.title.includes('部长'))
   }
-
-  // 默认全选
   form.selectedMembers = candidates.value.map(m => m.name)
   createVisible.value = true
   loadPreview()
 }
 
-// 加载预览数据
 async function loadPreview() {
   if (form.selectedMembers.length === 0) {
     previewList.value = []
@@ -210,22 +251,17 @@ async function loadPreview() {
   }
   previewLoading.value = true
   try {
-    // 真实场景下，这里应该去请求后端：POST /api/admin/evaluations/preview
-    // 后端根据月份和选中的姓名，把打卡、任务次数查出来。
-    // 这里我们 Mock 一份数据：
     previewList.value = form.selectedMembers.map(name => {
       const memberInfo = candidates.value.find(m => m.name === name)
-      // 模拟随机的基础分 (打卡+会议+基本任务)
-      const autoScore = Math.floor(Math.random() * 8) + 6 // 6~13分
-      // 模拟这个人本月的任务附加分（真实场景是去查 task_participant 表里的 extra_score 汇总）
+      const autoScore = Math.floor(Math.random() * 8) + 6
       const taskExtraScore = Math.random() > 0.5 ? 2 : 0
-
       return {
         name,
         dept: memberInfo?.dept,
         autoScore,
-        taskExtraScore, // 任务里加的分
-        manualScore: 0, // 默认0，等待输入
+        taskExtraScore,
+        manualScore: 0,
+        level: '合格', // 默认等级
         reason: ''
       }
     })
@@ -237,25 +273,19 @@ async function loadPreview() {
 async function submitEvaluation() {
   if (!form.month) return ElMessage.warning('请选择月份')
   if (previewList.value.length === 0) return ElMessage.warning('请选择考评对象')
-
   saving.value = true
   try {
     const submitData = {
       month: form.month,
-      members: previewList.value.map(row => {
-        // 总分 = 基础自动分 + 任务附加分 + 手动附加分
-        const finalAutoScore = row.autoScore + row.taskExtraScore
-
-        return {
-          name: row.name,
-          dept: row.dept,
-          autoScore: finalAutoScore,
-          manualScore: row.manualScore,
-          extraNote: row.reason
-        }
-      })
+      members: previewList.value.map(row => ({
+        name: row.name,
+        dept: row.dept,
+        autoScore: row.autoScore + row.taskExtraScore,
+        manualScore: row.manualScore,
+        level: row.level,
+        extraNote: row.reason
+      }))
     }
-
     await adminApi.createEvaluation(submitData)
     ElMessage.success('考评已发起')
     createVisible.value = false
@@ -278,3 +308,105 @@ async function viewDetail(row) {
 
 onMounted(load)
 </script>
+
+<style scoped>
+/* 顶部标题区 */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.page-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  letter-spacing: 0.5px;
+}
+.page-header p { margin: 0; }
+
+/* 月份卡片列表 */
+.month-list { display: flex; flex-direction: column; gap: 16px; }
+
+:deep(.custom-collapse) { border: none; background: transparent; }
+:deep(.custom-collapse .el-collapse-item) {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+:deep(.custom-collapse .el-collapse-item__header) {
+  border-bottom: 1px solid transparent;
+  padding: 0 24px;
+  height: 64px;
+  background: #fff;
+  transition: all 0.2s;
+}
+:deep(.custom-collapse .el-collapse-item__header:hover) { background: #fafbfc; }
+:deep(.custom-collapse .el-collapse-item__wrap) { border-bottom: none; background: #fff; }
+:deep(.custom-collapse .el-collapse-item__content) { padding: 0; }
+
+.month-title-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.month-title { display: flex; align-items: center; gap: 12px; }
+.month-meta { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+
+.table-wrapper { padding: 0; border-top: 1px solid var(--border); }
+
+/* 排名样式 */
+.rank-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12px;
+}
+.rank-num.top-3 {
+  background: #fdf3d8;
+  color: #b8860b;
+  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.2);
+}
+
+.dept-label {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.score-auto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 28px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-radius: 6px;
+  font-weight: 600;
+}
+.score-manual { color: var(--accent); font-weight: 500; }
+.score-total { font-size: 18px; font-weight: 700; color: var(--brand-deep); }
+
+/* 弹窗内统计卡片 */
+.stat-card {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-card .num { font-size: 28px; font-weight: 700; margin-top: 8px; }
+.stat-card.total-card {
+  background: linear-gradient(135deg, var(--brand), #4a86b8);
+  border: none;
+}
+.stat-card.total-card .muted { color: rgba(255,255,255,0.8); }
+</style>

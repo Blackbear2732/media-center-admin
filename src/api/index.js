@@ -300,16 +300,16 @@ export const adminApi = {
     // 发起考评
     createEvaluation: (data) => USE_MOCK
         ? delay((() => {
-            // 模拟后端接收数据并生成记录
             data.members.forEach((m, idx) => {
                 mock.evaluations.unshift({
                     id: Date.now() + idx,
                     month: data.month,
                     dept: m.dept,
                     member: m.name,
-                    autoScore: m.autoScore, // 前端算好传过来的，实际应由后端计算
+                    autoScore: m.autoScore,
                     manualScore: m.manualScore,
                     total: m.autoScore + m.manualScore,
+                    level: m.level, // 👈 接收前端传来的评定等级
                     status: '已完成',
                     createdAt: new Date().toLocaleString(),
                     details: { checkinDays: 10, taskCount: 2, meetingCount: 1, extraNote: m.extraNote }
@@ -318,6 +318,7 @@ export const adminApi = {
             return { success: true }
         })())
         : request.post('/admin/evaluations', data),
+
 
     // 获取某个成员考评明细（模拟展示打卡、任务等数据）
     memberEvalDetail: (memberName, month) => USE_MOCK
