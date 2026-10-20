@@ -472,3 +472,32 @@ body {
     padding-top: 18px;
     border-top: 1px dashed var(--border);
 }
+
+
+/* --- 过滤栏 --- */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    background: #fff;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.filter-group {
+    display: flex;
+    gap: 16px;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-label {
+    font-size: 13px;
+    color: var(--text-sub);
+    white-space: nowrap;
+}

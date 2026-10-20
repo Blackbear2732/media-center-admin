@@ -1,13 +1,13 @@
 /* ========== 中心信息 ========== */
 export const centerInfo = {
     name: '山西农业大学青年融媒体中心',
-    desc: '山西农业大学青年融媒体中心下设综合部、网宣部、影音部、摄制部、新闻部、设计部六大部门，负责全校团学新闻宣传、视觉设计、新媒体运营与音视频制作，致力于打造“一次采集、多元生成、多端发布”的校园融媒矩阵。'
+    desc: '山西农业大学青年融媒体中心成立于2013年，是学校对外宣传的重要窗口。中心现设有综合部、网宣部、新闻部、设计部、摄制部、影音部6个部门，以运营“山西农业大学团委“微信公众号和视频号为核心，全方位聚焦校园动态，及时跟进学校重大发展成果、宣传优秀师生典型。通过有力的新闻宣传和独特的视角，致力于传播农大声音、讲述农大故事、弘扬农大精神，生动展示师生积极向上的精神风貌，彰显学校深厚的文化底蕴。'
 }
 
 export const departments = [
     {
         id: 1, name: '综合部',
-        intro: '负责中心统筹协调、打卡监督、行政事务与数据统计，是融媒体中心的枢纽。',
+        intro: '负责沟通协调，承上启下我们将策划组织各类活动让你的大学生活丰富多彩并肩前行，解锁一个又一个成就感受到青春的无限可能',
         modules: ['checkin', 'dashboardUpload'],
         photos: [
             'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&q=80',
@@ -17,7 +17,7 @@ export const departments = [
     },
     {
         id: 2, name: '网宣部',
-        intro: '负责公众号、微博、抖音等新媒体平台运营与推文发布，传递校园正能量。',
+        intro: '脑洞大开，创意无限在公众号大放异彩记录校园的精彩生活无论是原创话题还是社团活动都能在你的笔下变得生动有趣',
         modules: ['article'],
         photos: [
             'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&q=80',
@@ -37,7 +37,7 @@ export const departments = [
     },
     {
         id: 4, name: '摄制部',
-        intro: '负责活动现场拍摄、素材采集、设备管理与直播摄像，捕捉精彩瞬间。',
+        intro: '从日常生活到大型演出每一个快门的按下都记录下这些难忘的瞬间欢迎你，与我们一同拿起相机用影像讲述故事',
         modules: ['device', 'raw'],
         photos: [
             'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80',
@@ -47,7 +47,7 @@ export const departments = [
     },
     {
         id: 5, name: '新闻部',
-        intro: '负责新闻采写、稿件编辑与会议新闻记录，做校园资讯的发现者。',
+        intro: '让我们用镜头、声音编织故事每一帧画面、每一段旋律都跳跃着青春的节拍带你沉浸式感受视频创作的魅力',
         modules: ['news'],
         photos: [
             'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500&q=80',
@@ -57,7 +57,7 @@ export const departments = [
     },
     {
         id: 6, name: '设计部',
-        intro: '负责海报、H5、视觉识别系统等平面与视觉设计，打造极致视觉体验。',
+        intro: '在这里，你可以发挥你的创意天赋用海报与展板绘出农大青年的色彩你可以学到设计、绘画的技能结识更多志同道合的朋友',
         modules: ['design'],
         photos: [
             'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500&q=80',
@@ -362,7 +362,8 @@ export const members = rawMemberData.map((m, i) => ({
     phone: m.p || '',
     email: `user${i}@example.com`,
     status: '在岗',
-    politicalStatus: m.t === '部长' || i % 3 === 0 ? '共青团员' : '群众',
+    // 让部分部长成为中共党员，部员里分布共青团员和群众
+    politicalStatus: m.t === '部长' && i % 2 === 0 ? '中共党员' : (m.t === '部长' || i % 3 === 0 ? '共青团员' : '群众'),
     gender: m.g
 }))
 

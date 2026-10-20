@@ -49,22 +49,24 @@ const routes = [
 
 const router = createRouter({ history: createWebHashHistory(), routes })
 
-router.beforeEach((to) => {
+router.beforeEach((to, from, next) => {
     document.title = `${to.meta.title || ''} - 山西农业大学青年融媒体中心`
     const token = localStorage.getItem('token')
     const role = localStorage.getItem('role') || 'member'
 
-    if (!to.meta.public && !token) {
-        return { path: '/login', query: { redirect: to.fullPath } }
+    try {
+        if (!to.meta.public && !token) {
+            return next({ path: '/login', query: { redirect: to.fullPath } })
+        }
+        if (to.meta.roles && !to.meta.roles.includes(role)) {
+            return next({ path: '/' })
+        }
+        // 👇 删掉原来关于 meta.dept 的拦截，直接放行
+        next()
+    } catch (e) {
+        console.error('路由守卫异常:', e)
+        next(false)
     }
-    if (to.meta.roles && !to.meta.roles.includes(role)) {
-        return { path: '/' }
-    }
-    if (to.meta.dept) {
-        const adminDept = localStorage.getItem('adminDept') || ''
-        if (adminDept !== to.meta.dept) return { path: '/admin/overview' }
-    }
-    return true
 })
 
 export default router
