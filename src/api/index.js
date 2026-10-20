@@ -417,6 +417,7 @@ export const adminApi = {
         : request.get('/admin/evaluations/template'),
 
     // 发起考评（修复了报错，并加入内存）
+    // 发起考评
     createEvaluation: (data) => USE_MOCK
         ? delay((() => {
             data.members.forEach((m, idx) => {
@@ -431,7 +432,15 @@ export const adminApi = {
                     level: m.level || '合格',
                     status: '已完成',
                     createdAt: new Date().toLocaleString(),
-                    details: { extraNote: m.extraNote || '' }
+                    details: {
+                        extraNote: m.extraNote || '',
+                        checkinDays: 8,
+                        checkinScore: 4,
+                        taskScore: Math.floor(m.autoScore * 0.4),
+                        meetingScore: m.autoScore - 4 - Math.floor(m.autoScore * 0.4),
+                        taskList: [{ title: '本月参与的各项任务', score: Math.floor(m.autoScore * 0.4) }],
+                        meetingList: [{ title: '本月参与的各项会议', score: m.autoScore - 4 - Math.floor(m.autoScore * 0.4) }]
+                    }
                 })
             })
             return { success: true }
