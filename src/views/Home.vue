@@ -199,16 +199,24 @@ function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({ beh
 onMounted(async () => {
   loading.value = true
   try {
-    const [c, d, t, v, dash] = await Promise.all([
-      homeApi.centerInfo(), homeApi.departments(), homeApi.latestTasks(), homeApi.latestVideos(), adminApi.dashboard()
+    // 首页是公开页：任何单个接口失败都不应拖垮整页（尤其是需要登录的看板接口）
+    const results = await Promise.allSettled([
+      homeApi.centerInfo(),
+      homeApi.departments(),
+      homeApi.latestTasks(),
+      homeApi.latestVideos(),
+      isLogin.value ? adminApi.dashboard() : Promise.resolve(null)
     ])
-    center.value = c
-    departments.value = d
-    tasks.value = t
-    videos.value = v
+    const [c, d, t, v, dash] = results.map(r => r.status === 'fulfilled' ? r.value : null)
+
+    center.value = c || {}
+    departments.value = Array.isArray(d) ? d.filter(Boolean) : []
+    tasks.value = Array.isArray(t) ? t.filter(Boolean) : []
+    videos.value = Array.isArray(v) ? v.filter(Boolean) : []
     dashboard.value = dash
-  } catch (e) {
-    console.error('首页数据加载失败', e)
+
+    const failed = results.filter(r => r.status === 'rejected')
+    if (failed.length > 0) console.warn('部分首页数据加载失败', failed)
   } finally {
     loading.value = false
   }
