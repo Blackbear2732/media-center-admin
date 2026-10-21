@@ -37,9 +37,12 @@ service.interceptors.response.use(
         return Promise.reject(new Error(msg || '请求失败'))
     },
     err => {
-        if (err.response?.status === 401) {
+        // 在 401 处理逻辑里加上：
+        if (code === 401) {
+            ElMessage.closeAll() // 👈 关掉前面可能弹出的多个错误提示
             clearAuth()
             redirectToLogin()
+            return Promise.reject(new Error(msg || '登录状态已过期'))
         }
         ElMessage.error(err.response?.data?.msg || err.message || '网络异常')
         return Promise.reject(err)
