@@ -91,11 +91,12 @@ const tagInput = ref('')
 
 const rawDevices = ref([])
 
-// 可选设备：仅「可用」「借出」两种状态
+// 可选设备：仅「可用」「借出」且仍有库存的设备
 const availableDevices = computed(() => {
   if (!Array.isArray(rawDevices.value)) return []
   return rawDevices.value.filter(d =>
-    d.status === DEVICE_STATUS.AVAILABLE || d.status === DEVICE_STATUS.LENT
+    (d.status === DEVICE_STATUS.AVAILABLE || d.status === DEVICE_STATUS.LENT) &&
+    Number(d.stock) > 0
   )
 })
 
@@ -120,6 +121,14 @@ async function submit() {
   if (!form.startTime || !form.endTime) return ElMessage.warning('请选择任务时间')
   if (!form.location) return ElMessage.warning('请填写任务地点')
   if (!form.deptIds.length) return ElMessage.warning('请至少选择一个参与部门')
+
+  // 库存校验：设备不足时不让提交（后端接入后仍需前置校验，前端只做第一道拦截）
+  const shortage = form.equipmentIds
+      .map(id => rawDevices.value.find(d => Number(d.id) === Number(id)))
+      .filter(d => d && Number(d.stock) <= 0)
+  if (shortage.length > 0) {
+    return ElMessage.warning(`设备库存不足：${shortage.map(d => d.name).join('、')}，请调整后重试`)
+  }
 
   submitting.value = true
   try {
