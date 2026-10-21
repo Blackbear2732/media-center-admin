@@ -1,9 +1,13 @@
 import request from './request'
-import * as mock from './mock'
+// 通过别名引用：VITE_USE_MOCK=false 时构建会替换为空实现（见 vite.config.js）
+import * as mock from '@/api/mock'
 import { ALL_DEPT_ID, ROLE, isAllDept } from '@/utils/dict'
 
-// 是否使用 Mock 数据（后端接口就绪后改为 false）
-const USE_MOCK = true
+// 是否使用 Mock 数据：由环境变量控制（.env.development / .env.production / .env.api）
+const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+
+// 是否已登录（匿名访客不应拿到「某个登录用户」视角的数据）
+const isLoggedIn = () => !!localStorage.getItem('token')
 
 // 安全容错的 delay 函数，防止 undefined 导致 JSON.parse 报错并卡死 Promise
 const delay = (data, ms = 0) => new Promise(resolve => setTimeout(() => {
@@ -44,6 +48,8 @@ export const homeApi = {
     centerInfo:   pick(() => request.get('/center'),              () => delay(mock.centerInfo)),
     departments:  pick(() => request.get('/departments'),         () => delay(mock.departments)),
     latestTasks:  pick(() => request.get('/tasks/latest'),        () => {
+        // 匿名访客看公共任务概览，不套用任何登录用户的部门视角
+        if (!isLoggedIn()) return delay(mock.tasks.slice(0, 4))
         const user = me()
         const role = mock.currentRole()
         const deptId = role === ROLE.DIRECTOR ? ALL_DEPT_ID : user.deptId
@@ -79,6 +85,7 @@ export const userApi = {
     updateProfile:  pick(d => request.put('/user/profile', d),        () => delay({ success: true })),
     updatePassword: pick(d => request.put('/user/password', d),       () => delay({ success: true })),
     myTasks:        pick(() => request.get('/user/tasks'),            () => {
+        if (!isLoggedIn()) return delay([])
         const user = me()
         const list = mock.tasks.filter(t =>
             (t.participants || []).some(p => p.name === user.name) ||
@@ -268,7 +275,17 @@ export const deviceApi = {
         return delay({ success: true })
     }),
 
-    myApplications: pick(() => request.get('/device-applications/my'),      () => delay(mock.deviceApplications))
+    // 当前用户自己的申请记录：必须同时匹配姓名与部门，避免同名成员串号
+    myApplications: pick(
+        () => request.get('/device-applications/my'),
+        () => {
+            if (!isLoggedIn()) return delay([])
+            const user = me()
+            return delay(mock.deviceApplications.filter(d =>
+                d.applicant === user.name && Number(d.deptId) === Number(user.deptId)
+            ))
+        }
+    )
 }
 
 /* ================= 部门管理区 (部长/主任) ================= */
@@ -408,6 +425,16 @@ export const adminApi = {
         })())
         : request.put(`/admin/tasks/${taskId}/signups/${name}/confirm`),
 
+    // 拒绝报名：把报名状态置为 2（已拒绝），保留记录便于追溯
+    rejectSignup: (taskId, name) => USE_MOCK
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            const signup = (task?.signups || []).find(s => s.name === name)
+            if (signup) signup.status = 2 // 2-已拒绝
+            return { success: true }
+        })())
+        : request.put(`/admin/tasks/${taskId}/signups/${encodeURIComponent(name)}/reject`),
+
     updateTask: (id, data) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(id))
@@ -538,14 +565,19 @@ export const adminApi = {
                     }
                 })
 
+                // 自动分以 details 为唯一真源：打卡 + 会议 + 任务基础分 + 任务附加分
+                // 前端传来的 autoScore 仅作展示，入库口径以此处计算为准，避免两套口径
+                const autoScore = checkinScore + meetingScore + taskBaseScore + taskExtraScore
+                const manualScore = Number(m.manualScore) || 0
+
                 mock.evaluations.unshift({
                     id: Date.now() + idx,
                     month,
                     deptId: Number(m.deptId) || Number(mock.members.find(x => x.name === name)?.deptId) || 101,
                     member: name,
-                    autoScore: m.autoScore,          // 基础自动分 + 任务附加分
-                    manualScore: m.manualScore,      // 部长填的
-                    total: m.autoScore + m.manualScore,
+                    autoScore,
+                    manualScore,
+                    total: autoScore + manualScore,
                     level: Number(m.level ?? 1),     // 0不合格 1合格 2良好 3优秀
                     status: 1,                       // 1-已发布
                     createdAt: new Date().toLocaleString(),
@@ -565,19 +597,52 @@ export const adminApi = {
         })())
         : request.post('/admin/evaluations', data),
 
-    memberEvalDetail: (memberName, month) => USE_MOCK
-        ? delay({
-            checkinList: [
-                { date: `${month}-01`, status: 1 },
-                { date: `${month}-02`, status: 1 },
-                { date: `${month}-03`, status: 0 }
-            ],
-            taskList: [
-                { title: '2024 秋季运动会开幕式报道', role: '参与人' },
-                { title: '校园文化节宣传片拍摄', role: '参与人' }
-            ]
-        })
-        : request.get('/admin/evaluations/detail', { params: { memberName, month } }),
+    // 考评明细：从考评快照 / 打卡记录 / 任务参与关系实时推导，不再返回硬编码假数据
+    memberEvalDetail: (memberName, month, deptId) => USE_MOCK
+        ? delay((() => {
+            const targetDeptId = deptId === undefined || deptId === null || deptId === '' ? null : Number(deptId)
+            const evaluation = (mock.evaluations || []).find(e =>
+                e.member === memberName &&
+                e.month === month &&
+                (targetDeptId === null || Number(e.deptId) === targetDeptId)
+            )
+            const details = evaluation?.details || {}
+            const memberInfo = (mock.members || []).find(m =>
+                m.name === memberName && (targetDeptId === null || Number(m.deptId) === targetDeptId)
+            )
+
+            // 打卡明细：以打卡记录为准，只取考评当月
+            const checkinList = (mock.checkinRecords || [])
+                .filter(r => r.member === memberName && String(r.date || '').startsWith(month))
+                .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+                .map(r => ({ date: r.date, status: Number(r.status) }))
+
+            // 任务明细：优先用考评入库时的快照；没有快照时按当前任务参与关系推导
+            const taskList = Array.isArray(details.taskList) && details.taskList.length > 0
+                ? details.taskList.map(t => ({
+                    title: t.title,
+                    role: '参与人',
+                    extraScore: Number(t.extraScore || 0)
+                }))
+                : mock.tasks.map(t => {
+                    const participant = (t.participants || []).find(p =>
+                        p.name === memberName &&
+                        (targetDeptId === null || Number(p.deptId) === targetDeptId)
+                    )
+                    return participant
+                        ? { title: t.title, role: '参与人', extraScore: Number(participant.extraScore || 0) }
+                        : null
+                }).filter(Boolean)
+
+            return {
+                month,
+                deptId: evaluation?.deptId ?? memberInfo?.deptId ?? null,
+                details,
+                checkinList,
+                taskList
+            }
+        })())
+        : request.get('/admin/evaluations/detail', { params: { memberName, month, deptId } }),
 
     // D-09 本部门素材
     materials: (deptId) => USE_MOCK
@@ -751,18 +816,22 @@ export const adminApi = {
         : request.put('/admin/dept-modules', { deptId, modules }),
 
     // 获取管理区菜单（role：0部员 1部长 2主任）
+    // 菜单的唯一真源：基础菜单 + 部门专属菜单；主任在全中心视角下看到所有专属菜单
     getMenus: (deptId, role) => USE_MOCK
         ? delay((() => {
-            let menus = [...mock.baseAdminMenus]
-            if (Number(role) === ROLE.DIRECTOR) {
+            const menus = [...mock.baseAdminMenus]
+            const id = Number(deptId)
+            const centerView = Number.isNaN(id) || isAllDept(id)
+
+            if (Number(role) === ROLE.DIRECTOR && centerView) {
                 const allSpecial = Object.values(mock.specialAdminMenus).flat()
                 const uniqueSpecial = Array.from(new Set(allSpecial.map(m => m.path)))
                     .map(path => allSpecial.find(m => m.path === path))
-                menus = [...menus, ...uniqueSpecial]
-            } else if (deptId) {
-                menus = [...menus, ...(mock.specialAdminMenus[Number(deptId)] || [])]
+                return [...menus, ...uniqueSpecial]
             }
-            return menus
+
+            if (Number.isNaN(id)) return menus
+            return [...menus, ...(mock.specialAdminMenus[id] || [])]
         })())
         : request.get('/admin/menus', { params: { deptId, role } }),
 
