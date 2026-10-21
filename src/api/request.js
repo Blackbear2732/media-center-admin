@@ -1,7 +1,18 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { userStore } from '@/store/user'
 
 const service = axios.create({ baseURL: '/api', timeout: 15000 })
+
+// 统一清理登录态：token / role / user / adminDept 一起清掉，
+// 否则 adminDept 残留会让下一次登录的管理区直接采用错误的部门视角
+const clearAuth = () => {
+    userStore.logout()
+}
+
+const redirectToLogin = () => {
+    if (window.location.pathname !== '/login') window.location.replace('/login')
+}
 
 service.interceptors.request.use(config => {
     const token = localStorage.getItem('token')
@@ -18,10 +29,8 @@ service.interceptors.response.use(
         const { code, data, msg } = res.data
         if (code === 200 || code === 0) return data
         if (code === 401) {
-            localStorage.removeItem('token')
-            localStorage.removeItem('role')
-            localStorage.removeItem('user')
-            window.location.replace('/login')
+            clearAuth()
+            redirectToLogin()
             return Promise.reject(new Error(msg || '登录状态已过期'))
         }
         ElMessage.error(msg || '请求失败')
@@ -29,10 +38,8 @@ service.interceptors.response.use(
     },
     err => {
         if (err.response?.status === 401) {
-            localStorage.removeItem('token')
-            localStorage.removeItem('role')
-            localStorage.removeItem('user')
-            window.location.replace('/login')
+            clearAuth()
+            redirectToLogin()
         }
         ElMessage.error(err.response?.data?.msg || err.message || '网络异常')
         return Promise.reject(err)
