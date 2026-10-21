@@ -42,7 +42,6 @@ import { ALL_DEPT_ID, DEPT_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict
 
 const route = useRoute()
 const router = useRouter()
-
 const roleLabel = computed(() => userStore.isDirector ? '中心主任' : '部长')
 
 // 当前管理视角部门：数字 deptId（100 = 全中心）
