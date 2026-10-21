@@ -21,10 +21,24 @@
             <el-input v-if="f.type === 'input'" v-model="form[f.key]" :placeholder="'请输入' + f.label" />
             <el-input v-else-if="f.type === 'textarea'" v-model="form[f.key]" type="textarea" :rows="8"
                       :placeholder="'请输入' + f.label" />
-            <el-upload v-else-if="f.type === 'file'" drag action="#" :auto-upload="false">
+            <el-upload
+                v-else-if="f.type === 'file'"
+                drag
+                action="#"
+                :auto-upload="false"
+                :show-file-list="false"
+                :accept="MATERIAL_FILE_ACCEPT.join(',')"
+                :on-change="(file) => handleMaterialFile(file, f)"
+            >
               <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
               <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+              <template #tip>
+                <div class="el-upload__tip">支持图片、文档、压缩包、视频，单个文件不超过 {{ MATERIAL_FILE_MAX_MB }}MB</div>
+              </template>
             </el-upload>
+            <div v-if="f.type === 'file' && form[f.key]" class="muted" style="margin-top:4px">
+              已选择：{{ form[f.key].name }}
+            </div>
           </el-form-item>
 
           <el-form-item label="共享部门">
@@ -55,6 +69,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { userApi, materialApi, taskApi } from '@/api'
 import { DEPARTMENTS_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
+import { validateUploadFile } from '@/utils/validate'
 
 const deptId = ref(null)
 const fields = ref([])
@@ -63,8 +78,27 @@ const loading = ref(false)
 const submitting = ref(false)
 const form = reactive({ taskId: null, sharedDeptIds: [], remark: '' })
 
+// 素材类上传：图片 / 文档 / 压缩包 / 视频，单个文件上限 200MB
+const MATERIAL_FILE_ACCEPT = [
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv',
+  '.zip', '.rar', '.7z',
+  '.mp4', '.mov', '.avi', '.mkv'
+]
+const MATERIAL_FILE_MAX_MB = 200
+
 // 主任没有具体部门的业务上传，默认给综合部（101）的通用表单
 const DEFAULT_UPLOAD_DEPT_ID = 101
+
+function handleMaterialFile(file, field) {
+  const raw = file?.raw
+  const { ok, message } = validateUploadFile(raw, {
+    accept: MATERIAL_FILE_ACCEPT,
+    maxSizeMB: MATERIAL_FILE_MAX_MB
+  })
+  if (!ok) return ElMessage.error(message)
+  form[field.key] = raw
+}
 
 function reset() {
   Object.keys(form).forEach(k => {
