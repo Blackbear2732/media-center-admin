@@ -54,6 +54,9 @@ export const getDeptLabel = (deptId) => dictLabel(DEPT_MAP, deptId, '未知部�
 // 是否全中心视角（主任默认视角）
 export const isAllDept = (deptId) => !deptId || Number(deptId) === ALL_DEPT_ID
 
+// 设备管理专属部门（摄制部）：部门 ID 只在这里维护一份，避免页面里散落 104
+export const DEVICE_MANAGE_DEPT_ID = 104
+
 /* ==========================================
  * 2. 角色字典（sys_role）
  * ========================================== */
@@ -165,6 +168,8 @@ export const MATERIAL_TYPE_OPTIONS = Object.keys(MATERIAL_TYPE_MAP).map(key => (
 }))
 
 export const getMaterialTypeLabel = (type) => dictLabel(MATERIAL_TYPE_MAP, type, '其他素材')
+
+// 注意：dictTagType 需要「映射表 + 值」两个参数，不能把查表结果直接传给它
 export const getMaterialTypeTagType = (type) => dictTagType({
     1: 'primary',
     2: 'success',
@@ -172,7 +177,7 @@ export const getMaterialTypeTagType = (type) => dictTagType({
     4: 'info',
     5: 'danger',
     6: 'success'
-}[type] || 'info')
+}, type)
 
 /* ==========================================
  * 7. 设备状态（biz_equipment.status）
