@@ -681,8 +681,14 @@ export const filterMaterials = (p = {}) => materials.filter(m => {
     if (p.content && !(m.content || '').includes(p.content)) return false
     if (p.deptId && Number(m.deptId) !== Number(p.deptId)) return false
     if (p.leaderName && m.leaderName !== p.leaderName) return false
-    if (p.startTime && m.createdAt < p.startTime) return false
-    if (p.endTime && m.createdAt > p.endTime) return false
+
+    // createdAt 精确到分钟（YYYY-MM-DD HH:mm），筛选值只到日期，
+    // 直接字符串比较会把当天素材误判为超出结束日期，因此统一按日期部分比较
+    const createdDate = String(m.createdAt || '').slice(0, 10)
+    const startDate = p.startTime ? String(p.startTime).slice(0, 10) : ''
+    const endDate = p.endTime ? String(p.endTime).slice(0, 10) : ''
+    if (startDate && createdDate < startDate) return false
+    if (endDate && createdDate > endDate) return false
     return true
 })
 
