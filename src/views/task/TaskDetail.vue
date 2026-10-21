@@ -87,7 +87,7 @@
           <template #header>
             <div class="flex-between">
               <b>任务所需设备</b>
-              <span v-if="canManageDevices" class="tag-soft" style="font-size: 11px; background: #fdf1e6; color: var(--accent);">{{ getDeptLabel(104) }}可管理</span>
+              <span v-if="canManageDevices" class="tag-soft" style="font-size: 11px; background: #fdf1e6; color: var(--accent);">{{ getDeptLabel(DEVICE_MANAGE_DEPT_ID) }}可管理</span>
             </div>
           </template>
 
@@ -223,6 +223,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { taskApi, adminApi, deviceApi } from '@/api'
 import {
   ALL_DEPT_ID,
+  DEVICE_MANAGE_DEPT_ID,
   MATERIAL_TYPE,
   getDeptLabel,
   getMaterialTypeLabel,
@@ -238,14 +239,15 @@ const loading = ref(false), matLoading = ref(false)
 const task = ref({})
 const materials = ref([]), opened = ref([])
 let timer = null
+let polling = false
 
 // --- 设备清单管理 ---
 const globalDevices = ref([])
 const selectedNewDevice = ref(null)
 
-// 权限判断：主任 或 摄制部（104）成员
+// 权限判断：主任 或 摄制部成员（部门 ID 见 dict.DEVICE_MANAGE_DEPT_ID）
 const canManageDevices = computed(() => {
-  return userStore.isDirector || userStore.deptId === 104
+  return userStore.isDirector || Number(userStore.deptId) === DEVICE_MANAGE_DEPT_ID
 })
 
 // equipmentId → 设备名称
@@ -314,11 +316,13 @@ const pendingSignups = computed(() => {
 })
 
 const myParticipantStatus = computed(() => {
-  const myName = userStore.name
-  const isJoined = (task.value.participants || []).some(p => p.name === myName)
-  if (isJoined) return 'joined'
-  const isPending = (task.value.signups || []).some(s => s.name === myName)
-  if (isPending) return 'pending'
+  // 姓名可能重复，必须同时比对部门，避免同名成员被误判为已参与
+  const isSameMember = (p) =>
+      p.name === userStore.name && Number(p.deptId) === Number(userStore.deptId)
+
+  if ((task.value.participants || []).some(isSameMember)) return 'joined'
+  // 只有「待确认」的报名才算审核中，已拒绝的记录不应让按钮一直停在 pending
+  if ((task.value.signups || []).some(s => isSameMember(s) && Number(s.status) === 0)) return 'pending'
   return 'none'
 })
 
@@ -378,13 +382,22 @@ async function handleRemove(p) {
 async function handleConfirm(s) {
   await adminApi.confirmSignup(task.value.id, s.name)
   task.value.signups = task.value.signups.filter(x => x.name !== s.name)
-  task.value.participants.push({ name: s.name, deptId: s.deptId })
+  const exists = task.value.participants.some(p =>
+      p.name === s.name && Number(p.deptId) === Number(s.deptId))
+  if (!exists) task.value.participants.push({ name: s.name, deptId: s.deptId })
   ElMessage.success('已确认报名')
 }
 
-function handleReject(s) {
-  task.value.signups = task.value.signups.filter(x => x.name !== s.name)
-  ElMessage.info('已拒绝该报名')
+// 拒绝报名需要落库，否则刷新后报名记录会再次出现
+async function handleReject(s) {
+  try {
+    await adminApi.rejectSignup(task.value.id, s.name)
+    const signup = (task.value.signups || []).find(x => x.name === s.name)
+    if (signup) signup.status = 2 // 2-已拒绝
+    ElMessage.info('已拒绝该报名')
+  } catch (e) {
+    ElMessage.error('拒绝报名失败，请稍后重试')
+  }
 }
 
 function openScoreDialog(p) {
@@ -439,15 +452,31 @@ async function loadMaterials() {
   }
 }
 
+// 轮询刷新素材：上一次请求未结束就跳过本轮，避免慢请求叠加造成并发
+async function pollMaterials() {
+  if (polling) return
+  polling = true
+  try {
+    await loadMaterials()
+  } finally {
+    polling = false
+  }
+}
+
 onMounted(() => {
   loadTask()
   loadMaterials()
   loadMembers()
   loadGlobalDevices()
-  timer = setInterval(loadMaterials, 15000)
+  timer = setInterval(pollMaterials, 15000)
 })
 
-onUnmounted(() => timer && clearInterval(timer))
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+})
 </script>
 
 <style scoped>

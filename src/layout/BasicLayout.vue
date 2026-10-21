@@ -120,7 +120,7 @@
   >
     <!-- 替换为你问卷星的正式访问链接 -->
     <iframe
-        src="https://v.wjx.cn/vm/e7c0Ny6.aspx# "
+        src="https://v.wjx.cn/vm/e7c0Ny6.aspx#"
         frameborder="0"
         style="width: 100%; height: 600px; overflow: hidden;"
         allowfullscreen

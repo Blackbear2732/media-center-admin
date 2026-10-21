@@ -7,7 +7,8 @@
       </div>
       <div class="admin-actions">
         <!-- 主任可以切换部门视角（100-全中心） -->
-        <el-select v-if="userStore.isDirector" v-model="deptId" style="width:150px" @change="changeDept">
+        <!-- 只绑定 :model-value，部门写入统一在 changeDept 中完成，避免 setAdminDept 被调用两次 -->
+        <el-select v-if="userStore.isDirector" :model-value="deptId" style="width:150px" @change="changeDept">
           <el-option v-for="d in DEPT_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
         </el-select>
         <span v-else class="tag-soft">{{ deptLabel }}</span>
@@ -35,8 +36,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import { ALL_DEPT_ID, DEPT_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 
@@ -44,18 +46,19 @@ const route = useRoute()
 const router = useRouter()
 const roleLabel = computed(() => userStore.isDirector ? '中心主任' : '部长')
 
-// 当前管理视角部门：数字 deptId（100 = 全中心）
-const deptId = computed({
-  get: () => userStore.viewDeptId,
-  set: (val) => userStore.setAdminDept(val)
-})
+// 当前管理视角部门：数字 deptId（100 = 全中心），只读，写入统一走 changeDept
+const deptId = computed(() => userStore.viewDeptId)
 
 const deptLabel = computed(() => {
   const id = deptId.value
   return isAllDept(id) ? '全中心视角' : `当前部门：${getDeptLabel(id)}`
 })
 
-const baseMenus = [
+// 菜单由后端（Mock）统一提供，避免前端再硬编码一套部门专属菜单
+const menus = ref([])
+
+// 接口异常时的兜底菜单，保证管理区仍可使用
+const FALLBACK_MENUS = [
   { path: 'overview', label: '概览' },
   { path: 'members', label: '成员管理' },
   { path: 'tasks', label: '任务参与' },
@@ -66,39 +69,41 @@ const baseMenus = [
   { path: 'dept-profile', label: '部门介绍' }
 ]
 
-// 动态组合菜单
-const menus = computed(() => {
-  const list = [...baseMenus]
-  const id = Number(deptId.value)
-
-  // 综合部（101）或全中心（100）视角，加上打卡和数据看板
-  if (id === 101 || isAllDept(id)) {
-    list.push({ path: 'checkins', label: '打卡管理' })
-    list.push({ path: 'dashboard', label: '数据看板' })
+async function loadMenus() {
+  let list = [...FALLBACK_MENUS]
+  let fromApi = false
+  try {
+    const res = await adminApi.getMenus(deptId.value, userStore.role)
+    if (Array.isArray(res) && res.length > 0) {
+      list = [...res]
+      fromApi = true
+    }
+  } catch (e) {
+    console.error('加载管理区菜单失败，使用兜底菜单', e)
   }
 
-  // 摄制部（104）或全中心视角，加上设备管理
-  if (id === 104 || isAllDept(id)) {
-    list.push({ path: 'devices', label: '设备管理' })
-  }
-
-  // 主任专属的模块配置
-  if (userStore.isDirector) {
+  // 模块配置是主任专属入口，与部门无关，由前端补充
+  if (userStore.isDirector && !list.some(m => m.path === 'module-config')) {
     list.push({ path: 'module-config', label: '模块配置' })
   }
+  menus.value = list
 
-  return list
-})
+  // 当前停留在菜单已不可见的页面（例如从综合部切到新闻部后的「打卡管理」）时回到概览
+  // 仅在服务端菜单可用时判断，避免接口异常时把用户从正常页面踢走
+  if (!fromApi) return
+  const currentPath = route.path.split('/').pop()
+  if (currentPath && currentPath !== 'overview' && !list.some(m => m.path === currentPath)) {
+    router.replace('/admin/overview')
+  }
+}
 
 function changeDept(val) {
   userStore.setAdminDept(val)
-  // 切换部门后，如果当前停留在专属页面，跳回概览，防止报错
-  const currentPath = route.path.split('/').pop()
-  const hasPermission = menus.value.some(m => m.path === currentPath)
-  if (!hasPermission && currentPath !== 'overview') {
-    router.push('/admin/overview')
-  }
+  // 切换部门后重新拉取该部门的菜单；若当前页面已不可见，loadMenus 会跳回概览
+  loadMenus()
 }
+
+watch(() => userStore.role, loadMenus)
 
 onMounted(() => {
   if (userStore.isMinister) {
@@ -106,6 +111,7 @@ onMounted(() => {
   } else if (userStore.isDirector && !userStore.adminDept) {
     userStore.setAdminDept(ALL_DEPT_ID)
   }
+  loadMenus()
 })
 </script>
 

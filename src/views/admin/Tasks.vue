@@ -286,15 +286,22 @@ async function handleDelete(row) {
 async function confirm(row, s) {
   await adminApi.confirmSignup(row.id, s.name)
   row.signups = row.signups.filter(x => x.name !== s.name)
-  if (!row.participants.some(p => p.name === s.name)) {
+  if (!row.participants.some(p => p.name === s.name && Number(p.deptId) === Number(s.deptId))) {
     row.participants.push({ name: s.name, deptId: s.deptId })
   }
   ElMessage.success('已确认报名')
 }
 
-function reject(row, s) {
-  row.signups = row.signups.filter(x => x.name !== s.name)
-  ElMessage.info('已忽略该报名')
+// 拒绝报名需要落库，否则刷新后仍会出现在待确认列表
+async function reject(row, s) {
+  try {
+    await adminApi.rejectSignup(row.id, s.name)
+    const signup = (row.signups || []).find(x => x.name === s.name)
+    if (signup) signup.status = 2 // 2-已拒绝
+    ElMessage.info('已忽略该报名')
+  } catch (e) {
+    ElMessage.error('操作失败，请稍后重试')
+  }
 }
 
 async function addParticipants(row) {

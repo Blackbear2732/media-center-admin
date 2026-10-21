@@ -1,7 +1,7 @@
 <template>
   <div v-loading="loading">
     <div class="surface-card" style="padding:8px 0">
-      <el-table :data="list" stripe>
+      <el-table :data="pagedList" stripe>
         <el-table-column type="expand">
           <template #default="{ row }">
             <div style="padding: 6px 24px 14px">
@@ -35,6 +35,17 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="table-pagination">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="size"
+          :page-sizes="pageSizes"
+          :total="total"
+          layout="total, sizes, prev, pager, next"
+          background
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -44,8 +55,10 @@ import { ref, onMounted } from 'vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getDeptLabel, getMaterialTypeLabel, getMaterialTypeTagType } from '@/utils/dict'
+import { usePagination } from '@/utils/usePagination'
 
 const list = ref([]), loading = ref(false)
+const { page, size, pageSizes, total, paged: pagedList } = usePagination(list)
 
 onMounted(async () => {
   loading.value = true

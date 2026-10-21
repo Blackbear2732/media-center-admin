@@ -62,6 +62,10 @@ router.beforeEach((to, from, next) => {
     if (!to.meta.public && !token) {
         return next({ path: '/login', query: { redirect: to.fullPath } })
     }
+    // 已登录用户访问登录页：直接回到首页，避免重复登录
+    if (token && to.path === '/login') {
+        return next('/')
+    }
     if (to.meta.roles && !to.meta.roles.includes(role)) {
         return next({ path: '/' })
     }

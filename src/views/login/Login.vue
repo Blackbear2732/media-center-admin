@@ -92,6 +92,8 @@ const deptHints = {
 
 // role：0 部员 / 1 部长 / 2 主任；deptId：仅部长需要
 async function quickLogin(role, deptId) {
+  // 按钮虽已 disabled，但 loading 到 finally 之间有 await，入口处仍需防重复提交
+  if (loading.value) return
   loading.value = true
   try {
     const res = await authApi.login({ role, deptId })

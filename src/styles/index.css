@@ -48,25 +48,25 @@ body {
 .pill:hover { color: var(--brand); border-color: #cfe0ee; }
 .pill.active { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: 0 4px 12px rgba(43,95,142,.25); }
 .tag-soft {
-    display: inline-block; padding: 2px 9px; border-radius: 999px;
-    font-size: 12px; background: var(--brand-soft); color: var(--brand);
+    display: inline-block; padding: 5px 14px; border-radius: 999px;
+    font-size: 12px; font-weight: 500; background: var(--brand-soft); color: var(--brand);
 }
 
 /* 任务卡片 (通用) */
 .task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
 .task-card {
-    padding: 20px 24px; /* 增加左右内边距，不那么拥挤 */
+    padding: 24px;
     cursor: pointer; transition: all .2s;
-    display: flex; flex-direction: column; gap: 14px; /* 拉开卡片内各区块的垂直间距 */
+    display: flex; flex-direction: column; gap: 16px;
 }
 .task-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: #cfe0ee; }
-.task-card-head { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-sub); }
-.task-card h3 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.4; }
+.task-card-head { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-sub); }
+.task-card h3 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.5; color: var(--text); }
 .task-card-meta { color: var(--text-sub); font-size: 13px; }
-.task-card-tags { display: flex; flex-wrap: wrap; gap: 8px; } /* 增加标签之间的间距 */
+.task-card-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 .task-card-foot {
     display: flex; align-items: center; justify-content: space-between;
-    margin-top: 4px; padding-top: 16px; border-top: 1px dashed var(--border);
+    margin-top: 4px; padding-top: 18px; border-top: 1px dashed var(--border);
 }
 
 /* 首页任务行：让标签和箭头不再贴着 */
@@ -111,45 +111,6 @@ body {
 .nav-item.active { color: var(--brand); font-weight: 600; background: var(--brand-soft); }
 .admin-link { color: var(--accent) !important; }
 .admin-link.active { background: #fdf1e6 !important; }
-.admin-head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    margin-bottom: 18px;
-}
-
-.admin-head h2 {
-    margin: 0;
-    font-size: 24px;
-    letter-spacing: .5px;
-}
-
-.admin-head p {
-    margin: 6px 0 0;
-}
-
-.admin-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.admin-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 20px;
-}
-
-.admin-tabs .pill {
-    text-decoration: none;
-}
-
-.admin-body {
-    min-height: 300px;
-}
-
-
 
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 .icon-btn { border: none; background: transparent; cursor: pointer; color: var(--text-sub); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
@@ -302,6 +263,9 @@ body {
    ======================================================== */
 .el-card__header { padding: 14px 20px; border-bottom: 1px solid var(--border); }
 
+/* 列表底部分页条（成员 / 素材 / 打卡 / 考评） */
+.table-pagination { display: flex; justify-content: flex-end; padding: 14px 18px 6px; }
+
 /* ========================================================
    9. 响应式媒体查询
    ======================================================== */
@@ -365,10 +329,6 @@ body {
 /* ========================================================
    素材库专属样式 (MaterialList)
    ======================================================== */
-.list-head { margin-bottom: 18px; }
-.list-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; color: var(--text); }
-.list-head p { margin: 6px 0 0; }
-
 .search-card { padding: 18px 18px 0; margin-bottom: 22px; }
 .search-form .el-form-item { margin-bottom: 18px; }
 
@@ -449,69 +409,14 @@ body {
     letter-spacing: .5px;
     color: var(--text);
 }
+.list-head p {
+    margin: 6px 0 0;
+}
 .filter-pills {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
 }
-
-/* --- 任务卡片内部呼吸感 --- */
-.task-card {
-    padding: 24px; /* 加大卡片内边距 */
-    cursor: pointer;
-    transition: all .2s;
-    display: flex;
-    flex-direction: column;
-    gap: 16px; /* 加大模块间的垂直间距 */
-}
-
-/* 状态栏：点+文字+时间 */
-.task-card-head {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
-    color: var(--text-sub);
-}
-
-/* 任务标题 */
-.task-card h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 1.5;
-    color: var(--text);
-}
-
-/* 标签容器的间距 */
-.task-card-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 4px;
-}
-
-/* 扩大标签(如新闻部)的内边距，告别拥挤 */
-.tag-soft {
-    display: inline-block;
-    padding: 5px 14px; /* 从 2px 9px 加大 */
-    border-radius: 999px;
-    font-size: 12px;
-    background: var(--brand-soft);
-    color: var(--brand);
-    font-weight: 500;
-}
-
-/* 卡片底部 */
-.task-card-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 4px;
-    padding-top: 18px;
-    border-top: 1px dashed var(--border);
-}
-
 
 /* --- 过滤栏 --- */
 .filter-bar {
@@ -676,6 +581,17 @@ body {
     }
     .el-table .el-button + .el-button {
         margin-left: 4px; /* 减小按钮之间的间距 */
+    }
+
+    /* 分页条在窄屏居中并允许换行 */
+    .table-pagination {
+        justify-content: center;
+        padding: 12px 8px 4px;
+    }
+    .table-pagination .el-pagination {
+        flex-wrap: wrap;
+        row-gap: 8px;
+        justify-content: center;
     }
 }
 
