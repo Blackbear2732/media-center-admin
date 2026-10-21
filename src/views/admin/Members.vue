@@ -67,12 +67,12 @@
             <el-tag :type="getMemberStatusType(row.status)" size="small">{{ getMemberStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="160" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
             <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link :type="Number(row.status) === MEMBER_STATUS.ACTIVE ? 'danger' : 'success'" @click="toggle(row)">
-              {{ Number(row.status) === MEMBER_STATUS.ACTIVE ? '停用' : '启用' }}
+            <el-button link :type="row.status === '在岗' ? 'danger' : 'success'" @click="toggle(row)">
+              {{ row.status === '在岗' ? '停用' : '启用' }}
             </el-button>
           </template>
         </el-table-column>

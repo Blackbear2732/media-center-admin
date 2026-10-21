@@ -543,41 +543,139 @@ body {
 
 
 /* ========================================================
-   移动端全局响应式适配 (Media Queries)
+   移动端全局响应式适配 (Max-Width: 768px)
    ======================================================== */
+@media screen and (max-width: 768px) {
 
-/* 针对平板和手机：隐藏横向溢出，防止左右晃动 */
-body { overflow-x: hidden; }
+    /* 1. 基础防溢出 */
+    body {
+        overflow-x: hidden;
+    }
 
-@media (max-width: 768px) {
-    /* 1. 主容器内边距减小 */
-    .main-inner { padding: 12px !important; }
+    /* 2. 容器内边距减小 */
+    .main-inner {
+        padding: 12px !important;
+    }
 
-    /* 2. 强制覆盖 Element Plus 的左右分栏，让它们全变成上下堆叠 (针对 el-col) */
-    .el-col { max-width: 100% !important; flex: 0 0 100% !important; }
+    /* 3. 强制多列布局转为单列 (Element Plus 的 el-col) */
+    .el-col {
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
 
-    /* 3. 表格横向滚动，防止撑破屏幕 */
+    /* 4. 表格适配：允许横向滑动，防止撑破页面 */
     .el-table {
         width: 100% !important;
         overflow-x: auto;
     }
-
-    /* 4. 首页数据面板改为单列 */
-    .data-panels { grid-template-columns: 1fr !important; gap: 16px !important; }
-
-    /* 5. 卡片网格改为单列 */
-    .task-grid, .dept-grid, .video-grid {
-        grid-template-columns: 1fr !important;
+    .el-table__body-wrapper {
+        overflow-x: auto;
+    }
+    /* 隐藏表格滚动条使界面更美观 (可选) */
+    .el-table::-webkit-scrollbar,
+    .el-table__body-wrapper::-webkit-scrollbar {
+        height: 6px;
+    }
+    .el-table::-webkit-scrollbar-thumb,
+    .el-table__body-wrapper::-webkit-scrollbar-thumb {
+        background: #dcdfe6;
+        border-radius: 4px;
     }
 
-    /* 6. 弹窗宽度占满手机屏幕 */
-    .el-dialog {
-        width: 90% !important;
+    /* 5. 弹窗适配：宽度占满屏幕 */
+    .el-dialog,
+    .el-message-box {
+        width: 92% !important;
         margin-top: 5vh !important;
+        border-radius: 12px;
+    }
+
+    /* 6. 表单适配：标签和输入框上下排列 */
+    .el-form-item {
+        display: flex;
+        flex-direction: column;
+    }
+    .el-form-item__label {
+        justify-content: flex-start;
+        padding: 0 0 6px 0 !important;
+        width: 100% !important;
+        text-align: left;
+    }
+    .el-form-item__content {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    /* 7. 网格布局(任务/素材卡片)变为单列 */
+    .task-grid,
+    .dept-grid,
+    .material-grid,
+    .video-grid,
+    .data-panels,
+    .device-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    /* 8. 首页 Hero 区域调整 */
+    .hero {
+        padding: 32px 20px !important;
+        grid-template-columns: 1fr !important;
+        border-radius: 16px !important;
+    }
+    .hero-content h1 {
+        font-size: 24px !important;
+    }
+    .hero-art {
+        display: none !important; /* 手机端隐藏装饰图形 */
+    }
+    .hero-stats {
+        flex-wrap: wrap;
+        gap: 16px !important;
+    }
+
+    /* 9. 标签页(Tabs)允许横向滑动 */
+    .el-tabs__nav-wrap::after {
+        display: none;
+    }
+    .el-tabs__nav {
+        white-space: nowrap;
+    }
+    .el-tabs__content {
+        padding-top: 10px;
+    }
+
+    /* 10. 筛选工具栏允许换行 */
+    .filter-bar {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 16px;
+    }
+    .filter-group {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .filter-item {
+        margin-bottom: 8px;
+    }
+    /* 强制取消表格固定列在移动端的悬浮效果，让其随表格滚动 */
+    .el-table__fixed-right,
+    .el-table__fixed {
+        display: none !important; /* 移动端直接隐藏固定列，部分版本需要 */
+    }
+    .el-table .el-table__cell.is-fixed-right {
+        position: static !important; /* 取消固定 */
+        right: auto !important;
+        box-shadow: none !important;
+    }
+
+    /* 缩小操作列的宽度和按钮间距 */
+    .el-table .el-button {
+        padding: 4px 6px; /* 减小按钮内边距 */
+        font-size: 12px;
+    }
+    .el-table .el-button + .el-button {
+        margin-left: 4px; /* 减小按钮之间的间距 */
     }
 }
 
-/* 针对更小屏幕（如 iPhone SE），调整卡片最小宽度 */
-@media (max-width: 375px) {
-    .task-grid { grid-template-columns: minmax(100%, 1fr) !important; }
-}

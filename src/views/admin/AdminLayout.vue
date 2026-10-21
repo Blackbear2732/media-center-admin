@@ -118,4 +118,12 @@ onMounted(() => {
 .admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .admin-tabs .pill { text-decoration: none; }
 .admin-body { min-height: 300px; }
+.admin-tabs {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 8px;
+}
+/* 隐藏滚动条 */
+.admin-tabs::-webkit-scrollbar { display: none; }
 </style>

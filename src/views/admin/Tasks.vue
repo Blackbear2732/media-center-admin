@@ -88,7 +88,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="160" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="router.push('/tasks/' + row.id)">查看</el-button>
             <el-button link type="warning" @click="openEdit(row)">编辑</el-button>

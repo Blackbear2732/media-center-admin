@@ -84,10 +84,11 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
+          <!-- 申请审核 -->
+          <el-table-column label="操作" width="120" align="center">
             <template #default="{ row }">
-              <el-button link type="success" :disabled="Number(row.status) !== APPLY_STATUS.PENDING" @click="review(row, APPLY_STATUS.APPROVED)">通过</el-button>
-              <el-button link type="danger" :disabled="Number(row.status) !== APPLY_STATUS.PENDING" @click="review(row, APPLY_STATUS.REJECTED)">拒绝</el-button>
+              <el-button link type="success" :disabled="row.status !== '待审核'" @click="review(row, '已通过')">通过</el-button>
+              <el-button link type="danger" :disabled="row.status !== '待审核'" @click="review(row, '已拒绝')">拒绝</el-button>
             </template>
           </el-table-column>
         </el-table>
