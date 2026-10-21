@@ -69,6 +69,30 @@ npm run dev
 
 ---
 
+## 部署
+
+### SPA 路由回退（必须）
+
+前端使用 History 模式路由，服务器需要把未命中的路径回退到 `index.html`，否则用户刷新 `/tasks/1` 会 404：
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+完整示例（含接口反代、静态资源缓存策略）见 [`deploy/nginx.conf`](deploy/nginx.conf)。
+Netlify 等静态托管已由根目录 `_redirects` 处理；Apache 可使用 `FallbackResource /index.html`。
+
+### 构建
+
+```bash
+npm run build        # 演示构建（Mock 数据）
+npm run build:api    # 接入真实后端（关闭 Mock，可 tree-shake）
+```
+
+---
+
 ## 角色与演示账号
 
 系统包含三种角色，登录页点击对应卡片即可一键进入（**无需密码**）：
@@ -132,21 +156,20 @@ npm run dev
 ### 当前状态：Mock 模式
 所有接口调用都走 `src/api/mock.js` 里的本地数据，无需启动后端即可查看完整交互效果。
 
-### 切换到真实后端：3 步
+### 切换方式：环境变量（不再改代码）
 
-**第 1 步 · 关掉 Mock 开关**
+Mock 开关由环境变量 `VITE_USE_MOCK` 控制，按构建模式读取对应文件：
 
-打开 `src/api/index.js`，把顶部：
+| 命令 | 读取的环境文件 | Mock 数据 |
+|---|---|---|
+| `npm run dev` | `.env.development` | 开启 |
+| `npm run build` | `.env.production` | 开启（当前演示构建） |
+| `npm run build:api` | `.env.api` | 关闭（接入真实后端） |
 
-```js
-const USE_MOCK = true
-```
+关闭 Mock 时，`vite.config.js` 会把 `@/api/mock` 别名替换为 `src/api/mock.stub.js`（同名空导出），
+整套演示数据（`mock.js` 中的成员名单、任务、素材等）不会进入构建产物，页面也不会加载它们。
 
-改为：
-
-```js
-const USE_MOCK = false
-```
+接入真实后端时使用 `npm run build:api` 即可（等价于 `VITE_USE_MOCK=false vite build`）。
 
 **第 2 步 · 配置后端地址**
 
