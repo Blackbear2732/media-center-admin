@@ -6,7 +6,7 @@ import { ALL_DEPT_ID, ROLE, isAllDept } from '@/utils/dict'
 const USE_MOCK = true
 
 // 安全容错的 delay 函数，防止 undefined 导致 JSON.parse 报错并卡死 Promise
-const delay = (data, ms = 200) => new Promise(resolve => setTimeout(() => {
+const delay = (data, ms = 0) => new Promise(resolve => setTimeout(() => {
     let result = null
     try {
         result = JSON.parse(JSON.stringify(data ?? null))
