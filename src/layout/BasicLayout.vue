@@ -104,6 +104,31 @@
       <div class="footer-text">山西农业大学青年融媒体中心 · 一次采集 · 多元生成 · 多端发布</div>
     </footer>
   </div>
+  <!-- 问卷悬浮按钮 -->
+  <div class="survey-btn" @click="surveyVisible = true">
+    <el-icon><ChatDotRound /></el-icon>
+    <span>填问卷</span>
+  </div>
+
+  <!-- 问卷弹窗 -->
+  <el-dialog
+      v-model="surveyVisible"
+      title="融媒体中心系统 - 体验反馈问卷"
+      width="800px"
+      class="survey-dialog"
+      destroy-on-close
+  >
+    <!-- 替换为你问卷星的正式访问链接 -->
+    <iframe
+        src="https://v.wjx.cn/vm/e7c0Ny6.aspx# "
+        frameborder="0"
+        style="width: 100%; height: 600px; overflow: hidden;"
+        allowfullscreen
+    ></iframe>
+  </el-dialog>
+
+
+
 </template>
 
 <script setup>
@@ -115,6 +140,14 @@ import { messageApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
 import { Menu } from '@element-plus/icons-vue'
+// 如果你没引入 ChatDotRound，请加上
+import { ChatDotRound } from '@element-plus/icons-vue'
+
+
+const surveyVisible = ref(false) // 问卷弹窗开关
+
+
+
 
 const route = useRoute()
 const router = useRouter()
@@ -202,4 +235,52 @@ async function onCommand(cmd) {
   .brand-text { display: none; } /* 手机端隐藏文字，只留 Logo */
   .main-inner { padding: 12px; }
 }
+
+
+/* 问卷悬浮按钮样式 */
+.survey-btn {
+  position: fixed;
+  right: 24px;
+  bottom: 80px;
+  background: linear-gradient(135deg, #409eff, #2b5f8e);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.4);
+  z-index: 9999;
+  transition: all 0.3s;
+}
+
+.survey-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(64, 158, 255, 0.6);
+}
+
+/* 手机端适配弹窗尺寸 */
+@media (max-width: 768px) {
+  .survey-btn {
+    right: 16px;
+    bottom: 60px;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  :deep(.survey-dialog) {
+    width: 95% !important;
+  }
+  :deep(.survey-dialog .el-dialog__body) {
+    padding: 10px;
+  }
+  :deep(.survey-dialog iframe) {
+    height: 65vh !important; /* 手机端高度自适应 */
+  }
+}
+
+
+
 </style>
