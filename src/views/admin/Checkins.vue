@@ -25,7 +25,7 @@
     </div>
 
     <div class="surface-card" style="padding: 0;">
-      <el-table :data="filteredList" v-loading="loading" stripe style="width: 100%">
+      <el-table :data="pagedList" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column prop="deptId" label="部门" width="120">
           <template #default="{ row }">
@@ -60,6 +60,17 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="table-pagination">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="size"
+          :page-sizes="pageSizes"
+          :total="total"
+          layout="total, sizes, prev, pager, next"
+          background
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -77,6 +88,7 @@ import {
   getCheckinStatusType,
   getDeptLabel
 } from '@/utils/dict'
+import { usePagination } from '@/utils/usePagination'
 
 const date = ref(new Date().toISOString().split('T')[0])
 const deptId = ref(ALL_DEPT_ID)
@@ -88,6 +100,9 @@ const filteredList = computed(() => {
   if (Number(statusFilter.value) === -1) return list.value
   return list.value.filter(item => Number(item.status) === Number(statusFilter.value))
 })
+
+// 全中心当日打卡名单可能上百条，分页渲染
+const { page, size, pageSizes, total, paged: pagedList } = usePagination(filteredList)
 
 async function loadData() {
   loading.value = true
