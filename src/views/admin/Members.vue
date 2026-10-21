@@ -39,7 +39,7 @@
 
     <!-- 表格区 -->
     <div class="surface-card" style="padding: 6px 0" v-loading="loading">
-      <el-table :data="displayList" stripe>
+      <el-table :data="pagedList" stripe>
         <el-table-column v-if="userStore.isDirector" prop="deptId" label="所属部门" width="100">
           <template #default="{ row }">
             <el-tag size="small" type="info">{{ getDeptLabel(row.deptId) }}</el-tag>
@@ -71,12 +71,23 @@
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
             <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link :type="row.status === '在岗' ? 'danger' : 'success'" @click="toggle(row)">
-              {{ row.status === '在岗' ? '停用' : '启用' }}
+            <el-button link :type="Number(row.status) === MEMBER_STATUS.ACTIVE ? 'danger' : 'success'" @click="toggle(row)">
+              {{ Number(row.status) === MEMBER_STATUS.ACTIVE ? '停用' : '启用' }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="table-pagination">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="size"
+          :page-sizes="pageSizes"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+        />
+      </div>
     </div>
 
     <!-- 新增/编辑弹窗 -->
@@ -166,6 +177,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
+import { usePagination } from '@/utils/usePagination'
 import {
   ALL_DEPT_ID,
   DEPARTMENTS_OPTIONS,
@@ -210,6 +222,9 @@ const displayList = computed(() => {
     return true
   })
 })
+
+// 主任可看到全部成员（100+ 人），分页渲染，避免一次渲染整张大表
+const { page, size, pageSizes, total, paged: pagedList } = usePagination(displayList)
 
 async function load() {
   loading.value = true
