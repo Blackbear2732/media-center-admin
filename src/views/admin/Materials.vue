@@ -1,7 +1,7 @@
 <template>
   <div v-loading="loading">
     <div class="surface-card" style="padding:8px 0">
-      <el-table :data="list" stripe>
+      <el-table :data="pagedList" stripe>
         <el-table-column type="expand">
           <template #default="{ row }">
             <div style="padding: 6px 24px 14px">
@@ -21,16 +21,31 @@
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="220" />
-        <el-table-column prop="type" label="类型" width="100" />
+        <el-table-column prop="type" label="类型" width="110">
+          <template #default="{ row }">
+            <el-tag size="small" :type="getMaterialTypeTagType(row.type)" effect="plain">{{ getMaterialTypeLabel(row.type) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="author" label="上传人" width="100" />
         <el-table-column prop="createdAt" label="上传时间" width="160" />
         <el-table-column label="共享部门" min-width="140">
           <template #default="{ row }">
-            <el-tag v-for="d in row.sharedDepts || []" :key="d" size="small" style="margin-right:4px">{{ d }}</el-tag>
-            <span v-if="!row.sharedDepts?.length" class="muted">未共享</span>
+            <el-tag v-for="id in row.sharedDeptIds || []" :key="id" size="small" style="margin-right:4px">{{ getDeptLabel(id) }}</el-tag>
+            <span v-if="!row.sharedDeptIds?.length" class="muted">未共享</span>
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="table-pagination">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="size"
+          :page-sizes="pageSizes"
+          :total="total"
+          layout="total, sizes, prev, pager, next"
+          background
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -38,11 +53,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { adminApi } from '@/api'
+import { userStore } from '@/store/user'
+import { getDeptLabel, getMaterialTypeLabel, getMaterialTypeTagType } from '@/utils/dict'
+import { usePagination } from '@/utils/usePagination'
 
-const dept = localStorage.getItem('adminDept') || '新闻部'
 const list = ref([]), loading = ref(false)
+const { page, size, pageSizes, total, paged: pagedList } = usePagination(list)
+
 onMounted(async () => {
   loading.value = true
-  try { list.value = await adminApi.materials(dept) } finally { loading.value = false }
+  try { list.value = await adminApi.materials(userStore.viewDeptId) } finally { loading.value = false }
 })
 </script>

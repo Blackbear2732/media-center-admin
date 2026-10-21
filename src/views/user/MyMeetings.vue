@@ -8,7 +8,9 @@
         <el-table-column prop="location" label="地点" width="170" />
         <el-table-column prop="host" label="主持人" width="110" />
         <el-table-column prop="status" label="参会状态" width="110">
-          <template #default="{ row }"><el-tag :type="statusTagType(row.status)" size="small">{{ row.status }}</el-tag></template>
+          <template #default="{ row }">
+            <el-tag :type="getMeetingJoinStatusType(row.status)" size="small">{{ getMeetingJoinStatusLabel(row.status) }}</el-tag>
+          </template>
         </el-table-column>
       </el-table>
     </el-card>
@@ -17,7 +19,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { userApi, statusTagType } from '@/api'
+import { userApi } from '@/api'
+import { getMeetingJoinStatusLabel, getMeetingJoinStatusType } from '@/utils/dict'
 
 const list = ref([]), loading = ref(false)
 onMounted(async () => {

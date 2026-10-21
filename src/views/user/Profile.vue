@@ -40,9 +40,12 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { userApi } from '@/api'
+import { userStore } from '@/store/user'
 
+const router = useRouter()
 const form = reactive({ studentNo: '', name: '', college: '', className: '', phone: '', email: '' })
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const loading = ref(false), saving = ref(false), pwdSaving = ref(false)
@@ -73,8 +76,8 @@ async function changePwd() {
   try {
     await userApi.updatePassword({ ...pwd })  // PUT /api/user/password
     ElMessage.success('密码修改成功，请重新登录')
-    localStorage.removeItem('token')
-    location.hash = '#/login'
+    userStore.logout()
+    router.replace('/login')
   } finally { pwdSaving.value = false }
 }
 </script>

@@ -3,19 +3,19 @@
     <div class="stat-grid">
       <div class="surface-card stat-card">
         <div class="stat-num">{{ data.memberCount || 0 }}</div>
-        <div class="stat-label">{{ dept ? '部门成员' : '全中心总人数' }}</div>
+        <div class="stat-label">{{ isAll ? '全中心总人数' : '部门成员' }}</div>
       </div>
       <div class="surface-card stat-card">
         <div class="stat-num">{{ data.activeCount || 0 }}</div>
-        <div class="stat-label">{{ dept ? '在岗人数' : '全中心在岗' }}</div>
+        <div class="stat-label">{{ isAll ? '全中心在岗' : '在岗人数' }}</div>
       </div>
       <div class="surface-card stat-card">
         <div class="stat-num">{{ data.taskCount || 0 }}</div>
-        <div class="stat-label">{{ dept ? '参与任务' : '全中心任务' }}</div>
+        <div class="stat-label">{{ isAll ? '全中心任务' : '参与任务' }}</div>
       </div>
       <div class="surface-card stat-card">
         <div class="stat-num">{{ data.materialCount || 0 }}</div>
-        <div class="stat-label">{{ dept ? '素材数量' : '全中心素材' }}</div>
+        <div class="stat-label">{{ isAll ? '全中心素材' : '素材数量' }}</div>
       </div>
     </div>
 
@@ -50,7 +50,7 @@
       >
         <div class="task-card-head">
           <span class="status-dot" :class="getTaskDotClass(t.status)"></span>
-          <span>{{ t.status }}</span>
+          <span>{{ getTaskStatusLabel(t.status) }}</span>
           <span style="margin-left:auto">{{ t.startTime }}</span>
         </div>
         <h3>{{ t.title }}</h3>
@@ -60,14 +60,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { adminApi } from '@/api'
-import { getTaskDotClass } from '@/utils/dict'
+import { userStore } from '@/store/user'
+import { getTaskDotClass, getTaskStatusLabel, isAllDept } from '@/utils/dict'
 
 const router = useRouter()
 const loading = ref(false)
-const dept = ref('')
+
+// 当前管理视角部门（100 = 全中心）
+const deptId = computed(() => userStore.viewDeptId)
+const isAll = computed(() => isAllDept(deptId.value))
+
 const data = ref({
   memberCount: 0,
   activeCount: 0,
@@ -77,8 +82,9 @@ const data = ref({
   recentTasks: []
 })
 
+// 待办类型字典
 const todoLabel = (t) => {
-  const map = { signup: '报名确认', material: '素材归档', evaluation: '考评提醒' }
+  const map = { signup: '报名确认', material: '素材归档', evaluation: '考评提醒', checkin: '打卡核对', device: '设备审核', global: '全中心' }
   return map[t] || '待办'
 }
 
@@ -89,8 +95,7 @@ function goTask(id) {
 onMounted(async () => {
   loading.value = true
   try {
-    dept.value = localStorage.getItem('adminDept') || '' // 主任这里为空
-    const res = await adminApi.overview(dept.value)
+    const res = await adminApi.overview(deptId.value)
     if (res) {
       data.value = res
     }

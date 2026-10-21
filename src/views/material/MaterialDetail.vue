@@ -7,14 +7,14 @@
           <template #header>
             <div class="flex-between">
               <b>{{ data.title }}</b>
-              <el-tag size="small">{{ data.type }}</el-tag>
+              <el-tag size="small" :type="getMaterialTypeTagType(data.type)">{{ getMaterialTypeLabel(data.type) }}</el-tag>
             </div>
           </template>
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="所属部门">{{ data.department }}</el-descriptions-item>
+            <el-descriptions-item label="所属部门">{{ getDeptLabel(data.deptId) }}</el-descriptions-item>
             <el-descriptions-item label="上传人">{{ data.author }}</el-descriptions-item>
             <el-descriptions-item label="上传时间">{{ data.createdAt }}</el-descriptions-item>
-            <el-descriptions-item label="主要领导">{{ data.leader }}</el-descriptions-item>
+            <el-descriptions-item label="主要领导">{{ data.leaderName || '—' }}</el-descriptions-item>
           </el-descriptions>
           <div v-if="data.content" style="margin-top:16px">
             <div class="sec-title">正文内容</div>
@@ -72,6 +72,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { materialApi } from '@/api'
+import { userStore } from '@/store/user'
+import { getDeptLabel, getMaterialTypeLabel, getMaterialTypeTagType } from '@/utils/dict'
 
 const route = useRoute()
 const router = useRouter()
@@ -90,7 +92,7 @@ async function extract() {
   try {
     await materialApi.recordExtract(route.params.id)  // POST /api/materials/{id}/extract
     ElMessage.success('提取记录已上报')
-    extractLogs.value.unshift({ user: '张三', time: new Date().toLocaleString() })
+    extractLogs.value.unshift({ user: userStore.name, time: new Date().toLocaleString() })
   } finally { extracting.value = false }
 }
 function copyCode() {

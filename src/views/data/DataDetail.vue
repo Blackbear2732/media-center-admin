@@ -93,6 +93,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
 
 const route = useRoute()
@@ -100,7 +101,10 @@ const router = useRouter()
 const loading = ref(false)
 const dashboard = ref({})
 
-const type = computed(() => route.params.type || 'wx')
+// 路由参数只允许 wx / yy，避免用户手输 /data-panel/foo 时把未知类型当成影音数据展示
+const VALID_TYPES = ['wx', 'yy']
+const type = computed(() => String(route.params.type || 'wx'))
+const isValidType = computed(() => VALID_TYPES.includes(type.value))
 const isWx = computed(() => type.value === 'wx')
 
 // 使用计算属性安全地解构数据
@@ -137,6 +141,11 @@ function openLink(url) {
 }
 
 onMounted(async () => {
+  if (!isValidType.value) {
+    ElMessage.warning('数据看板类型不存在，已返回首页')
+    router.replace('/')
+    return
+  }
   loading.value = true
   try {
     const res = await adminApi.dashboard()

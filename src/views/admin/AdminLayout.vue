@@ -3,14 +3,15 @@
     <div class="admin-head">
       <div>
         <h2>部门管理区</h2>
-        <p class="muted">{{ roleLabel }} · {{ dept ? `当前部门：${dept}` : '全中心视角' }}</p>
+        <p class="muted">{{ roleLabel }} · {{ deptLabel }}</p>
       </div>
       <div class="admin-actions">
-        <!-- 主任可以切换部门 -->
-        <el-select v-if="userStore.isDirector" v-model="dept" style="width:150px" @change="changeDept">
-          <el-option v-for="d in deptList" :key="d" :label="d === '' ? '全部部门' : d" :value="d" />
+        <!-- 主任可以切换部门视角（100-全中心） -->
+        <!-- 只绑定 :model-value，部门写入统一在 changeDept 中完成，避免 setAdminDept 被调用两次 -->
+        <el-select v-if="userStore.isDirector" :model-value="deptId" style="width:150px" @change="changeDept">
+          <el-option v-for="d in DEPT_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
         </el-select>
-        <span v-else class="tag-soft">{{ dept }}</span>
+        <span v-else class="tag-soft">{{ deptLabel }}</span>
         <button class="pill" @click="router.push('/')">返回前台</button>
       </div>
     </div>
@@ -28,31 +29,36 @@
     </div>
 
     <div class="admin-body">
-      <!-- 加了 :key="dept"，切换部门时强制刷新子页面 -->
-      <router-view :key="dept" />
+      <!-- 加了 :key="deptId"，切换部门时强制刷新子页面 -->
+      <router-view :key="deptId" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
+import { ALL_DEPT_ID, DEPT_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 
 const route = useRoute()
 const router = useRouter()
-
-const deptList = ['', '综合部', '网宣部', '影音部', '摄制部', '新闻部', '设计部']
 const roleLabel = computed(() => userStore.isDirector ? '中心主任' : '部长')
 
-// 当前选中的部门
-const dept = computed({
-  get: () => userStore.adminDept,
-  set: (val) => userStore.setAdminDept(val)
+// 当前管理视角部门：数字 deptId（100 = 全中心），只读，写入统一走 changeDept
+const deptId = computed(() => userStore.viewDeptId)
+
+const deptLabel = computed(() => {
+  const id = deptId.value
+  return isAllDept(id) ? '全中心视角' : `当前部门：${getDeptLabel(id)}`
 })
 
-// 👇 补全报错缺失的基础菜单数组
-const baseMenus = [
+// 菜单由后端（Mock）统一提供，避免前端再硬编码一套部门专属菜单
+const menus = ref([])
+
+// 接口异常时的兜底菜单，保证管理区仍可使用
+const FALLBACK_MENUS = [
   { path: 'overview', label: '概览' },
   { path: 'members', label: '成员管理' },
   { path: 'tasks', label: '任务参与' },
@@ -63,43 +69,49 @@ const baseMenus = [
   { path: 'dept-profile', label: '部门介绍' }
 ]
 
-// 动态组合菜单
-const menus = computed(() => {
-  const list = [...baseMenus]
-
-  // 综合部 或 全中心视角，加上打卡和数据看板
-  if (dept.value === '综合部' || dept.value === '') {
-    list.push({ path: 'checkins', label: '打卡管理' })
-    list.push({ path: 'dashboard', label: '数据看板' })
+async function loadMenus() {
+  let list = [...FALLBACK_MENUS]
+  let fromApi = false
+  try {
+    const res = await adminApi.getMenus(deptId.value, userStore.role)
+    if (Array.isArray(res) && res.length > 0) {
+      list = [...res]
+      fromApi = true
+    }
+  } catch (e) {
+    console.error('加载管理区菜单失败，使用兜底菜单', e)
   }
 
-  // 摄制部 或 全中心视角，加上设备管理
-  if (dept.value === '摄制部' || dept.value === '') {
-    list.push({ path: 'devices', label: '设备管理' })
-  }
-
-  // 主任专属的模块配置
-  if (userStore.isDirector) {
+  // 模块配置是主任专属入口，与部门无关，由前端补充
+  if (userStore.isDirector && !list.some(m => m.path === 'module-config')) {
     list.push({ path: 'module-config', label: '模块配置' })
   }
+  menus.value = list
 
-  return list
-})
-
-function changeDept(val) {
-  userStore.setAdminDept(val)
-  // 切换部门后，如果当前停留在专属页面，跳回概览，防止报错
+  // 当前停留在菜单已不可见的页面（例如从综合部切到新闻部后的「打卡管理」）时回到概览
+  // 仅在服务端菜单可用时判断，避免接口异常时把用户从正常页面踢走
+  if (!fromApi) return
   const currentPath = route.path.split('/').pop()
-  const hasPermission = menus.value.some(m => m.path === currentPath)
-  if (!hasPermission && currentPath !== 'overview') {
-    router.push('/admin/overview')
+  if (currentPath && currentPath !== 'overview' && !list.some(m => m.path === currentPath)) {
+    router.replace('/admin/overview')
   }
 }
 
+function changeDept(val) {
+  userStore.setAdminDept(val)
+  // 切换部门后重新拉取该部门的菜单；若当前页面已不可见，loadMenus 会跳回概览
+  loadMenus()
+}
+
+watch(() => userStore.role, loadMenus)
+
 onMounted(() => {
   if (userStore.isMinister) {
-    userStore.setAdminDept(userStore.dept)
+    userStore.setAdminDept(userStore.deptId)
+  } else if (userStore.isDirector && !userStore.adminDept) {
+    userStore.setAdminDept(ALL_DEPT_ID)
   }
+  loadMenus()
 })
 </script>
 
@@ -111,4 +123,12 @@ onMounted(() => {
 .admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .admin-tabs .pill { text-decoration: none; }
 .admin-body { min-height: 300px; }
+.admin-tabs {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 8px;
+}
+/* 隐藏滚动条 */
+.admin-tabs::-webkit-scrollbar { display: none; }
 </style>

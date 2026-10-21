@@ -9,12 +9,12 @@ const routes = [
             { path: '', component: () => import('@/views/Home.vue'), meta: { title: '首页', public: true } },
             { path: 'profile', component: () => import('@/views/user/Profile.vue'), meta: { title: '个人信息' } },
             { path: 'my/tasks', component: () => import('@/views/user/MyTasks.vue'), meta: { title: '我的任务' } },
-            { path: 'my/checkins', component: () => import('@/views/user/MyCheckins.vue'), meta: { title: '我的打卡', roles: ['member'] } },
+            { path: 'my/checkins', component: () => import('@/views/user/MyCheckins.vue'), meta: { title: '我的打卡', roles: [0] } },
             { path: 'my/evaluations', component: () => import('@/views/user/MyEvaluations.vue'), meta: { title: '我的考评' } },
             { path: 'my/meetings', component: () => import('@/views/user/MyMeetings.vue'), meta: { title: '我的会议' } },
             { path: 'my/messages', component: () => import('@/views/user/MyMessages.vue'), meta: { title: '我的消息' } },
             { path: 'tasks', component: () => import('@/views/task/TaskList.vue'), meta: { title: '任务列表' } },
-            { path: 'tasks/create', component: () => import('@/views/task/TaskCreate.vue'), meta: { title: '发布任务', roles: ['minister', 'director'] } },
+            { path: 'tasks/create', component: () => import('@/views/task/TaskCreate.vue'), meta: { title: '发布任务', roles: [1, 2] } },
             { path: 'tasks/:id', component: () => import('@/views/task/TaskDetail.vue'), meta: { title: '任务详情' } },
             { path: 'materials', component: () => import('@/views/material/MaterialList.vue'), meta: { title: '素材库' } },
             { path: 'materials/:id', component: () => import('@/views/material/MaterialDetail.vue'), meta: { title: '素材详情' } },
@@ -24,7 +24,7 @@ const routes = [
         ]
     },
     {
-        path: '/admin', component: BasicLayout, meta: { roles: ['minister', 'director'] },
+        path: '/admin', component: BasicLayout, meta: { roles: [1, 2] },
         children: [
             {
                 path: '', component: () => import('@/views/admin/AdminLayout.vue'),
@@ -41,7 +41,7 @@ const routes = [
                     { path: 'dashboard', component: () => import('@/views/admin/Dashboard.vue'), meta: { title: '数据看板' } },
                     { path: 'checkins', component: () => import('@/views/admin/Checkins.vue'), meta: { title: '打卡管理' } },
                     { path: 'devices', component: () => import('@/views/admin/Devices.vue'), meta: { title: '设备管理' } },
-                    { path: 'module-config', component: () => import('@/views/admin/ModuleConfig.vue'), meta: { title: '模块配置', roles: ['director'] } }
+                    { path: 'module-config', component: () => import('@/views/admin/ModuleConfig.vue'), meta: { title: '模块配置', roles: [2] } }
                 ]
             }
         ]
@@ -55,10 +55,16 @@ const router = createRouter({ history: createWebHistory(), routes })
 router.beforeEach((to, from, next) => {
     document.title = `${to.meta.title || ''} - 山西农业大学青年融媒体中心`
     const token = localStorage.getItem('token')
-    const role = localStorage.getItem('role') || 'member'
+    // 角色统一为数字：0 部员 / 1 部长 / 2 主任
+    const rawRole = localStorage.getItem('role')
+    const role = rawRole === null || rawRole === '' ? null : Number(rawRole)
 
     if (!to.meta.public && !token) {
         return next({ path: '/login', query: { redirect: to.fullPath } })
+    }
+    // 已登录用户访问登录页：直接回到首页，避免重复登录
+    if (token && to.path === '/login') {
+        return next('/')
     }
     if (to.meta.roles && !to.meta.roles.includes(role)) {
         return next({ path: '/' })

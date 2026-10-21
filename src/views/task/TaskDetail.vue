@@ -9,7 +9,7 @@
           <template #header>
             <div class="flex-between">
               <b>{{ task.title }}</b>
-              <el-tag :type="getTaskTagType(task.status)" v-if="task.status">{{ task.status }}</el-tag>
+              <el-tag :type="getTaskTagType(task.status)">{{ getTaskStatusLabel(task.status) }}</el-tag>
             </div>
           </template>
           <el-descriptions :column="2" border>
@@ -24,16 +24,16 @@
             </el-descriptions-item>
             <el-descriptions-item label="参与部门">
               <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                <el-tag v-for="d in (task.departments || [])" :key="d" size="small" type="success">{{ d }}</el-tag>
+                <el-tag v-for="id in (task.deptIds || [])" :key="id" size="small" type="success">{{ getDeptLabel(id) }}</el-tag>
               </div>
             </el-descriptions-item>
             <el-descriptions-item label="联动部门">
               <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                <el-tag v-for="d in (task.relatedDepts || [])" :key="d" size="small" type="warning">{{ d }}</el-tag>
-                <span v-if="!task.relatedDepts?.length" class="muted">无</span>
+                <el-tag v-for="id in (task.relatedDeptIds || [])" :key="id" size="small" type="warning">{{ getDeptLabel(id) }}</el-tag>
+                <span v-if="!task.relatedDeptIds?.length" class="muted">无</span>
               </div>
             </el-descriptions-item>
-            <el-descriptions-item label="任务说明" :span="2">{{ task.desc || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="任务说明" :span="2">{{ task.description || '—' }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
 
@@ -53,15 +53,15 @@
           <div v-else v-for="m in materials" :key="m.id" style="border-bottom:1px solid #f0f2f5;padding:12px 0">
             <div class="flex-between">
               <div>
-                <el-tag size="small" style="margin-right:8px">{{ m.type }}</el-tag>
+                <el-tag size="small" :type="getMaterialTypeTagType(m.type)" style="margin-right:8px">{{ getMaterialTypeLabel(m.type) }}</el-tag>
                 <b>{{ m.title }}</b>
-                <span class="muted" style="margin-left:8px">{{ m.department }} · {{ m.author }} · {{ m.createdAt }}</span>
+                <span class="muted" style="margin-left:8px">{{ getDeptLabel(m.deptId) }} · {{ m.author }} · {{ m.createdAt }}</span>
               </div>
               <el-link type="primary" @click="router.push('/materials/' + m.id)">查看素材详情</el-link>
             </div>
             <div v-if="m.leaderName" class="muted" style="margin-top:4px">主要领导：{{ m.leaderName }}</div>
 
-            <div v-if="m.type === '新闻稿'" style="margin-top:10px">
+            <div v-if="m.type === MATERIAL_TYPE.NEWS" style="margin-top:10px">
               <el-collapse v-model="opened">
                 <el-collapse-item :name="String(m.id)">
                   <template #title><span class="muted">点击展开新闻稿全文</span></template>
@@ -87,21 +87,21 @@
           <template #header>
             <div class="flex-between">
               <b>任务所需设备</b>
-              <span v-if="canManageDevices" class="tag-soft" style="font-size: 11px; background: #fdf1e6; color: var(--accent);">摄制部可管理</span>
+              <span v-if="canManageDevices" class="tag-soft" style="font-size: 11px; background: #fdf1e6; color: var(--accent);">{{ getDeptLabel(DEVICE_MANAGE_DEPT_ID) }}可管理</span>
             </div>
           </template>
 
-          <div v-if="!task.devices || task.devices.length === 0" class="muted" style="padding: 10px 0;">
+          <div v-if="!task.equipmentIds || task.equipmentIds.length === 0" class="muted" style="padding: 10px 0;">
             暂无关联设备
           </div>
 
-          <div v-else v-for="d in task.devices" :key="d" class="flex-between" style="padding: 8px 0; border-bottom: 1px dashed var(--border);">
-            <span style="font-weight: 500; font-size: 14px;">{{ d }}</span>
+          <div v-else v-for="id in task.equipmentIds" :key="id" class="flex-between" style="padding: 8px 0; border-bottom: 1px dashed var(--border);">
+            <span style="font-weight: 500; font-size: 14px;">{{ deviceName(id) }}</span>
             <el-button
                 v-if="canManageDevices"
                 link type="danger"
                 size="small"
-                @click="removeDevice(d)"
+                @click="removeDevice(id)"
             >移除</el-button>
           </div>
 
@@ -114,7 +114,7 @@
                     v-for="d in availableDevicesForAdd"
                     :key="d.id"
                     :label="d.name"
-                    :value="d.name"
+                    :value="d.id"
                 />
               </el-select>
               <el-button type="primary" size="small" @click="addDevice">添加</el-button>
@@ -140,9 +140,9 @@
               </el-tag>
             </span>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <el-tag size="small" type="info">{{ p.dept }}</el-tag>
+              <el-tag size="small" type="info">{{ getDeptLabel(p.deptId) }}</el-tag>
 
-              <template v-if="canManageDept(p.dept)">
+              <template v-if="canManageDept(p.deptId)">
                 <el-button link type="primary" size="small" @click="openScoreDialog(p)">打分</el-button>
                 <el-button link type="danger" size="small" @click="handleRemove(p)">移除</el-button>
               </template>
@@ -155,7 +155,7 @@
             <div v-if="pendingSignups.length > 0" style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
               <div class="muted" style="margin-bottom:8px; font-weight: 600;">待确认报名</div>
               <div v-for="s in pendingSignups" :key="s.name" class="flex-between" style="padding:8px 0;">
-                <span>{{ s.name }}（{{ s.dept }}）</span>
+                <span>{{ s.name }}（{{ getDeptLabel(s.deptId) }}）</span>
                 <div>
                   <el-button size="small" type="success" plain @click="handleConfirm(s)">确认</el-button>
                   <el-button size="small" type="danger" plain @click="handleReject(s)">拒绝</el-button>
@@ -166,7 +166,7 @@
             <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
               <div class="muted" style="margin-bottom:8px; font-weight: 600;">添加人员</div>
               <el-select v-model="selectedMember" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;" filterable>
-                <el-option v-for="m in availableMembers" :key="m.id" :label="`${m.name} (${m.dept})`" :value="m.name" />
+                <el-option v-for="m in availableMembers" :key="m.id" :label="`${m.name} (${getDeptLabel(m.deptId)})`" :value="m.name" />
               </el-select>
               <el-button type="primary" size="small" style="width: 100%;" @click="handleAddParticipant">添加到任务</el-button>
             </div>
@@ -221,7 +221,16 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { taskApi, adminApi, deviceApi } from '@/api'
-import { getTaskTagType } from '@/utils/dict'
+import {
+  ALL_DEPT_ID,
+  DEVICE_MANAGE_DEPT_ID,
+  MATERIAL_TYPE,
+  getDeptLabel,
+  getMaterialTypeLabel,
+  getMaterialTypeTagType,
+  getTaskStatusLabel,
+  getTaskTagType
+} from '@/utils/dict'
 import { userStore } from '@/store/user'
 
 const route = useRoute()
@@ -230,20 +239,27 @@ const loading = ref(false), matLoading = ref(false)
 const task = ref({})
 const materials = ref([]), opened = ref([])
 let timer = null
+let polling = false
 
 // --- 设备清单管理 ---
 const globalDevices = ref([])
-const selectedNewDevice = ref('')
+const selectedNewDevice = ref(null)
 
-// 权限判断：主任 或 摄制部（不管部长还是部员）
+// 权限判断：主任 或 摄制部成员（部门 ID 见 dict.DEVICE_MANAGE_DEPT_ID）
 const canManageDevices = computed(() => {
-  return userStore.isDirector || userStore.dept === '摄制部'
+  return userStore.isDirector || Number(userStore.deptId) === DEVICE_MANAGE_DEPT_ID
 })
+
+// equipmentId → 设备名称
+const deviceName = (id) => {
+  const dev = globalDevices.value.find(d => Number(d.id) === Number(id))
+  return dev ? dev.name : `设备 #${id}`
+}
 
 // 计算可选设备（排除任务里已经有的）
 const availableDevicesForAdd = computed(() => {
-  const currentDevices = task.value.devices || []
-  return globalDevices.value.filter(d => !currentDevices.includes(d.name))
+  const currentIds = (task.value.equipmentIds || []).map(Number)
+  return globalDevices.value.filter(d => !currentIds.includes(Number(d.id)))
 })
 
 async function loadGlobalDevices() {
@@ -256,22 +272,22 @@ async function loadGlobalDevices() {
 async function addDevice() {
   if (!selectedNewDevice.value) return ElMessage.warning('请选择要添加的设备')
 
-  const newDevices = [...(task.value.devices || []), selectedNewDevice.value]
-  await adminApi.updateTaskDevices(task.value.id, newDevices)
+  const newIds = [...(task.value.equipmentIds || []).map(Number), Number(selectedNewDevice.value)]
+  await adminApi.updateTaskDevices(task.value.id, newIds)
 
   // 更新视图
-  task.value.devices = newDevices
-  selectedNewDevice.value = ''
+  task.value.equipmentIds = newIds
+  selectedNewDevice.value = null
   ElMessage.success('设备已添加到任务')
 }
 
-async function removeDevice(deviceName) {
-  await ElMessageBox.confirm(`确认从任务中移除「${deviceName}」吗？`, '提示', { type: 'warning' })
+async function removeDevice(deviceId) {
+  await ElMessageBox.confirm(`确认从任务中移除「${deviceName(deviceId)}」吗？`, '提示', { type: 'warning' })
 
-  const newDevices = (task.value.devices || []).filter(d => d !== deviceName)
-  await adminApi.updateTaskDevices(task.value.id, newDevices)
+  const newIds = (task.value.equipmentIds || []).map(Number).filter(id => id !== Number(deviceId))
+  await adminApi.updateTaskDevices(task.value.id, newIds)
 
-  task.value.devices = newDevices
+  task.value.equipmentIds = newIds
   ElMessage.success('已移除')
 }
 
@@ -284,26 +300,29 @@ const scoreVisible = ref(false)
 const savingScore = ref(false)
 const scoreForm = reactive({ memberName: '', score: 0, reason: '' })
 
-const canManageDept = (dept) => {
+const canManageDept = (deptId) => {
   if (userStore.isDirector) return true
-  if (userStore.isMinister && dept === userStore.dept) return true
+  if (userStore.isMinister && Number(deptId) === Number(userStore.deptId)) return true
   return false
 }
 
+// 待确认报名（部长只看本部门，主任看全部）
 const pendingSignups = computed(() => {
-  let signups = task.value.signups || []
+  let signups = (task.value.signups || []).filter(s => Number(s.status) === 0)
   if (userStore.isMinister) {
-    signups = signups.filter(s => s.dept === userStore.dept)
+    signups = signups.filter(s => Number(s.deptId) === Number(userStore.deptId))
   }
   return signups
 })
 
 const myParticipantStatus = computed(() => {
-  const myName = userStore.name
-  const isJoined = (task.value.participants || []).some(p => p.name === myName)
-  if (isJoined) return 'joined'
-  const isPending = (task.value.signups || []).some(s => s.name === myName)
-  if (isPending) return 'pending'
+  // 姓名可能重复，必须同时比对部门，避免同名成员被误判为已参与
+  const isSameMember = (p) =>
+      p.name === userStore.name && Number(p.deptId) === Number(userStore.deptId)
+
+  if ((task.value.participants || []).some(isSameMember)) return 'joined'
+  // 只有「待确认」的报名才算审核中，已拒绝的记录不应让按钮一直停在 pending
+  if ((task.value.signups || []).some(s => isSameMember(s) && Number(s.status) === 0)) return 'pending'
   return 'none'
 })
 
@@ -313,7 +332,7 @@ const availableMembers = computed(() => {
     return (deptMembers.value || []).filter(m => !currentNames.includes(m.name))
   }
   return (deptMembers.value || []).filter(m =>
-      m.dept === userStore.dept && !currentNames.includes(m.name)
+      Number(m.deptId) === Number(userStore.deptId) && !currentNames.includes(m.name)
   )
 })
 
@@ -322,8 +341,8 @@ const availableMembers = computed(() => {
 async function loadMembers() {
   if (!userStore.canManage) return
   try {
-    const targetDept = userStore.isDirector ? '' : userStore.dept
-    const res = await adminApi.members(targetDept)
+    const targetDeptId = userStore.isDirector ? ALL_DEPT_ID : userStore.deptId
+    const res = await adminApi.members(targetDeptId)
     deptMembers.value = Array.isArray(res) ? res : []
   } catch (e) {
     deptMembers.value = []
@@ -332,9 +351,10 @@ async function loadMembers() {
 
 async function handleSignup() {
   try {
-    await taskApi.signup(task.value.id, { name: userStore.name, dept: userStore.dept })
+    const payload = { name: userStore.name, deptId: userStore.deptId }
+    await taskApi.signup(task.value.id, payload)
     if (!task.value.signups) task.value.signups = []
-    task.value.signups.push({ name: userStore.name, dept: userStore.dept })
+    task.value.signups.push({ ...payload, status: 0 })
     ElMessage.success('报名成功，请等待部长确认')
   } catch (e) {
     ElMessage.error('报名失败')
@@ -346,8 +366,8 @@ async function handleAddParticipant() {
   const member = deptMembers.value.find(m => m.name === selectedMember.value)
   if (!member) return
 
-  await adminApi.addParticipant(task.value.id, { name: member.name, dept: member.dept })
-  task.value.participants.push({ name: member.name, dept: member.dept })
+  await adminApi.addParticipant(task.value.id, { name: member.name, deptId: member.deptId })
+  task.value.participants.push({ name: member.name, deptId: member.deptId })
   selectedMember.value = ''
   ElMessage.success('添加成功')
 }
@@ -362,13 +382,22 @@ async function handleRemove(p) {
 async function handleConfirm(s) {
   await adminApi.confirmSignup(task.value.id, s.name)
   task.value.signups = task.value.signups.filter(x => x.name !== s.name)
-  task.value.participants.push({ name: s.name, dept: s.dept })
+  const exists = task.value.participants.some(p =>
+      p.name === s.name && Number(p.deptId) === Number(s.deptId))
+  if (!exists) task.value.participants.push({ name: s.name, deptId: s.deptId })
   ElMessage.success('已确认报名')
 }
 
-function handleReject(s) {
-  task.value.signups = task.value.signups.filter(x => x.name !== s.name)
-  ElMessage.info('已拒绝该报名')
+// 拒绝报名需要落库，否则刷新后报名记录会再次出现
+async function handleReject(s) {
+  try {
+    await adminApi.rejectSignup(task.value.id, s.name)
+    const signup = (task.value.signups || []).find(x => x.name === s.name)
+    if (signup) signup.status = 2 // 2-已拒绝
+    ElMessage.info('已拒绝该报名')
+  } catch (e) {
+    ElMessage.error('拒绝报名失败，请稍后重试')
+  }
 }
 
 function openScoreDialog(p) {
@@ -404,7 +433,7 @@ async function loadTask() {
       task.value = res
       if (!task.value.participants) task.value.participants = []
       if (!task.value.signups) task.value.signups = []
-      if (!task.value.devices) task.value.devices = []
+      if (!task.value.equipmentIds) task.value.equipmentIds = []
     }
   } catch (e) {
     console.error('加载任务失败', e)
@@ -423,15 +452,31 @@ async function loadMaterials() {
   }
 }
 
+// 轮询刷新素材：上一次请求未结束就跳过本轮，避免慢请求叠加造成并发
+async function pollMaterials() {
+  if (polling) return
+  polling = true
+  try {
+    await loadMaterials()
+  } finally {
+    polling = false
+  }
+}
+
 onMounted(() => {
   loadTask()
   loadMaterials()
   loadMembers()
   loadGlobalDevices()
-  timer = setInterval(loadMaterials, 15000)
+  timer = setInterval(pollMaterials, 15000)
 })
 
-onUnmounted(() => timer && clearInterval(timer))
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+})
 </script>
 
 <style scoped>

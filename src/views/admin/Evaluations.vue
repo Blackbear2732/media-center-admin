@@ -28,14 +28,14 @@
           </template>
 
           <div class="table-wrapper">
-            <el-table :data="groupedList[month]" stripe style="width: 100%" :header-cell-style="{ background: '#f8fafc', color: '#606266', fontWeight: '600' }">
+            <el-table :data="monthRows(month)" stripe style="width: 100%" :header-cell-style="{ background: '#f8fafc', color: '#606266', fontWeight: '600' }">
               <el-table-column type="index" label="排名" width="70" align="center">
                 <template #default="{ $index }">
                   <span class="rank-num" :class="{ 'top-3': $index < 3 }">{{ $index + 1 }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="dept" label="所属部门" width="120">
-                <template #default="{ row }"><span class="dept-label">{{ row.dept }}</span></template>
+              <el-table-column prop="deptId" label="所属部门" width="120">
+                <template #default="{ row }"><span class="dept-label">{{ getDeptLabel(row.deptId) }}</span></template>
               </el-table-column>
               <el-table-column prop="member" label="考评对象" width="120">
                 <template #default="{ row }"><div style="font-weight: 500;">{{ row.member }}</div></template>
@@ -53,8 +53,8 @@
 
               <el-table-column prop="level" label="评定等级" width="110" align="center">
                 <template #default="{ row }">
-                  <el-tag :type="getLevelType(row.level)" size="small" effect="dark" round>
-                    {{ row.level || '未评级' }}
+                  <el-tag :type="getEvalLevelType(row.level)" size="small" effect="dark" round>
+                    {{ getEvalLevelLabel(row.level) }}
                   </el-tag>
                 </template>
               </el-table-column>
@@ -67,6 +67,17 @@
                 </template>
               </el-table-column>
             </el-table>
+
+            <!-- 长期累积后单月记录也可能很多，按月分页渲染 -->
+            <div v-if="groupedList[month].length > PAGE_SIZE" class="table-pagination">
+              <el-pagination
+                v-model:current-page="monthPage[month]"
+                :page-size="PAGE_SIZE"
+                :total="groupedList[month].length"
+                layout="total, prev, pager, next"
+                background
+              />
+            </div>
           </div>
         </el-collapse-item>
       </el-collapse>
@@ -149,10 +160,7 @@
         <el-table-column label="评定等级" width="120" align="center">
           <template #default="{ row }">
             <el-select v-model="row.level" size="small" placeholder="请选择">
-              <el-option label="优秀" value="优秀" />
-              <el-option label="良好" value="良好" />
-              <el-option label="合格" value="合格" />
-              <el-option label="不合格" value="不合格" />
+              <el-option v-for="l in EVAL_LEVEL_OPTIONS" :key="l.value" :label="l.label" :value="l.value" />
             </el-select>
           </template>
         </el-table-column>
@@ -186,16 +194,19 @@
             <div class="num" style="color: var(--accent);">{{ currentEval.manualScore }}</div>
           </div>
           <div class="stat-card total-card">
-            <div class="muted">综合总分 ({{ currentEval.level }})</div>
+            <div class="muted">综合总分 ({{ getEvalLevelLabel(currentEval.level) }})</div>
             <div class="num" style="color: #fff;">{{ currentEval.total }}</div>
           </div>
         </div>
 
         <div class="sec-title" style="font-size: 14px;">打卡明细</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-          <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="c.status === '已打卡' ? 'success' : 'danger'" size="small" effect="plain">
-            {{ c.date }} {{ c.status }}
+        <div v-if="detailData.checkinList?.length" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+          <el-tag v-for="c in detailData.checkinList" :key="c.date" :type="getCheckinStatusType(c.status)" size="small" effect="plain">
+            {{ c.date }} {{ getCheckinStatusLabel(c.status) }}
           </el-tag>
+        </div>
+        <div v-else class="muted" style="margin-bottom: 16px; background: #f8fafc; padding: 10px 12px; border-radius: 8px;">
+          本月暂无打卡流水；考评快照记录打卡 {{ detailData.details?.checkinDays || 0 }} 天（{{ detailData.details?.checkinScore || 0 }} 分）
         </div>
 
         <div class="sec-title" style="font-size: 14px;">任务参与及加分</div>
@@ -206,20 +217,31 @@
           </div>
           <span class="muted">{{ t.role }}</span>
         </div>
+        <el-empty v-if="!detailData.taskList?.length" description="本月暂无任务记录" :image-size="50" />
 
         <div class="sec-title" style="font-size: 14px;">手动评分备注</div>
-        <div class="muted" style="background: #f8fafc; padding: 12px; border-radius: 8px;">{{ currentEval.details.extraNote || '无' }}</div>
+        <div class="muted" style="background: #f8fafc; padding: 12px; border-radius: 8px;">{{ currentEval.details?.extraNote || '无' }}</div>
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, h } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, User } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
+import {
+  ALL_DEPT_ID,
+  EVAL_LEVEL_OPTIONS,
+  ROLE,
+  getCheckinStatusLabel,
+  getCheckinStatusType,
+  getDeptLabel,
+  getEvalLevelLabel,
+  getEvalLevelType
+} from '@/utils/dict'
 
 const loading = ref(false), saving = ref(false), detailLoading = ref(false), previewLoading = ref(false)
 const list = ref([])
@@ -246,19 +268,27 @@ const groupedList = computed(() => {
 
 const groupedMonths = computed(() => Object.keys(groupedList.value).sort().reverse())
 
-const getLevelType = (level) => {
-  const map = { '优秀': 'danger', '良好': 'warning', '合格': 'primary', '不合格': 'info' }
-  return map[level] || 'info'
+// 按月分页：考评是长期累积数据，单月人数也可能超过一屏
+const PAGE_SIZE = 10
+const monthPage = reactive({})
+
+function monthRows(month) {
+  const rows = groupedList.value[month] || []
+  const page = Number(monthPage[month]) || 1
+  return rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 }
 
 async function load() {
   loading.value = true
   try {
-    const res = await adminApi.evaluations(userStore.isDirector ? '' : userStore.dept)
+    const res = await adminApi.evaluations(userStore.viewDeptId)
     list.value = res || []
     if (groupedMonths.value.length > 0 && activeMonths.value.length === 0) {
       activeMonths.value = [groupedMonths.value[0]]
     }
+    groupedMonths.value.forEach(month => {
+      if (!monthPage[month]) monthPage[month] = 1
+    })
   } finally {
     loading.value = false
   }
@@ -267,11 +297,13 @@ async function load() {
 async function openCreate() {
   form.month = new Date().toISOString().slice(0, 7)
   if (userStore.isDirector) {
-    const allMembers = await adminApi.members('')
-    candidates.value = allMembers.filter(m => m.title.includes('部长'))
+    // 主任评部长
+    const allMembers = await adminApi.members(ALL_DEPT_ID)
+    candidates.value = allMembers.filter(m => Number(m.role) === ROLE.MINISTER)
   } else {
-    const deptMembers = await adminApi.members(userStore.dept)
-    candidates.value = deptMembers.filter(m => !m.title.includes('部长'))
+    // 部长评本部门部员
+    const deptMembers = await adminApi.members(userStore.deptId)
+    candidates.value = deptMembers.filter(m => Number(m.role) === ROLE.MEMBER)
   }
   form.selectedMembers = candidates.value.map(m => m.name)
   createVisible.value = true
@@ -285,8 +317,12 @@ async function loadPreview() {
   }
   previewLoading.value = true
   try {
-    // 👇 替换为真实的接口调用，不再用 Math.random()
-    previewList.value = await adminApi.previewEvaluation(form.month, form.selectedMembers)
+    const res = await adminApi.previewEvaluation(form.month, form.selectedMembers)
+    // 初始化当前总分，便于排序与手动分联动
+    previewList.value = (res || []).map(row => ({
+      ...row,
+      currentTotal: Number(row.autoScore || 0) + Number(row.taskExtraScore || 0) + Number(row.manualScore || 0)
+    }))
   } catch (e) {
     console.error('获取考评预览失败', e)
   } finally {
@@ -296,37 +332,54 @@ async function loadPreview() {
 
 // 👇 每次修改输入框，立刻同步计算 currentTotal
 function handleScoreChange(row) {
-  row.currentTotal = row.autoScore + row.taskExtraScore + row.manualScore
+  row.currentTotal = Number(row.autoScore || 0) + Number(row.taskExtraScore || 0) + Number(row.manualScore || 0)
 }
 
 async function submitEvaluation() {
   if (!form.month) return ElMessage.warning('请选择月份')
-  if (previewList.value.length === 0) return ElMessage.warning('请选择考评对象')
+  if (form.selectedMembers.length === 0 || previewList.value.length === 0) {
+    return ElMessage.warning('请选择考评对象')
+  }
+  if (previewLoading.value) return ElMessage.warning('评分预览生成中，请稍候')
+
+  // 预览接口是异步的，快速点击「确认」时可能还没对齐所选成员，提交前做一次一致性校验
+  const selected = [...form.selectedMembers].sort()
+  const previewed = previewList.value.map(row => row.name).sort()
+  const sameSet = selected.length === previewed.length &&
+      selected.every((name, index) => name === previewed[index])
+  if (!sameSet) {
+    await loadPreview()
+    return ElMessage.warning('评分预览已更新，请核对后再提交')
+  }
 
   try {
+    // 使用 VNode 渲染确认内容，避免 dangerouslyUseHTMLString 带来的 XSS 风险
     await ElMessageBox.confirm(
-        `<div style="line-height: 1.8;">
-        <p>即将对 <b>${form.month}</b> 的 <b>${previewList.value.length}</b> 名成员正式发起考评。</p>
-        <p style="color: #f56c6c; font-size: 13px; margin-top: 8px;">⚠️ 提交后结果将直接入库并通知成员，不可再修改。</p>
-      </div>`,
+        h('div', { style: 'line-height: 1.8' }, [
+          h('p', `即将对 ${form.month} 的 ${previewList.value.length} 名成员正式发起考评。`),
+          h('p', { style: 'color: #f56c6c; font-size: 13px; margin-top: 8px' },
+              '⚠️ 提交后结果将直接入库并通知成员，不可再修改。')
+        ]),
         '最终确认',
         {
           confirmButtonText: '确认无误，正式发起',
           cancelButtonText: '返回检查',
-          type: 'warning',
-          dangerouslyUseHTMLString: true,
+          type: 'warning'
         }
     )
 
     saving.value = true
     const submitData = {
       month: form.month,
+      deptId: userStore.viewDeptId,
       members: previewList.value.map(row => ({
         name: row.name,
-        dept: row.dept,
-        autoScore: row.autoScore + row.taskExtraScore,
+        deptId: row.deptId,
+        // autoScore 只含基础自动分，任务附加分单独传递；入库口径以服务端明细为准
+        autoScore: row.autoScore,
+        taskExtraScore: row.taskExtraScore,
         manualScore: row.manualScore,
-        level: row.level,
+        level: Number(row.level),
         extraNote: row.reason
       }))
     }
@@ -349,7 +402,7 @@ async function viewDetail(row) {
   detailVisible.value = true
   detailLoading.value = true
   try {
-    detailData.value = await adminApi.memberEvalDetail(row.member, row.month)
+    detailData.value = await adminApi.memberEvalDetail(row.member, row.month, row.deptId)
   } finally {
     detailLoading.value = false
   }

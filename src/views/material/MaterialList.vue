@@ -12,14 +12,12 @@
         <el-form-item><el-input v-model="query.title" placeholder="按标题搜索" clearable /></el-form-item>
         <el-form-item><el-input v-model="query.content" placeholder="按正文搜索" clearable /></el-form-item>
         <el-form-item>
-          <el-select v-model="query.department" placeholder="全部部门" clearable style="width:150px">
-            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.name" />
+          <el-select v-model="query.deptId" placeholder="全部部门" clearable style="width:150px">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-select v-model="query.leader" placeholder="主要领导" clearable style="width:140px">
-            <el-option v-for="l in ['李书记', '王校长']" :key="l" :label="l" :value="l" />
-          </el-select>
+          <el-input v-model="query.leaderName" placeholder="主要领导" clearable style="width:140px" />
         </el-form-item>
         <el-form-item>
           <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD"
@@ -34,11 +32,11 @@
 
     <div class="material-grid" v-loading="loading">
       <div v-for="m in list" :key="m.id" class="material-card surface-card" @click="router.push('/materials/' + m.id)">
-        <div class="material-type">{{ m.type }}</div>
+        <div class="material-type">{{ getMaterialTypeLabel(m.type) }}</div>
         <h3>{{ m.title }}</h3>
         <p v-if="m.content" class="material-excerpt">{{ m.content.slice(0, 72) }}…</p>
         <div class="material-meta">
-          <span>{{ m.department }}</span>
+          <span>{{ getDeptLabel(m.deptId) }}</span>
           <span>{{ m.author }}</span>
           <span>{{ m.createdAt }}</span>
         </div>
@@ -51,12 +49,13 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { materialApi, homeApi } from '@/api'
+import { materialApi } from '@/api'
+import { DEPARTMENTS_OPTIONS, getDeptLabel, getMaterialTypeLabel } from '@/utils/dict'
 
 const router = useRouter()
-const query = reactive({ title: '', content: '', department: '', leader: '' })
+const query = reactive({ title: '', content: '', deptId: '', leaderName: '' })
 const dateRange = ref([])
-const list = ref([]), loading = ref(false), departments = ref([])
+const list = ref([]), loading = ref(false)
 
 async function search() {
   loading.value = true
@@ -66,13 +65,12 @@ async function search() {
     })
   } finally { loading.value = false }
 }
+
 function reset() {
-  Object.assign(query, { title: '', content: '', department: '', leader: '' })
+  Object.assign(query, { title: '', content: '', deptId: '', leaderName: '' })
   dateRange.value = []
   search()
 }
-onMounted(async () => {
-  departments.value = await homeApi.departments()
-  search()
-})
+
+onMounted(search)
 </script>

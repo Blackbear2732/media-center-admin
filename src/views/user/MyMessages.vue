@@ -9,7 +9,7 @@
     </div>
 
     <div class="msg-list surface-card" v-loading="loading">
-      <div v-for="m in list" :key="m.id" class="msg-row" :class="{ unread: !m.read }" @click="readOne(m)">
+      <div v-for="m in list" :key="m.id" class="msg-row" :class="{ unread: isUnread(m) }" @click="readOne(m)">
         <span class="msg-dot"></span>
         <div class="msg-body">
           <div class="msg-top">
@@ -30,23 +30,27 @@ import { ElMessage } from 'element-plus'
 import { messageApi } from '@/api'
 
 const list = ref([]), loading = ref(false)
-const unread = computed(() => list.value.filter(m => !m.read).length)
+
+// is_read：0 未读 / 1 已读
+const isUnread = (m) => Number(m.isRead) === 0
+const unread = computed(() => list.value.filter(m => isUnread(m)).length)
 
 async function load() {
   loading.value = true
   try { list.value = await messageApi.list() } finally { loading.value = false }
 }
+
 async function readOne(m) {
-  if (m.read) return
+  if (!isUnread(m)) return
   await messageApi.markRead(m.id) // PUT /api/messages/{id}/read
-  m.read = true
+  m.isRead = 1
   // 通知顶部导航栏更新未读数
   window.dispatchEvent(new Event('update-unread-count'))
 }
 
 async function markAll() {
   await messageApi.markAllRead() // PUT /api/messages/read-all
-  list.value.forEach(m => (m.read = true))
+  list.value.forEach(m => (m.isRead = 1))
   ElMessage.success('已全部标记为已读')
   // 通知顶部导航栏更新未读数
   window.dispatchEvent(new Event('update-unread-count'))

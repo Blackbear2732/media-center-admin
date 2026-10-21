@@ -14,6 +14,7 @@
           <el-upload
               drag
               action="#"
+              accept=".xlsx,.xls,.csv"
               :auto-upload="false"
               :show-file-list="false"
               :on-change="(file) => handleFile(file, 'wx')"
@@ -47,6 +48,7 @@
           <el-upload
               drag
               action="#"
+              accept=".xlsx,.xls,.csv"
               :auto-upload="false"
               :show-file-list="false"
               :on-change="(file) => handleFile(file, 'yy')"
@@ -99,7 +101,12 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { validateUploadFile } from '@/utils/validate'
 import { UploadFilled, Document } from '@element-plus/icons-vue'
+
+// 数据导入只接受表格文件，且限制体积，避免误传大文件/可执行文件
+const DATA_FILE_ACCEPT = ['.xlsx', '.xls', '.csv']
+const DATA_FILE_MAX_MB = 20
 
 const loading = ref(false)
 const fileWx = ref(null)
@@ -109,8 +116,17 @@ const uploadingYy = ref(false)
 const uploadHistory = ref([])
 
 function handleFile(file, type) {
-  if (type === 'wx') fileWx.value = file.raw
-  if (type === 'yy') fileYy.value = file.raw
+  const raw = file?.raw
+  const { ok, message } = validateUploadFile(raw, {
+    accept: DATA_FILE_ACCEPT,
+    maxSizeMB: DATA_FILE_MAX_MB
+  })
+  if (!ok) {
+    ElMessage.error(message)
+    return
+  }
+  if (type === 'wx') fileWx.value = raw
+  if (type === 'yy') fileYy.value = raw
 }
 
 async function doUpload(type) {
