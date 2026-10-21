@@ -142,18 +142,11 @@ import { getRoleLabel } from '@/utils/dict'
 import { Menu } from '@element-plus/icons-vue'
 // 如果你没引入 ChatDotRound，请加上
 import { ChatDotRound } from '@element-plus/icons-vue'
-
-
 const surveyVisible = ref(false) // 问卷弹窗开关
-
-
-
-
 const route = useRoute()
 const router = useRouter()
 const msgCount = ref(0)
 const mobileMenuVisible = ref(false) // 手机菜单可见性
-
 const roleLabel = computed(() => getRoleLabel(userStore.role))
 
 async function updateMsgCount() {
