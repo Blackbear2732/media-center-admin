@@ -825,6 +825,13 @@ export const adminApi = {
         })())
         : request.put(`/admin/device-applications/${id}`, data),
 
+    // 批量邮件待发送管理
+    mailBatches: () => USE_MOCK ? delay([]) : request.get('/admin/mail-batches'),
+    mailBatchDetail: (batchNo) => USE_MOCK ? delay([]) : request.get(`/admin/mail-batches/${batchNo}`),
+    deleteMailRecipient: (batchNo, id) => USE_MOCK ? delay({ success: true }) : request.delete(`/admin/mail-batches/${batchNo}/recipients/${id}`),
+    sendMailBatch: (batchNo) => USE_MOCK ? delay({ success: true }) : request.post(`/admin/mail-batches/${batchNo}/send`),
+    cancelMailBatch: (batchNo) => USE_MOCK ? delay({ success: true }) : request.delete(`/admin/mail-batches/${batchNo}`),
+
     // 获取部门专属模块配置
     getDeptModules: (deptId) => USE_MOCK
         ? delay(mock.deptModuleConfig[Number(deptId)] || [])

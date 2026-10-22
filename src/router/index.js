@@ -41,7 +41,8 @@ const routes = [
                     { path: 'dashboard', component: () => import('@/views/admin/Dashboard.vue'), meta: { title: '数据看板' } },
                     { path: 'checkins', component: () => import('@/views/admin/Checkins.vue'), meta: { title: '打卡管理' } },
                     { path: 'devices', component: () => import('@/views/admin/Devices.vue'), meta: { title: '设备管理' } },
-                    { path: 'module-config', component: () => import('@/views/admin/ModuleConfig.vue'), meta: { title: '模块配置', roles: [2] } }
+                    { path: 'module-config', component: () => import('@/views/admin/ModuleConfig.vue'), meta: { title: '模块配置', roles: [2] } },
+                    { path: 'mail-batches', component: () => import('@/views/admin/MailBatches.vue'), meta: { title: '邮件管理', roles: [2] } }
                 ]
             }
         ]
