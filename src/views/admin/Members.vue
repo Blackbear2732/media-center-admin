@@ -70,8 +70,8 @@
         <el-table-column label="操作" width="160" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link :type="Number(row.status) === MEMBER_STATUS.ACTIVE ? 'danger' : 'success'" @click="toggle(row)">
+            <el-button v-if="canManageRow(row)" link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button v-if="canManageRow(row)" link :type="Number(row.status) === MEMBER_STATUS.ACTIVE ? 'danger' : 'success'" @click="toggle(row)">
               {{ Number(row.status) === MEMBER_STATUS.ACTIVE ? '停用' : '启用' }}
             </el-button>
           </template>
@@ -100,7 +100,7 @@
         </el-form-item>
         <el-form-item label="角色">
           <el-select v-model="form.role" style="width:100%">
-            <el-option v-for="r in ROLE_OPTIONS" :key="r.value" :label="r.label" :value="r.value" />
+            <el-option v-for="r in roleOptions" :key="r.value" :label="r.label" :value="r.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="学号" required><el-input v-model="form.studentNo" /></el-form-item>
@@ -222,6 +222,19 @@ const displayList = computed(() => {
     return true
   })
 })
+
+// 与后端一致：主任可分配部长/部员，部长只能分配部员；系统内置超级管理员不受限
+const roleRank = (role) => (Number(role) === 2 ? 3 : Number(role) === 1 ? 2 : 1)
+const roleOptions = computed(() => {
+  if (Number(userStore.userInfo?.id) === 1) return ROLE_OPTIONS
+  if (userStore.isDirector) return ROLE_OPTIONS.filter(r => Number(r.value) !== 2)
+  return ROLE_OPTIONS.filter(r => Number(r.value) === 0)
+})
+
+function canManageRow(row) {
+  if (Number(userStore.userInfo?.id) === 1) return true
+  return roleRank(userStore.role) > roleRank(row.role)
+}
 
 // 主任可看到全部成员（100+ 人），分页渲染，避免一次渲染整张大表
 const { page, size, pageSizes, total, paged: pagedList } = usePagination(displayList)
