@@ -85,6 +85,21 @@
                 <el-tag :type="getApplyStatusType(row.status)" size="small">{{ getApplyStatusLabel(row.status) }}</el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="操作" width="110" align="center">
+              <template #default="{ row }">
+                <el-button
+                    v-if="Number(row.status) === APPLY_STATUS.APPROVED"
+                    type="primary" size="small" plain
+                    @click="pickup(row)"
+                >确认取走</el-button>
+                <el-button
+                    v-else-if="Number(row.status) === APPLY_STATUS.USING"
+                    type="success" size="small" plain
+                    @click="returnDevice(row)"
+                >确认归还</el-button>
+                <span v-else class="muted">—</span>
+              </template>
+            </el-table-column>
           </el-table>
           <el-empty v-if="!loading && !applications.length" description="暂无申请记录" :image-size="60" />
         </el-card>
@@ -98,6 +113,7 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { deviceApi } from '@/api'
 import {
+  APPLY_STATUS,
   DEVICE_STATUS,
   getApplyStatusLabel,
   getApplyStatusType,
@@ -139,6 +155,20 @@ async function loadApplications() {
     const res = await deviceApi.myApplications()
     applications.value = Array.isArray(res) ? res : []
   } finally { loading.value = false }
+}
+
+async function pickup(row) {
+  await deviceApi.pickup(row.id)
+  ElMessage.success('已确认取走，设备进入使用中')
+  await loadApplications()
+  await loadDevices()
+}
+
+async function returnDevice(row) {
+  await deviceApi.returnDevice(row.id)
+  ElMessage.success('已确认归还')
+  await loadApplications()
+  await loadDevices()
 }
 
 function reset() {

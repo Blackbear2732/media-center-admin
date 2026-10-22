@@ -285,7 +285,30 @@ export const deviceApi = {
                 d.applicant === user.name && Number(d.deptId) === Number(user.deptId)
             ))
         }
-    )
+    ),
+
+    // 申请通过后，由申请人手动确认取走/归还
+    pickup: (id) => USE_MOCK
+        ? delay((() => {
+            const target = (mock.deviceApplications || []).find(d => String(d.id) === String(id))
+            if (target) {
+                target.status = 3
+                target.pickupTime = new Date().toISOString()
+            }
+            return { success: true }
+        })())
+        : request.put(`/device-applications/${id}/pickup`),
+
+    returnDevice: (id) => USE_MOCK
+        ? delay((() => {
+            const target = (mock.deviceApplications || []).find(d => String(d.id) === String(id))
+            if (target) {
+                target.status = 4
+                target.returnTime = new Date().toISOString()
+            }
+            return { success: true }
+        })())
+        : request.put(`/device-applications/${id}/return`)
 }
 
 /* ================= 部门管理区 (部长/主任) ================= */
