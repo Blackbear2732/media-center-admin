@@ -7,6 +7,9 @@
           <el-form :model="form" label-width="90px">
             <el-form-item label="学号"><el-input v-model="form.studentNo" disabled /></el-form-item>
             <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
+            <el-form-item label="昵称">
+              <el-input v-model="form.nickname" placeholder="可自定义，不填则显示姓名" />
+            </el-form-item>
             <el-form-item label="学院"><el-input v-model="form.college" /></el-form-item>
             <el-form-item label="班级"><el-input v-model="form.className" /></el-form-item>
             <el-form-item label="电话"><el-input v-model="form.phone" placeholder="用于接收通知" /></el-form-item>
@@ -46,7 +49,7 @@ import { userApi } from '@/api'
 import { userStore } from '@/store/user'
 
 const router = useRouter()
-const form = reactive({ studentNo: '', name: '', college: '', className: '', phone: '', email: '' })
+const form = reactive({ studentNo: '', name: '', nickname: '', college: '', className: '', phone: '', email: '' })
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const loading = ref(false), saving = ref(false), pwdSaving = ref(false)
 let origin = {}

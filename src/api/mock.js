@@ -22,7 +22,7 @@ export const accounts = [
     },
     {
         role: 2, deptId: 100, token: 'mock-director', label: '中心主任',
-        user: { id: 1001, studentNo: '2023000001', name: '张钧益', nickname: '钧益', deptId: 100, role: 2, college: '—', className: '—', grade: '2023级', phone: '13800000003', email: 'wang@example.com', title: '中心主任', gender: '男', politicalStatus: '中共党员', status: 1 }
+        user: { id: 1001, studentNo: '20231614308', name: '张钧益', nickname: '钧益', deptId: 100, role: 2, college: '—', className: '—', grade: '2023级', phone: '13800000003', email: 'wang@example.com', title: '中心主任', gender: '男', politicalStatus: '中共党员', status: 1 }
     },
     {
         role: 1, deptId: 101, token: 'mock-zh', label: '部长',
@@ -65,7 +65,7 @@ export function findAccountByUsername(username, password) {
     const pwd = String(password || '')
     if (!name || pwd !== '123456') return null
     // 与真实后端保持一致的账号别名
-    const aliases = { admin: '2023000001', zhangsan: '20250404306' }
+    const aliases = { admin: '20231614308', '2023000001': '20231614308', zhangsan: '20250404306' }
     const accountNo = aliases[name] || name
     return accounts.find(a =>
         a.user.studentNo === accountNo ||

@@ -50,7 +50,7 @@ import { userStore } from '@/store/user'
 
 const router = useRouter()
 const route = useRoute()
-const form = reactive({ username: 'admin', password: '123456' }) // 默认填好方便测试
+const form = reactive({ username: '20231614308', password: '123456' }) // 默认填好方便测试
 const loading = ref(false)
 
 async function handleLogin() {
