@@ -246,7 +246,25 @@ export const materialApi = {
         }
         mock.materials.unshift(newMaterial)
         return delay({ success: true })
-    })
+    }),
+
+    // 编辑素材
+    update: (id, data) => USE_MOCK
+        ? delay((() => {
+            const target = mock.materials.find(m => String(m.id) === String(id))
+            if (target) Object.assign(target, data)
+            return { success: true }
+        })())
+        : request.put(`/materials/${id}`, data),
+
+    // 删除素材（软删除）
+    remove: (id) => USE_MOCK
+        ? delay((() => {
+            const index = mock.materials.findIndex(m => String(m.id) === String(id))
+            if (index >= 0) mock.materials.splice(index, 1)
+            return { success: true }
+        })())
+        : request.delete(`/materials/${id}`)
 }
 
 /* ================= 设备申请 F-14 ================= */
