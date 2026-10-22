@@ -8,10 +8,11 @@
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">部门</label>
-          <el-select v-model="deptId" style="width:140px" @change="loadData">
-            <el-option label="全部部门" :value="ALL_DEPT_ID" />
-            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+          <el-select v-model="deptId" style="width:140px" :disabled="!userStore.isDirector" @change="onDeptChange">
+            <el-option v-if="userStore.isDirector" label="全部部门" :value="ALL_DEPT_ID" />
+            <el-option v-for="d in deptOptions" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
+          <span v-if="!userStore.isDirector" class="muted" style="margin-left:6px;">仅本部门</span>
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">状态</label>
@@ -79,6 +80,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { userStore } from '@/store/user'
 import {
   ALL_DEPT_ID,
   CHECKIN_STATUS,
@@ -91,10 +93,16 @@ import {
 import { usePagination } from '@/utils/usePagination'
 
 const date = ref(new Date().toISOString().split('T')[0])
-const deptId = ref(ALL_DEPT_ID)
+const deptId = ref(userStore.isDirector ? ALL_DEPT_ID : (userStore.deptId ?? ALL_DEPT_ID))
 const statusFilter = ref(-1) // -1 表示全部
 const list = ref([])
 const loading = ref(false)
+
+// 主任可切换全部/任意部门；部长只有本部门数据权限，锁定本部门
+const deptOptions = computed(() => {
+  if (userStore.isDirector) return DEPARTMENTS_OPTIONS
+  return DEPARTMENTS_OPTIONS.filter(d => Number(d.value) === Number(userStore.deptId))
+})
 
 const filteredList = computed(() => {
   if (Number(statusFilter.value) === -1) return list.value
@@ -103,6 +111,10 @@ const filteredList = computed(() => {
 
 // 全中心当日打卡名单可能上百条，分页渲染
 const { page, size, pageSizes, total, paged: pagedList } = usePagination(filteredList)
+
+function onDeptChange() {
+  loadData()
+}
 
 async function loadData() {
   loading.value = true
