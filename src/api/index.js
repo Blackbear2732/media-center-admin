@@ -63,10 +63,10 @@ export const homeApi = {
 
 /* ================= 登录认证 ================= */
 export const authApi = {
-    // 入参：{ role: 0|1|2, deptId: 101~106 }（接入若依后改为 { username, password }）
+    // 入参：{ username, password }；Mock 模式统一密码 123456
     login: (payload = {}) => USE_MOCK
         ? delay((() => {
-            const acc = mock.findAccount(payload.role, payload.deptId)
+            const acc = mock.findAccountByUsername(payload.username, payload.password)
             if (!acc) return null
             return {
                 token: `${acc.token}-${Date.now()}`,

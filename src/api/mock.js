@@ -50,13 +50,28 @@ export const accounts = [
     }
 ]
 
-// 按 角色 + 部门 查找演示账号
+// 按 角色 + 部门 查找演示账号（兼容旧的快速登录 / mock 内部使用）
 export function findAccount(role, deptId) {
     const r = Number(role) || 0
     if (r === 1) {
         return accounts.find(a => a.role === 1 && a.deptId === Number(deptId)) || accounts.find(a => a.role === 1)
     }
     return accounts.find(a => a.role === r) || accounts[0]
+}
+
+// 账号密码登录（Mock 模式）：学号 / 姓名 / 若依账号均可，统一密码 123456
+export function findAccountByUsername(username, password) {
+    const name = String(username || '').trim()
+    const pwd = String(password || '')
+    if (!name || pwd !== '123456') return null
+    // 与真实后端保持一致的账号别名
+    const aliases = { admin: '2023000001', zhangsan: '20250404306' }
+    const accountNo = aliases[name] || name
+    return accounts.find(a =>
+        a.user.studentNo === accountNo ||
+        a.user.name === name ||
+        a.user.userName === name
+    ) || null
 }
 
 export function currentUser() {
