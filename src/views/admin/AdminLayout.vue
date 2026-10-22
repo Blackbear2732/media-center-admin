@@ -91,6 +91,11 @@ async function loadMenus() {
   if (canCheckin && !list.some(m => m.path === 'checkins')) {
     list.push({ path: 'checkins', label: '打卡管理' })
   }
+  // 设备管理归摄制部：接口异常兜底时也只有主任/摄制部显示
+  const canDevices = userStore.isDirector || Number(userStore.deptId) === 104
+  if (canDevices && !list.some(m => m.path === 'devices')) {
+    list.push({ path: 'devices', label: '设备管理' })
+  }
   menus.value = list
 
   // 当前停留在菜单已不可见的页面（例如从综合部切到新闻部后的「打卡管理」）时回到概览

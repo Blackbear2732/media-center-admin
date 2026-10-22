@@ -151,8 +151,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { userStore } from '@/store/user'
 import {
   APPLY_STATUS,
   DEVICE_STATUS,
@@ -169,6 +171,10 @@ const tabs = [
   { key: 'review', label: '申请审核' },
   { key: 'usage', label: '使用记录' }
 ]
+const router = useRouter()
+const canManageDevices = computed(() =>
+  userStore.isDirector || Number(userStore.deptId) === 104
+)
 const active = ref('archive')
 const loading = ref(false), saving = ref(false)
 const devices = ref([]), applications = ref([]), usage = ref([])
@@ -234,7 +240,14 @@ async function review(row, status) {
   ElMessage.success('审核完成')
 }
 
-onMounted(load)
+onMounted(() => {
+  if (!canManageDevices.value) {
+    ElMessage.warning('设备管理仅摄制部可用')
+    router.replace('/admin/overview')
+    return
+  }
+  load()
+})
 </script>
 
 <style scoped>
