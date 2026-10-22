@@ -8,11 +8,11 @@
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">部门</label>
-          <el-select v-model="deptId" style="width:140px" :disabled="!userStore.isDirector" @change="onDeptChange">
-            <el-option v-if="userStore.isDirector" label="全部部门" :value="ALL_DEPT_ID" />
+          <el-select v-model="deptId" style="width:140px" :disabled="!canManageAllDepts" @change="onDeptChange">
+            <el-option v-if="canManageAllDepts" label="全部部门" :value="ALL_DEPT_ID" />
             <el-option v-for="d in deptOptions" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
-          <span v-if="!userStore.isDirector" class="muted" style="margin-left:6px;">仅本部门</span>
+          <span v-if="canManageAllDepts && !userStore.isDirector" class="muted" style="margin-left:6px;">综合部可处理全部部门</span>
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">状态</label>
@@ -78,6 +78,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
@@ -92,15 +93,19 @@ import {
 } from '@/utils/dict'
 import { usePagination } from '@/utils/usePagination'
 
+const router = useRouter()
 const date = ref(new Date().toISOString().split('T')[0])
-const deptId = ref(userStore.isDirector ? ALL_DEPT_ID : (userStore.deptId ?? ALL_DEPT_ID))
+// 打卡管理归综合部：主任和综合部部长可处理全部部门，其他部长不可进入
+const canManageAllDepts = computed(() =>
+  userStore.isDirector || Number(userStore.deptId) === 101
+)
+const deptId = ref(canManageAllDepts.value ? ALL_DEPT_ID : (userStore.deptId ?? ALL_DEPT_ID))
 const statusFilter = ref(-1) // -1 表示全部
 const list = ref([])
 const loading = ref(false)
 
-// 主任可切换全部/任意部门；部长只有本部门数据权限，锁定本部门
 const deptOptions = computed(() => {
-  if (userStore.isDirector) return DEPARTMENTS_OPTIONS
+  if (canManageAllDepts.value) return DEPARTMENTS_OPTIONS
   return DEPARTMENTS_OPTIONS.filter(d => Number(d.value) === Number(userStore.deptId))
 })
 
@@ -139,6 +144,11 @@ async function mark(row, status) {
 }
 
 onMounted(() => {
+  if (!canManageAllDepts.value) {
+    ElMessage.warning('打卡管理仅综合部可用')
+    router.replace('/admin/overview')
+    return
+  }
   loadData()
 })
 </script>

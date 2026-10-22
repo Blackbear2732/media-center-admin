@@ -86,6 +86,11 @@ async function loadMenus() {
   if (userStore.isDirector && !list.some(m => m.path === 'module-config')) {
     list.push({ path: 'module-config', label: '模块配置' })
   }
+  // 打卡管理归综合部：接口异常兜底时也只有主任/综合部显示
+  const canCheckin = userStore.isDirector || Number(userStore.deptId) === 101
+  if (canCheckin && !list.some(m => m.path === 'checkins')) {
+    list.push({ path: 'checkins', label: '打卡管理' })
+  }
   menus.value = list
 
   // 当前停留在菜单已不可见的页面（例如从综合部切到新闻部后的「打卡管理」）时回到概览
