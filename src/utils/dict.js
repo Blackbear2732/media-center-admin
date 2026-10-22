@@ -210,7 +210,7 @@ export const getApplyStatusType = (status) => dictTagType({
 }, status)
 
 /* ==========================================
- * 9. 打卡状态（biz_checkin_record.status：0未转发 1已转发）
+ * 9. 打卡状态（biz_checkin_record.status：NULL未设置 0未打卡 1已打卡）
  * ========================================== */
 export const CHECKIN_STATUS = { NOT_DONE: 0, DONE: 1 }
 
@@ -219,7 +219,7 @@ export const CHECKIN_STATUS_OPTIONS = Object.keys(CHECKIN_STATUS_MAP).map(key =>
     value: Number(key),
     label: CHECKIN_STATUS_MAP[key]
 }))
-export const getCheckinStatusLabel = (status) => dictLabel(CHECKIN_STATUS_MAP, status, '未打卡')
+export const getCheckinStatusLabel = (status) => dictLabel(CHECKIN_STATUS_MAP, status, '未设置')
 export const getCheckinStatusType = (status) => (Number(status) === 1 ? 'success' : 'danger')
 
 // 个人考勤明细（正常 / 迟到 / 缺勤）

@@ -37,27 +37,39 @@
         <el-table-column prop="member" label="姓名" width="120" />
         <el-table-column prop="status" label="打卡状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="getCheckinStatusType(row.status)" size="small" effect="dark" round>
+            <el-tag v-if="row.status !== null && row.status !== undefined && row.status !== ''"
+                    :type="getCheckinStatusType(row.status)" size="small" effect="dark" round>
               {{ getCheckinStatusLabel(row.status) }}
             </el-tag>
+            <span v-else class="muted"></span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="160">
+        <el-table-column label="操作" min-width="190">
           <template #default="{ row }">
-            <el-button
-                v-if="Number(row.status) === CHECKIN_STATUS.NOT_DONE"
-                type="primary"
-                size="small"
-                plain
-                @click="mark(row, CHECKIN_STATUS.DONE)"
-            >标记打卡</el-button>
-            <el-button
-                v-else
-                type="danger"
-                size="small"
-                plain
-                @click="mark(row, CHECKIN_STATUS.NOT_DONE)"
-            >取消打卡</el-button>
+            <template v-if="row.status === null || row.status === undefined || row.status === ''">
+              <el-button type="danger" size="small" plain @click="mark(row, CHECKIN_STATUS.NOT_DONE)">
+                标记未打卡
+              </el-button>
+              <el-button type="primary" size="small" plain @click="mark(row, CHECKIN_STATUS.DONE)">
+                标记已打卡
+              </el-button>
+            </template>
+            <template v-else>
+              <el-button
+                  v-if="Number(row.status) === CHECKIN_STATUS.NOT_DONE"
+                  type="primary"
+                  size="small"
+                  plain
+                  @click="mark(row, CHECKIN_STATUS.DONE)"
+              >标记打卡</el-button>
+              <el-button
+                  v-else
+                  type="danger"
+                  size="small"
+                  plain
+                  @click="mark(row, CHECKIN_STATUS.NOT_DONE)"
+              >取消打卡</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
