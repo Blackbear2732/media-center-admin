@@ -169,6 +169,33 @@ export const MATERIAL_TYPE_OPTIONS = Object.keys(MATERIAL_TYPE_MAP).map(key => (
 
 export const getMaterialTypeLabel = (type) => dictLabel(MATERIAL_TYPE_MAP, type, '其他素材')
 
+// 素材库大类：视频照片素材 / 视频成片 / 图文素材
+export const MATERIAL_CATEGORY = {
+    VIDEO_PHOTO: 'video_photo',
+    VIDEO_FINAL: 'video_final',
+    TEXT: 'text'
+}
+
+export const MATERIAL_CATEGORY_OPTIONS = [
+    { value: 'video_photo', label: '视频照片素材' },
+    { value: 'video_final', label: '视频成片' },
+    { value: 'text', label: '图文素材' }
+]
+
+export const getMaterialCategory = (type) => {
+    const value = Number(type)
+    if (value === MATERIAL_TYPE.VIDEO_FINAL) return MATERIAL_CATEGORY.VIDEO_FINAL
+    if (value === MATERIAL_TYPE.IMAGE || value === MATERIAL_TYPE.POSTER || value === MATERIAL_TYPE.VIDEO_RAW) {
+        return MATERIAL_CATEGORY.VIDEO_PHOTO
+    }
+    return MATERIAL_CATEGORY.TEXT
+}
+
+export const getMaterialCategoryLabel = (type) => {
+    const category = getMaterialCategory(type)
+    return MATERIAL_CATEGORY_OPTIONS.find(item => item.value === category)?.label || '图文素材'
+}
+
 // 注意：dictTagType 需要「映射表 + 值」两个参数，不能把查表结果直接传给它
 export const getMaterialTypeTagType = (type) => dictTagType({
     1: 'primary',

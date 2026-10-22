@@ -1,5 +1,15 @@
 <template>
   <div v-loading="loading">
+    <div class="surface-card" style="padding:12px 16px; margin-bottom:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <span class="muted">素材分类</span>
+      <el-radio-group v-model="category" size="small">
+        <el-radio-button label="all">全部（{{ list.length }}）</el-radio-button>
+        <el-radio-button v-for="c in MATERIAL_CATEGORY_OPTIONS" :key="c.value" :label="c.value">
+          {{ c.label }}（{{ categoryCounts[c.value] || 0 }}）
+        </el-radio-button>
+      </el-radio-group>
+    </div>
+
     <div class="surface-card" style="padding:8px 0">
       <el-table :data="pagedList" stripe>
         <el-table-column type="expand">
@@ -21,6 +31,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="220" />
+        <el-table-column label="分类" width="130">
+          <template #default="{ row }">
+            <el-tag size="small" type="info" effect="plain">{{ getMaterialCategoryLabel(row.type) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="type" label="类型" width="110">
           <template #default="{ row }">
             <el-tag size="small" :type="getMaterialTypeTagType(row.type)" effect="plain">{{ getMaterialTypeLabel(row.type) }}</el-tag>
@@ -95,20 +110,44 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi, materialApi } from '@/api'
 import { userStore } from '@/store/user'
-import { DEPARTMENTS_OPTIONS, getDeptLabel, getMaterialTypeLabel, getMaterialTypeTagType } from '@/utils/dict'
+import {
+  DEPARTMENTS_OPTIONS,
+  MATERIAL_CATEGORY_OPTIONS,
+  getDeptLabel,
+  getMaterialCategory,
+  getMaterialCategoryLabel,
+  getMaterialTypeLabel,
+  getMaterialTypeTagType
+} from '@/utils/dict'
 import { usePagination } from '@/utils/usePagination'
 
 const list = ref([]), loading = ref(false), saving = ref(false)
+const category = ref('all')
 const editVisible = ref(false)
 const editForm = reactive({
   id: null, title: '', content: '', leaderName: '', netdiskUrl: '', netdiskCode: '',
   videoChannelUrl: '', themeTag: '', sharedDeptIds: []
 })
-const { page, size, pageSizes, total, paged: pagedList } = usePagination(list)
+
+const categoryCounts = computed(() => {
+  const counts = {}
+  for (const item of list.value) {
+    const key = getMaterialCategory(item.type)
+    counts[key] = (counts[key] || 0) + 1
+  }
+  return counts
+})
+
+const displayList = computed(() => {
+  if (category.value === 'all') return list.value
+  return list.value.filter(item => getMaterialCategory(item.type) === category.value)
+})
+
+const { page, size, pageSizes, total, paged: pagedList } = usePagination(displayList)
 
 async function load() {
   loading.value = true
