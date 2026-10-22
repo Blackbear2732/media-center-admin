@@ -56,7 +56,7 @@
         <el-table-column prop="title" label="中心职务" width="110" />
         <el-table-column prop="politicalStatus" label="政治面貌" width="110">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.politicalStatus === '中共党员' ? 'danger' : (row.politicalStatus === '共青团员' ? 'warning' : 'info')" effect="plain">
+            <el-tag size="small" :type="row.politicalStatus === '中共党员' ? 'danger' : ((row.politicalStatus === '共青团员' || row.politicalStatus === '中共预备党员') ? 'warning' : 'info')" effect="plain">
               {{ row.politicalStatus }}
             </el-tag>
           </template>
@@ -197,7 +197,7 @@ import {
 } from '@/utils/dict'
 
 // 政治面貌是人员属性（varchar 存储），不是后端枚举，这里集中一份选项
-const POLITICAL_OPTIONS = ['中共党员', '共青团员', '群众']
+const POLITICAL_OPTIONS = ['中共党员', '中共预备党员', '共青团员', '群众']
 
 const deptFilter = ref(userStore.isDirector ? ALL_DEPT_ID : userStore.deptId)
 const roleFilter = ref('')
