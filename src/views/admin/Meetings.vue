@@ -20,9 +20,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openRoll(row)">点名</el-button>
+            <el-button link type="danger" @click="removeMeeting(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -91,7 +92,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
@@ -176,6 +177,24 @@ async function createMeeting() {
     ElMessage.error('创建失败')
   } finally {
     saving.value = false
+  }
+}
+
+async function removeMeeting(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除会议《${row.title}》吗？删除后不可恢复。`, '删除确认',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return // 用户取消
+  }
+  try {
+    await adminApi.deleteMeeting(row.id)
+    list.value = list.value.filter(m => !(String(m.id) === String(row.id)))
+    ElMessage.success('会议已删除')
+  } catch (e) {
+    ElMessage.error('删除失败')
   }
 }
 

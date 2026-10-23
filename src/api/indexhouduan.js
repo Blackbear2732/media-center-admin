@@ -200,6 +200,7 @@ export const adminApi = {
     // 入参：id 会议ID；records [{ memberId, name, deptId, status }]
     //   status: 1到场 2迟到 3请假 4缺席
     saveMeetingRecords: (id, records) => request.put(`/admin/meetings/${id}/records`, { records }),
+    deleteMeeting: (id) => request.delete(`/admin/meetings/${id}`),
 
     // D-06 考评列表
     // 入参：deptId 部门ID（100 表示全中心）

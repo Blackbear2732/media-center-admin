@@ -515,6 +515,8 @@ export const adminApi = {
         })())
         : request.put(`/admin/meetings/${id}/records`, { records }),
 
+    deleteMeeting: (id) => request.delete(`/admin/meetings/${id}`),
+
     // D-06/07/08 考评管理
     evaluations: (deptId) => USE_MOCK
         ? delay(isAllDept(deptId)
