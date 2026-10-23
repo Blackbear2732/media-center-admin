@@ -4,19 +4,39 @@ import { userStore } from '@/store/user'
 
 const service = axios.create({ baseURL: '/api', timeout: 15000 })
 
+/*
+ * 轻量 GET 响应缓存：本地开发/频繁切换菜单时减少重复请求。
+ * - 只缓存 GET，写请求（POST/PUT/DELETE）一律透传不缓存
+ * - 键 = 请求方法 + URL + 登录 token（避免跨账号串数据）
+ * - 短 TTL，过期自动失效；写请求会清除整体缓存防止脏读
+ * - 可选 config.cache = false 强制本次不透传缓存
+ */
+const GET_CACHE_TTL = 4000
+const getCache = new Map()
+
 // 统一清理登录态：token / role / user / adminDept 一起清掉，
 // 否则 adminDept 残留会让下一次登录的管理区直接采用错误的部门视角
 const clearAuth = () => {
     userStore.logout()
+    clearGetCache()
 }
 
 const redirectToLogin = () => {
     if (window.location.pathname !== '/login') window.location.replace('/login')
 }
 
+const cacheKey = (method, url, token) => method + '|' + url + '|' + (token || '')
+
+const clearGetCache = () => getCache.clear()
+
 service.interceptors.request.use(config => {
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
+
+    // 写操作会改变数据，立即失效所有读缓存避免拿到旧数据
+    const method = (config.method || 'get').toLowerCase()
+    if (method !== 'get') clearGetCache()
+
     return config
 })
 
@@ -48,5 +68,26 @@ service.interceptors.response.use(
         return Promise.reject(err)
     }
 )
+
+/*
+ * 包装 GET：命中短 TTL 缓存直接返回，未命中则请求并在成功后写入。
+ * 兼容 axios 的 get(url, config) 用法，hack 掉 config.cache === false 时跳过缓存。
+ */
+const rawGet = service.get.bind(service)
+service.get = (url, config = {}) => {
+    if (config.cache === false) return rawGet(url, config)
+    const token = localStorage.getItem('token') || ''
+    // 把 query params 也纳入缓存键，避免同一 URL 不同参数互相串缓存
+    const params = config.params ? '?' + JSON.stringify(config.params) : ''
+    const key = cacheKey('get', url + params, token)
+    const hit = getCache.get(key)
+    if (hit && Date.now() - hit.ts < GET_CACHE_TTL) {
+        return Promise.resolve(hit.data)
+    }
+    return rawGet(url, config).then(data => {
+        getCache.set(key, { ts: Date.now(), data })
+        return data
+    })
+}
 
 export default service
