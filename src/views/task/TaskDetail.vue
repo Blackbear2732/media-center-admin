@@ -144,7 +144,10 @@
 
               <template v-if="canManageDept(p.deptId)">
                 <el-button v-if="p.attendStatus != 1" link type="warning" size="small" @click="handleAttend(p)">确认到场</el-button>
-                <el-tag v-else size="small" type="success">已到场</el-tag>
+                <template v-else>
+                  <el-tag size="small" type="success">已到场</el-tag>
+                  <el-button link type="danger" size="small" @click="handleUndoAttend(p)">撤销到场</el-button>
+                </template>
                 <el-button link type="primary" size="small" @click="openScoreDialog(p)">打分</el-button>
                 <el-button link type="danger" size="small" @click="handleRemove(p)">移除</el-button>
               </template>
@@ -393,11 +396,38 @@ async function handleConfirm(s) {
 // 确认到场（签到）：调后端置 attendStatus=1，作为考评 task_join 基础分依据
 async function handleAttend(p) {
   try {
+    await ElMessageBox.confirm(
+      `确认「${p.name}」已到场么？确认后将计入该成员当月考评的任务基础分。`, '确认到场',
+      { type: 'warning', confirmButtonText: '确认到场', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return // 用户取消
+  }
+  try {
     await adminApi.attendSignup(task.value.id, p.name)
     p.attendStatus = 1
     ElMessage.success('已确认「' + p.name + '」到场')
   } catch (e) {
     ElMessage.error('确认到场失败，请稍后重试')
+  }
+}
+
+// 撤销到场：误触时可撤回
+async function handleUndoAttend(p) {
+  try {
+    await ElMessageBox.confirm(
+      `确定撤销「${p.name}」的到场记录吗？撤销后该任务不纳入考评加分。`, '撤销到场',
+      { type: 'warning', confirmButtonText: '撤销', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return // 用户取消
+  }
+  try {
+    await adminApi.undoAttend(task.value.id, p.name)
+    p.attendStatus = 0
+    ElMessage.success('已撤销「' + p.name + '」到场')
+  } catch (e) {
+    ElMessage.error('撤销失败，请稍后重试')
   }
 }
 

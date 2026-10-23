@@ -485,6 +485,16 @@ export const adminApi = {
         })())
         : request.put(`/admin/tasks/${taskId}/signups/${encodeURIComponent(name)}/attend`),
 
+    // 撤销到场：误触时可撤回，attendStatus 置回 0
+    undoAttend: (taskId, name) => USE_MOCK
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            const member = [task?.signups, task?.participants].flat().find(m => m && m.name === name)
+            if (member) member.attend = 0
+            return { success: true }
+        })())
+        : request.put(`/admin/tasks/${taskId}/signups/${encodeURIComponent(name)}/undo-attend`),
+
     updateTask: (id, data) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(id))

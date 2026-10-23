@@ -180,6 +180,7 @@ export const adminApi = {
     // 入参：taskId 任务ID；name 报名人姓名
     confirmSignup:     (taskId, name) => request.put(`/admin/tasks/${taskId}/signups/${name}/confirm`),
     attendSignup:      (taskId, name) => request.put(`/admin/tasks/${taskId}/signups/${name}/attend`),
+    undoAttend:        (taskId, name) => request.put(`/admin/tasks/${taskId}/signups/${name}/undo-attend`),
 
     // D-04 编辑任务
     // 入参：id 任务ID；data 任务字段
