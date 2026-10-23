@@ -735,6 +735,7 @@ export const adminApi = {
 
     // D-13/D-17 数据看板
     dashboard: () => USE_MOCK ? delay(mock.dashboardData) : request.get('/admin/dashboard'),
+    dashboardImports: () => USE_MOCK ? delay([]) : request.get('/admin/dashboard/imports'),
 
     uploadCsv: (type, file) => USE_MOCK ? delay({ success: true, rows: 128 }) : (() => {
         const fd = new FormData();

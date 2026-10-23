@@ -86,9 +86,13 @@
         </el-table-column>
         <el-table-column prop="fileName" label="文件名" min-width="200" />
         <el-table-column prop="rows" label="解析条数" width="120" />
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default>
-            <el-tag type="success" size="small">成功</el-tag>
+        <el-table-column prop="status" label="状态" width="120">
+          <template #default="{ row }">
+            <el-tooltip :disabled="row.status !== 'failed'" :content="row.error || '导入失败'" placement="top">
+              <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
+                {{ row.statusLabel || (row.status === 'success' ? '成功' : '失败') }}
+              </el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -140,13 +144,7 @@ async function doUpload(type) {
     const res = await adminApi.uploadCsv(type, file)
     ElMessage.success(`解析成功，共导入 ${res.rows} 条数据`)
 
-    uploadHistory.value.unshift({
-      time: new Date().toLocaleString(),
-      type,
-      fileName: file.name,
-      rows: res.rows,
-      status: '成功'
-    })
+    await loadUploadHistory()
 
     if (type === 'wx') fileWx.value = null
     if (type === 'yy') fileYy.value = null
@@ -158,10 +156,13 @@ async function doUpload(type) {
   }
 }
 
-onMounted(() => {
-  uploadHistory.value = [
-    { time: '2026-05-20 10:30:00', type: 'wx', fileName: '2026年推文统计.xlsx', rows: 142, status: '成功' },
-    { time: '2026-05-20 10:25:00', type: 'yy', fileName: '视频号动态数据明细.xlsx', rows: 179, status: '成功' }
-  ]
-})
+async function loadUploadHistory() {
+  try {
+    uploadHistory.value = (await adminApi.dashboardImports()) || []
+  } catch (e) {
+    uploadHistory.value = []
+  }
+}
+
+onMounted(loadUploadHistory)
 </script>

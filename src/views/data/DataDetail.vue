@@ -32,31 +32,33 @@
     <!-- 趋势图 -->
     <div class="surface-card" style="padding: 24px; margin-bottom: 24px;">
       <div style="font-weight: 600; margin-bottom: 20px;">月度趋势（{{ isWx ? '阅读' : '播放' }}量）</div>
-      <div style="display: flex; align-items: flex-end; gap: 32px; height: 160px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
-        <div v-for="t in trend" :key="t.month" style="display: flex; flex-direction: column; align-items: center; flex: 1; gap: 8px;">
-          <div style="font-size: 12px; color: var(--brand);">{{ formatNumber(t.views) }}</div>
+      <div class="trend-scroll">
+        <div class="trend-track" :style="{ minWidth: trendMinWidth }">
+          <div v-for="t in trend" :key="t.month" class="trend-item">
+            <div class="trend-value">{{ formatNumber(t.views) }}</div>
 
-          <!-- 柱子 -->
-          <div
-              :style="{
-              height: getBarHeight(t.views) + 'px',
-              width: '100%',
-              maxWidth: '40px',
-              background: isWx ? 'linear-gradient(180deg, #6fa8d4, #2b5f8e)' : 'linear-gradient(180deg, #f2b279, #e8833a)',
-              borderRadius: '6px 6px 0 0',
-              transition: 'all 0.3s'
-            }"
-          ></div>
+            <!-- 柱子 -->
+            <div
+                :style="{
+                height: getBarHeight(t.views) + 'px',
+                width: '100%',
+                maxWidth: '40px',
+                background: isWx ? 'linear-gradient(180deg, #6fa8d4, #2b5f8e)' : 'linear-gradient(180deg, #f2b279, #e8833a)',
+                borderRadius: '6px 6px 0 0',
+                transition: 'all 0.3s'
+              }"
+            ></div>
 
-          <div class="muted" style="font-size: 12px;">{{ t.month.slice(5) }}月</div>
+            <div class="trend-month">{{ t.month.slice(5) }}月</div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- 数据列表 -->
     <div class="surface-card" style="padding: 0; overflow: hidden;">
-      <el-table :data="list" stripe style="width: 100%;" :header-cell-style="{ background: '#fafbfc' }">
-        <el-table-column type="index" label="排名" width="80" align="center" />
+      <el-table :data="pagedList" stripe style="width: 100%;" :header-cell-style="{ background: '#fafbfc' }">
+        <el-table-column type="index" :index="indexMethod" label="排名" width="80" align="center" />
         <el-table-column prop="title" label="标题" min-width="300">
           <template #default="{ row }">
             <el-link type="primary" :href="row.url" target="_blank" :underline="false" style="font-weight: 500;">
@@ -86,6 +88,16 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="table-pagination">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :page-sizes="[20, 50, 100, 200]"
+          :total="total"
+          layout="total, sizes, prev, pager, next"
+          background
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -119,6 +131,16 @@ const trend = computed(() => {
 const list = computed(() => {
   return dashboard.value.list || []
 })
+
+const page = ref(1)
+const pageSize = ref(20)
+const total = computed(() => list.value.length)
+const pagedList = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return list.value.slice(start, start + pageSize.value)
+})
+const trendMinWidth = computed(() => `${Math.max(600, trend.value.length * 56)}px`)
+const indexMethod = (index) => (page.value - 1) * pageSize.value + index + 1
 
 // 计算柱状图相对高度
 const getBarHeight = (views) => {
@@ -159,3 +181,41 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.trend-scroll {
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.trend-track {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  height: 200px;
+  padding: 8px 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.trend-item {
+  flex: 0 0 48px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.trend-value {
+  font-size: 11px;
+  color: var(--brand);
+  white-space: nowrap;
+}
+
+.trend-month {
+  font-size: 11px;
+  color: var(--text-secondary, #909399);
+  white-space: nowrap;
+}
+</style>
