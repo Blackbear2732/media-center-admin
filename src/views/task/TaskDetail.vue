@@ -96,13 +96,31 @@
           </div>
 
           <div v-else v-for="id in task.equipmentIds" :key="id" class="flex-between" style="padding: 8px 0; border-bottom: 1px dashed var(--border);">
-            <span style="font-weight: 500; font-size: 14px;">{{ deviceName(id) }}</span>
-            <el-button
-                v-if="canManageDevices"
-                link type="danger"
-                size="small"
-                @click="removeDevice(id)"
-            >移除</el-button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 500; font-size: 14px;">{{ deviceName(id) }}</span>
+              <el-tag v-if="deviceStatus(id) === 1" size="small" type="warning">外借中</el-tag>
+              <el-tag v-else-if="deviceStatus(id) === 0" size="small" type="success">在库</el-tag>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <el-button
+                  v-if="canManageDevices && deviceStatus(id) === 0"
+                  link type="primary"
+                  size="small"
+                  @click="takeEquipment(id)"
+              >取走</el-button>
+              <el-button
+                  v-if="canManageDevices && deviceStatus(id) === 1"
+                  link type="primary"
+                  size="small"
+                  @click="returnEquipment(id)"
+              >归还</el-button>
+              <el-button
+                  v-if="canManageDevices"
+                  link type="danger"
+                  size="small"
+                  @click="removeDevice(id)"
+              >移除</el-button>
+            </div>
           </div>
 
           <!-- 添加设备控件 -->
@@ -259,6 +277,52 @@ const canManageDevices = computed(() => {
 const deviceName = (id) => {
   const dev = globalDevices.value.find(d => Number(d.id) === Number(id))
   return dev ? dev.name : `设备 #${id}`
+}
+
+// equipmentId → 设备状态（0在库 1外借 2维修 3报废）
+const deviceStatus = (id) => {
+  const dev = globalDevices.value.find(d => Number(d.id) === Number(id))
+  return dev ? Number(dev.status) : 0
+}
+
+// 摄制部从设备库取走设备
+async function takeEquipment(deviceId) {
+  try {
+    await ElMessageBox.confirm(
+      `确认取走设备「${deviceName(deviceId)}」吗？取走后该设备标记为「外借中」。`, '取走设备',
+      { type: 'warning', confirmButtonText: '取走', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return // 用户取消
+  }
+  try {
+    await deviceApi.takeEquipment(deviceId)
+    const dev = globalDevices.value.find(d => Number(d.id) === Number(deviceId))
+    if (dev) dev.status = 1
+    ElMessage.success('已取走设备')
+  } catch (e) {
+    ElMessage.error('取走失败，请稍后重试')
+  }
+}
+
+// 摄制部归还设备
+async function returnEquipment(deviceId) {
+  try {
+    await ElMessageBox.confirm(
+      `确认归还设备「${deviceName(deviceId)}」吗？归还后该设备恢复「在库」。`, '归还设备',
+      { type: 'warning', confirmButtonText: '归还', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return // 用户取消
+  }
+  try {
+    await deviceApi.returnEquipment(deviceId)
+    const dev = globalDevices.value.find(d => Number(d.id) === Number(deviceId))
+    if (dev) dev.status = 0
+    ElMessage.success('设备已归还')
+  } catch (e) {
+    ElMessage.error('归还失败，请稍后重试')
+  }
 }
 
 // 计算可选设备（排除任务里已经有的）

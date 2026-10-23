@@ -325,7 +325,24 @@ export const deviceApi = {
             }
             return { success: true }
         })())
-        : request.put(`/device-applications/${id}/return`)
+        : request.put(`/device-applications/${id}/return`),
+
+    // 任务界面设备区：摄制部直接从设备库取走/归还设备（对应 /admin/devices/{id}/take|return）
+    takeEquipment: (id) => USE_MOCK
+        ? delay((() => {
+            const target = (mock.deviceList || []).find(d => String(d.id) === String(id))
+            if (target) target.status = 1   // 1-外借
+            return { success: true }
+        })())
+        : request.put(`/admin/devices/${id}/take`),
+
+    returnEquipment: (id) => USE_MOCK
+        ? delay((() => {
+            const target = (mock.deviceList || []).find(d => String(d.id) === String(id))
+            if (target) target.status = 0   // 0-在库
+            return { success: true }
+        })())
+        : request.put(`/admin/devices/${id}/return`)
 }
 
 /* ================= 部门管理区 (部长/主任) ================= */
