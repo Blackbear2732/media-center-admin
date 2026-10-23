@@ -233,6 +233,8 @@ body {
 .todo-list { padding: 6px 18px; }
 .todo-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--border); }
 .todo-row:last-child { border-bottom: none; }
+.todo-link { cursor: pointer; padding: 12px 8px; margin: 0 -8px; border-radius: 8px; transition: background .18s; }
+.todo-link:hover { background: #fafbfc; }
 .todo-text { flex: 1; font-size: 13px; }
 
 /* Devices 设备管理 */

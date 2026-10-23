@@ -29,10 +29,11 @@
       <div v-if="!data.todos || data.todos.length === 0" class="muted" style="padding: 20px; text-align: center;">
         暂无待办事项
       </div>
-      <div v-else v-for="(t, i) in data.todos" :key="i" class="todo-row">
+      <div v-else v-for="(t, i) in data.todos" :key="i" class="todo-row todo-link" @click="goTodo(t)">
         <span class="tag-soft">{{ todoLabel(t.type) }}</span>
         <span class="todo-text">{{ t.text }}</span>
         <span class="muted">{{ t.time }}</span>
+        <el-icon style="margin-left:auto; color: var(--text-sub);"><ArrowRight /></el-icon>
       </div>
     </div>
 
@@ -90,6 +91,19 @@ const todoLabel = (t) => {
 
 function goTask(id) {
   router.push('/tasks/' + id)
+}
+
+// 待办类型 -> 对应管理界面（待办多为聚合提醒，跳转对应管理菜单页）
+const TODO_ROUTES = {
+  signup: '/admin/tasks',
+  device: '/admin/devices',
+  checkin: '/admin/checkins',
+  evaluation: '/admin/evaluations',
+  global: '/admin/overview'
+}
+function goTodo(t) {
+  const path = TODO_ROUTES[t.type]
+  if (path) router.push(path)
 }
 
 onMounted(async () => {
