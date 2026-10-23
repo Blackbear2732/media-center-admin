@@ -57,14 +57,14 @@
     <!-- 数据面板 (点击跳转详情) -->
     <div class="data-panels">
       <!-- 网宣数据 -->
-      <div class="data-panel surface-card" @click="router.push('/data-panel/wx')">
+      <div class="data-panel surface-card" @click="openPanel('wx')">
         <div class="panel-head">
           <div class="panel-title">
             <span class="dot" style="background:#3d7aab"></span>
             网宣数据看板
           </div>
           <span class="muted" style="display:flex;align-items:center;gap:4px;color:var(--brand)">
-            查看详情 <el-icon><ArrowRight /></el-icon>
+            {{ isLogin ? '查看详情' : '登录后查看' }} <el-icon><ArrowRight /></el-icon>
           </span>
         </div>
         <div class="panel-body">
@@ -89,14 +89,14 @@
       </div>
 
       <!-- 影音数据 -->
-      <div class="data-panel surface-card" @click="router.push('/data-panel/yy')">
+      <div class="data-panel surface-card" @click="openPanel('yy')">
         <div class="panel-head">
           <div class="panel-title">
             <span class="dot" style="background:#e8833a"></span>
             影音数据看板
           </div>
           <span class="muted" style="display:flex;align-items:center;gap:4px;color:var(--accent)">
-            查看详情 <el-icon><ArrowRight /></el-icon>
+            {{ isLogin ? '查看详情' : '登录后查看' }} <el-icon><ArrowRight /></el-icon>
           </span>
         </div>
         <div class="panel-body">
@@ -162,6 +162,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { homeApi, adminApi } from '@/api'
 // 顶部引入
 import { getTaskDotClass, getTaskStatusLabel } from '@/utils/dict'
@@ -196,16 +197,23 @@ function goWorkspace() { router.push(isLogin.value ? '/tasks' : '/login') }
 function goTask(t) { router.push(isLogin.value ? '/tasks/' + t.id : '/login') }
 function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }) }
 
+// 数据看板：未登录也能看到概览数据，但进入详情需要登录
+function openPanel(type) {
+  if (isLogin.value) return router.push(`/data-panel/${type}`)
+  ElMessage.info('请先登录，即可查看详细数据看板')
+  router.push({ path: '/login', query: { redirect: `/data-panel/${type}` } })
+}
+
 onMounted(async () => {
   loading.value = true
   try {
-    // 首页是公开页：任何单个接口失败都不应拖垮整页（尤其是需要登录的看板接口）
+    // 首页是公开页：任何单个接口失败都不应拖垮整页（dashboard 已开放匿名访问，未登录也能看到看板数据）
     const results = await Promise.allSettled([
       homeApi.centerInfo(),
       homeApi.departments(),
       homeApi.latestTasks(),
       homeApi.latestVideos(),
-      isLogin.value ? adminApi.dashboard() : Promise.resolve(null)
+      adminApi.dashboard()
     ])
     const [c, d, t, v, dash] = results.map(r => r.status === 'fulfilled' ? r.value : null)
 
