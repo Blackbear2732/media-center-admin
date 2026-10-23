@@ -3,24 +3,38 @@
     <div class="list-head">
       <div>
         <h2>素材库</h2>
-        <p class="muted">按任务分类浏览 · 点击任务查看该任务的素材</p>
+        <p class="muted">全局搜索 · 共 {{ list.length }} 条结果</p>
       </div>
     </div>
 
-    <!-- 任务导航：按任务找素材 -->
     <div class="search-card surface-card">
-      <div class="muted" style="margin-bottom:10px; font-weight:600;">按任务查找素材</div>
-      <el-select v-model="selectedTaskId" placeholder="请选择任务" filterable clearable style="width:360px"
-                 @change="onTaskChange">
-        <el-option v-for="t in tasks" :key="t.id" :label="t.title" :value="t.id" />
-      </el-select>
-      <el-button style="margin-left:12px" type="primary" @click="loadTaskMaterials">查看素材</el-button>
-      <span v-if="selectedTaskName" class="muted" style="margin-left:12px">
-        当前任务：{{ selectedTaskName }}（{{ list.length }} 个素材）
-      </span>
+      <el-form :model="query" :inline="true" class="search-form">
+        <el-form-item><el-input v-model="query.title" placeholder="按标题搜索" clearable /></el-form-item>
+        <el-form-item><el-input v-model="query.content" placeholder="按正文搜索" clearable /></el-form-item>
+        <el-form-item>
+          <el-select v-model="query.taskId" placeholder="全部任务" clearable filterable style="width:180px">
+            <el-option v-for="t in tasks" :key="t.id" :label="t.title" :value="t.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-select v-model="query.deptId" placeholder="全部部门" clearable style="width:150px">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-input v-model="query.leaderName" placeholder="主要领导" clearable style="width:140px" />
+        </el-form-item>
+        <el-form-item>
+          <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD"
+                          start-placeholder="开始日期" end-placeholder="结束日期" style="width:250px" />
+        </el-form-item>
+        <el-form-item>
+          <button class="pill active" type="button" @click="search">搜索</button>
+          <button class="pill" type="button" style="margin-left:8px" @click="reset">重置</button>
+        </el-form-item>
+      </el-form>
     </div>
 
-    <!-- 素材网格：显示所选任务的素材 或 全部素材 -->
     <div class="material-grid" v-loading="loading">
       <div v-for="m in list" :key="m.id" class="material-card surface-card" @click="router.push('/materials/' + m.id)">
         <div class="material-type">{{ getMaterialTypeLabel(m.type) }}</div>
@@ -29,55 +43,43 @@
         <div class="material-meta">
           <span>{{ getDeptLabel(m.deptId) }}</span>
           <span>{{ m.author }}</span>
-          <span v-if="m.createdAt">{{ m.createdAt }}</span>
+          <span>{{ m.createdAt }}</span>
         </div>
       </div>
     </div>
-
-    <el-empty v-if="!loading && !list.length"
-              :description="selectedTaskId ? '该任务暂无素材' : '没有匹配的素材'" />
+    <el-empty v-if="!loading && !list.length" description="没有匹配的素材" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { taskApi, materialApi } from '@/api'
-import { getDeptLabel, getMaterialTypeLabel } from '@/utils/dict'
+import { materialApi, taskApi } from '@/api'
+import { DEPARTMENTS_OPTIONS, getDeptLabel, getMaterialTypeLabel } from '@/utils/dict'
 
 const router = useRouter()
+const query = reactive({ title: '', content: '', deptId: '', leaderName: '', taskId: '' })
+const dateRange = ref([])
 const tasks = ref([])
-const selectedTaskId = ref('')
-const selectedTaskName = ref('')
 const list = ref([]), loading = ref(false)
 
-// 选择任务后立即加载该任务素材
-async function onTaskChange(id) {
-  if (!id) { await loadAll(); return }
-  await loadTaskMaterials()
-}
-
-async function loadTaskMaterials() {
-  const id = selectedTaskId.value
-  const task = tasks.value.find(t => String(t.id) === String(id))
-  selectedTaskName.value = task ? task.title : ''
-  if (!id) return
+async function search() {
   loading.value = true
   try {
-    list.value = (await taskApi.materials(id)) || []
+    list.value = await materialApi.search({
+      ...query, startTime: dateRange.value?.[0], endTime: dateRange.value?.[1]
+    })
   } finally { loading.value = false }
 }
 
-// 未选任务时展示全部素材
-async function loadAll() {
-  loading.value = true
-  try {
-    list.value = (await materialApi.search({})) || []
-  } finally { loading.value = false }
+function reset() {
+  Object.assign(query, { title: '', content: '', deptId: '', leaderName: '', taskId: '' })
+  dateRange.value = []
+  search()
 }
 
 onMounted(async () => {
   tasks.value = (await taskApi.list({ status: -1 })) || []
-  await loadAll()
+  search()
 })
 </script>
