@@ -296,7 +296,7 @@ async function takeEquipment(deviceId) {
     return // 用户取消
   }
   try {
-    await deviceApi.takeEquipment(deviceId)
+    await deviceApi.takeEquipment(deviceId, route.params.id)
     const dev = globalDevices.value.find(d => Number(d.id) === Number(deviceId))
     if (dev) dev.status = 1
     ElMessage.success('已取走设备')
@@ -316,7 +316,7 @@ async function returnEquipment(deviceId) {
     return // 用户取消
   }
   try {
-    await deviceApi.returnEquipment(deviceId)
+    await deviceApi.returnEquipment(deviceId, route.params.id)
     const dev = globalDevices.value.find(d => Number(d.id) === Number(deviceId))
     if (dev) dev.status = 0
     ElMessage.success('设备已归还')
