@@ -49,7 +49,7 @@
               }"
             ></div>
 
-            <div class="trend-month">{{ formatMonth(t.month) }}月</div>
+            <div class="trend-month">{{ formatYear(t.month) }}年</div>
           </div>
         </div>
       </div>
@@ -158,11 +158,11 @@ const formatNumber = (num) => {
   return num
 }
 
-// 从月份字段中提取“月”数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
-const formatMonth = (month) => {
+// 从月份字段中提取“年”数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
+const formatYear = (month) => {
   if (!month) return ''
-  const part = String(month).split(' ')[0].split('-')[1]
-  return part ? String(parseInt(part, 10)) : String(month)
+  const part = String(month).split(' ')[0].split('-')[0]
+  return part ? part : String(month)
 }
 
 function openLink(url) {
