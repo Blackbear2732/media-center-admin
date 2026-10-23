@@ -141,20 +141,6 @@
           </div>
         </div>
       </div>
-      <aside class="split-side">
-        <div class="section-head">
-          <div><h3>最新视频</h3><div class="sub">校园影像精选</div></div>
-        </div>
-        <div class="video-grid">
-          <div v-for="(v, i) in videos" :key="v.id" class="video-card surface-card">
-            <div class="video-cover" :style="{ background: videoGradients[i % 4] }">
-              <el-icon :size="26"><VideoPlay /></el-icon>
-              <span class="video-duration">{{ v.duration }}</span>
-            </div>
-            <div class="video-title">{{ v.title }}</div>
-          </div>
-        </div>
-      </aside>
     </div>
   </div>
 </template>
@@ -172,7 +158,6 @@ const loading = ref(false)
 const center = ref({})
 const departments = ref([])
 const tasks = ref([])
-const videos = ref([])
 const isLogin = computed(() => !!localStorage.getItem('token'))
 const dashboard = ref(null)
 const formatNumber = (num) => {
@@ -186,12 +171,6 @@ const deptGradients = [
   'linear-gradient(135deg,#7b6fa8,#a99bd4)',
   'linear-gradient(135deg,#c26a6a,#e5a0a0)',
   'linear-gradient(135deg,#4d7a8f,#7ba6b8)'
-]
-const videoGradients = [
-  'linear-gradient(135deg,#4a6fa5,#7fa3cf)',
-  'linear-gradient(135deg,#a56a4a,#d5a07f)',
-  'linear-gradient(135deg,#4a8a7a,#7fc4b0)',
-  'linear-gradient(135deg,#7a4a8a,#b07fc4)'
 ]
 function goWorkspace() { router.push(isLogin.value ? '/tasks' : '/login') }
 function goTask(t) { router.push(isLogin.value ? '/tasks/' + t.id : '/login') }
@@ -212,15 +191,13 @@ onMounted(async () => {
       homeApi.centerInfo(),
       homeApi.departments(),
       homeApi.latestTasks(),
-      homeApi.latestVideos(),
       adminApi.dashboard()
     ])
-    const [c, d, t, v, dash] = results.map(r => r.status === 'fulfilled' ? r.value : null)
+    const [c, d, t, dash] = results.map(r => r.status === 'fulfilled' ? r.value : null)
 
     center.value = c || {}
     departments.value = Array.isArray(d) ? d.filter(Boolean) : []
     tasks.value = Array.isArray(t) ? t.filter(Boolean) : []
-    videos.value = Array.isArray(v) ? v.filter(Boolean) : []
     dashboard.value = dash
 
     const failed = results.filter(r => r.status === 'rejected')

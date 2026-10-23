@@ -57,8 +57,7 @@ export const homeApi = {
             ? mock.tasks
             : mock.tasks.filter(t => taskInDept(t, deptId))
         return delay(list.slice(0, 4))
-    }),
-    latestVideos: pick(() => request.get('/videos/latest'),       () => delay(mock.videos))
+    })
 }
 
 /* ================= 登录认证 ================= */

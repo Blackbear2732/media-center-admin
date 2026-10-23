@@ -9,10 +9,7 @@ export const homeApi = {
     departments:  () => request.get('/departments'),
 
     // 获取最新任务（首页展示用，后端按当前登录人权限返回）
-    latestTasks:  () => request.get('/tasks/latest'),
-
-    // 获取最新视频（首页视频展示）
-    latestVideos: () => request.get('/videos/latest')
+    latestTasks:  () => request.get('/tasks/latest')
 }
 
 /* ================= 登录认证 ================= */
