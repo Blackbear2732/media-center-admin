@@ -179,6 +179,7 @@ export const adminApi = {
     // D-04 确认部员报名（将报名人转正为参与人）
     // 入参：taskId 任务ID；name 报名人姓名
     confirmSignup:     (taskId, name) => request.put(`/admin/tasks/${taskId}/signups/${name}/confirm`),
+    attendSignup:      (taskId, name) => request.put(`/admin/tasks/${taskId}/signups/${name}/attend`),
 
     // D-04 编辑任务
     // 入参：id 任务ID；data 任务字段
@@ -208,6 +209,26 @@ export const adminApi = {
 
     // D-07 获取考评模板（评分项、权重等）
     evaluationTemplate: ()       => request.get('/admin/evaluations/template'),
+
+    // 考评模板设置：查询某部门模板及明细（deptId 空/100 落回综合部）
+    // 入参：deptId 部门ID
+    evalTemplateOf: (deptId) => request.get('/admin/eval-templates', { params: { deptId } }),
+
+    // 考评模板设置：保存某部门模板各项分值
+    // 入参：deptId 部门ID；items [{ sourceKey, itemName, score }]
+    saveEvalTemplate: (deptId, items) => request.put(`/admin/eval-templates/${deptId}`, { items }),
+
+    // 考评额外加分（多次）：查询某成员的加分历史（month 可选）
+    // 入参：userId 成员ID；month 月份 yyyy-MM
+    evalEvents: (userId, month) => request.get('/admin/eval-events', { params: { userId, month } }),
+
+    // 添加一条额外加分
+    // 入参：{ userId, deptId, month, score, remark }
+    addEvalEvent: (data) => request.post('/admin/eval-events', data),
+
+    // 删除一条额外加分记录
+    // 入参：id 加分记录ID
+    deleteEvalEvent: (id) => request.delete(`/admin/eval-events/${id}`),
 
     // D-07 考评预览（根据打卡、会议、任务自动算分）
     // 入参：month 月份 yyyy-MM；memberNames 成员姓名数组

@@ -143,6 +143,8 @@
               <el-tag size="small" type="info">{{ getDeptLabel(p.deptId) }}</el-tag>
 
               <template v-if="canManageDept(p.deptId)">
+                <el-button v-if="p.attendStatus != 1" link type="warning" size="small" @click="handleAttend(p)">确认到场</el-button>
+                <el-tag v-else size="small" type="success">已到场</el-tag>
                 <el-button link type="primary" size="small" @click="openScoreDialog(p)">打分</el-button>
                 <el-button link type="danger" size="small" @click="handleRemove(p)">移除</el-button>
               </template>
@@ -386,6 +388,17 @@ async function handleConfirm(s) {
       p.name === s.name && Number(p.deptId) === Number(s.deptId))
   if (!exists) task.value.participants.push({ name: s.name, deptId: s.deptId })
   ElMessage.success('已确认报名')
+}
+
+// 确认到场（签到）：调后端置 attendStatus=1，作为考评 task_join 基础分依据
+async function handleAttend(p) {
+  try {
+    await adminApi.attendSignup(task.value.id, p.name)
+    p.attendStatus = 1
+    ElMessage.success('已确认「' + p.name + '」到场')
+  } catch (e) {
+    ElMessage.error('确认到场失败，请稍后重试')
+  }
 }
 
 // 拒绝报名需要落库，否则刷新后报名记录会再次出现

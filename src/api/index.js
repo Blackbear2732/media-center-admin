@@ -475,6 +475,16 @@ export const adminApi = {
         })())
         : request.put(`/admin/tasks/${taskId}/signups/${encodeURIComponent(name)}/reject`),
 
+    // 确认到场：把报名/参与记录的到场状态置为 1（签到），作为考评 task_join 基础分依据
+    attendSignup: (taskId, name) => USE_MOCK
+        ? delay((() => {
+            const task = mock.tasks.find(t => String(t.id) === String(taskId))
+            const member = [task?.signups, task?.participants].flat().find(m => m && m.name === name)
+            if (member) member.attend = 1
+            return { success: true }
+        })())
+        : request.put(`/admin/tasks/${taskId}/signups/${encodeURIComponent(name)}/attend`),
+
     updateTask: (id, data) => USE_MOCK
         ? delay((() => {
             const task = mock.tasks.find(t => String(t.id) === String(id))
@@ -527,6 +537,47 @@ export const adminApi = {
     evaluationTemplate: () => USE_MOCK
         ? delay(mock.evaluationTemplate)
         : request.get('/admin/evaluations/template'),
+
+    // 考评模板设置：查询某部门模板及明细（deptId 空/100 落回综合部）
+    evalTemplateOf: (deptId) => USE_MOCK
+        ? delay((() => {
+            const id = isAllDept(deptId) ? 101 : Number(deptId)
+            const deptName = { 101: '综合部', 102: '网宣部', 103: '影音部', 104: '摄制部', 105: '新闻部', 106: '设计部' }[id]
+            return {
+                deptId: id,
+                templateId: id,
+                hasCustom: !isAllDept(deptId),
+                templateName: `${deptName} 考评模板`,
+                items: (mock.evaluationTemplates[deptName] || mock.defaultEvaluationTemplate || []).map(it => ({
+                    sourceKey: it.key,
+                    itemName: it.name,
+                    score: it.score,
+                    enabled: 1,
+                    type: it.type
+                }))
+            }
+        })())
+        : request.get('/admin/eval-templates', { params: { deptId } }),
+
+    // 按部门保存考评模板分值（deptId 为路径参数；items 为 [{ sourceKey, itemName, score }]）
+    saveEvalTemplate: (deptId, items) => USE_MOCK
+        ? delay({ success: true })
+        : request.put(`/admin/eval-templates/${deptId}`, { items }),
+
+    // 考评额外加分（多次）：查询某成员的加分历史（month 可选）
+    evalEvents: (userId, month) => USE_MOCK
+        ? delay(mock.evalEvents || [])
+        : request.get('/admin/eval-events', { params: { userId, month } }),
+
+    // 添加一条额外加分：{ userId, deptId, month, score, remark }
+    addEvalEvent: (data) => USE_MOCK
+        ? delay({ success: true })
+        : request.post('/admin/eval-events', data),
+
+    // 删除一条额外加分记录
+    deleteEvalEvent: (id) => USE_MOCK
+        ? delay({ success: true })
+        : request.delete(`/admin/eval-events/${id}`),
 
     previewEvaluation: (month, memberNames) => USE_MOCK
         ? delay((() => {
