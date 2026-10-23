@@ -16,9 +16,17 @@
             </el-select>
           </el-form-item>
 
+          <!-- 主任可任选部门上传，表单字段随部门变化 -->
+          <el-form-item v-if="isDirector" label="上传到部门" required>
+            <el-select v-model="deptId" style="width:100%" @change="loadFields">
+              <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+            </el-select>
+            <div class="muted" style="margin-top:4px">主任可任意选择部门上传，表单字段会随所选部门变化</div>
+          </el-form-item>
+
           <!-- 动态字段 -->
           <el-form-item v-for="f in fields" :key="f.key" :label="f.label" :required="f.required">
-            <el-input v-if="f.type === 'input'" v-model="form[f.key]" :placeholder="'请输入' + f.label" />
+            <el-input v-if="f.type === 'input'" v-model="form[f.key]" :placeholder="'请输入' + f.label" @change="parseShareText(f)" />
             <el-input v-else-if="f.type === 'textarea'" v-model="form[f.key]" type="textarea" :rows="8"
                       :placeholder="'请输入' + f.label" />
             <el-upload
@@ -72,6 +80,7 @@ import { DEPARTMENTS_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 import { validateUploadFile } from '@/utils/validate'
 
 const deptId = ref(null)
+const isDirector = ref(false)
 const fields = ref([])
 const tasks = ref([])
 const loading = ref(false)
@@ -89,6 +98,36 @@ const MATERIAL_FILE_MAX_MB = 200
 
 // 主任没有具体部门的业务上传，默认给综合部（101）的通用表单
 const DEFAULT_UPLOAD_DEPT_ID = 101
+
+function hasField(key) {
+  return fields.value.some(f => f.key === key)
+}
+
+// 从网盘分享文本中提取首个 http(s) 链接
+function extractUrl(text) {
+  const m = (text || '').match(/https?:\/\/[^\s\u4e00-\u9fff"']+/)
+  return m ? m[0] : ''
+}
+
+// 从「提取码：xxxx」或链接 ?pwd=xxxx 提取提取码
+function extractCode(text, url) {
+  const fromText = (text || '').match(/提取码[:：]\s*([A-Za-z0-9]+)/)
+  if (fromText) return fromText[1]
+  const fromUrl = (url || '').match(/[?&]pwd=(?:.[^&])*/i)
+  return ''
+}
+
+// 粘贴整段百度网盘分享文本到「网盘链接」框时，自动拆出链接与提取码
+function parseShareText(f) {
+  if (!f || f.key !== 'netdiskUrl' || !hasField('netdiskCode')) return
+  const raw = form.netdiskUrl || ''
+  const url = extractUrl(raw)
+  if (!url) return
+  const pwd = (url.match(/[?&]pwd=([A-Za-z0-9]+)/i) || [])[1]
+  const code = extractCode(raw, url) || pwd || ''
+  form.netdiskUrl = url
+  if (code && hasField('netdiskCode')) form.netdiskCode = code
+}
 
 function handleMaterialFile(file, field) {
   const raw = file?.raw
@@ -123,15 +162,20 @@ async function submit() {
   }
 }
 
+async function loadFields() {
+  const fieldData = await materialApi.uploadFields(deptId.value)
+  fields.value = Array.isArray(fieldData) ? fieldData : []
+  fields.value.forEach(f => { if (!(f.key in form)) form[f.key] = '' })
+}
+
 async function init() {
   loading.value = true
   try {
     const u = await userApi.profile()
-    deptId.value = isAllDept(u?.deptId) ? DEFAULT_UPLOAD_DEPT_ID : Number(u?.deptId || DEFAULT_UPLOAD_DEPT_ID)
+    isDirector.value = isAllDept(u?.deptId)
+    deptId.value = isDirector.value ? DEFAULT_UPLOAD_DEPT_ID : Number(u?.deptId || DEFAULT_UPLOAD_DEPT_ID)
 
-    const fieldData = await materialApi.uploadFields(deptId.value)
-    fields.value = Array.isArray(fieldData) ? fieldData : []
-    fields.value.forEach(f => { if (!(f.key in form)) form[f.key] = '' })
+    await loadFields()
 
     const taskData = await taskApi.list({})
     tasks.value = Array.isArray(taskData) ? taskData : []

@@ -93,7 +93,20 @@ async function extract() {
     await materialApi.recordExtract(route.params.id)  // POST /api/materials/{id}/extract
     ElMessage.success('提取记录已上报')
     extractLogs.value.unshift({ user: userStore.name, time: new Date().toLocaleString() })
+    // 自动拼合链接 + 提取码到剪贴板
+    const text = buildPanText()
+    if (text) {
+      await navigator.clipboard?.writeText(text).catch(() => {})
+      ElMessage.success('链接与提取码已复制到剪贴板')
+    }
   } finally { extracting.value = false }
+}
+// 拼合网盘链接与提取码，便于一键粘贴到网盘
+function buildPanText() {
+  const url = data.value.netdiskUrl || ''
+  if (!url) return ''
+  const code = data.value.netdiskCode
+  return code ? `${url}\n提取码：${code}` : url
 }
 function copyCode() {
   navigator.clipboard?.writeText(data.value.netdiskCode || '')
