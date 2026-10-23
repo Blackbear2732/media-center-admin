@@ -49,8 +49,18 @@
               }"
             ></div>
 
-            <div class="trend-month">{{ formatYear(t.month) }}年</div>
+            <!-- 月份（每根柱子下方） -->
+            <div class="trend-month">{{ formatMonth(t.month) }}月</div>
           </div>
+        </div>
+        <!-- 年份（跨月按年归组，形成时间轴） -->
+        <div class="trend-year-row" :style="{ minWidth: trendMinWidth }">
+          <div
+              v-for="(g, gi) in yearGroups"
+              :key="gi"
+              class="trend-year-cell"
+              :style="{ width: g.count * COLUMN_PITCH + 'px' }"
+          >{{ g.year }}年</div>
         </div>
       </div>
     </div>
@@ -139,8 +149,25 @@ const pagedList = computed(() => {
   const start = (page.value - 1) * pageSize.value
   return list.value.slice(start, start + pageSize.value)
 })
-const trendMinWidth = computed(() => `${Math.max(600, trend.value.length * 56)}px`)
+const trendMinWidth = computed(() => `${Math.max(600, trend.value.length * COLUMN_PITCH)}px`)
 const indexMethod = (index) => (page.value - 1) * pageSize.value + index + 1
+
+// 时间轴每根柱子的固定列宽，供月份/年份标签对齐
+const COLUMN_PITCH = 56
+
+// 按年份归组连续月份，用于时间轴底部的年份区间标签
+const yearGroups = computed(() => {
+  const groups = []
+  let cur = null
+  trend.value.forEach((t, i) => {
+    const y = formatYear(t.month)
+    if (!cur) cur = { year: y, count: 1 }
+    else if (cur.year === y) cur.count++
+    else { groups.push(cur); cur = { year: y, count: 1 } }
+  })
+  if (cur) groups.push(cur)
+  return groups
+})
 
 // 计算柱状图相对高度
 const getBarHeight = (views) => {
@@ -163,6 +190,13 @@ const formatYear = (month) => {
   if (!month) return ''
   const part = String(month).split(' ')[0].split('-')[0]
   return part ? part : String(month)
+}
+
+// 从月份字段中提取“月”数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
+const formatMonth = (month) => {
+  if (!month) return ''
+  const part = String(month).split(' ')[0].split('-')[1]
+  return part ? String(parseInt(part, 10)) : String(month)
 }
 
 function openLink(url) {
@@ -196,22 +230,39 @@ onMounted(async () => {
 }
 
 .trend-track {
+  overflow: visible;
   display: flex;
   align-items: flex-end;
-  gap: 16px;
   height: 200px;
-  padding: 8px 4px 6px;
+  padding: 8px 4px 2px;
   border-bottom: 1px solid var(--border);
 }
 
 .trend-item {
-  flex: 0 0 48px;
+  flex: 0 0 56px;
+  width: 56px;
   height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
   gap: 6px;
+}
+
+/* 时间轴底部的年份行：与上方柱子同宽同左对齐 */
+.trend-year-row {
+  display: flex;
+  padding: 4px 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.trend-year-cell {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .trend-value {
