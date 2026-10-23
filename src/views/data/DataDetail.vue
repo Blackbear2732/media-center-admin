@@ -49,7 +49,7 @@
               }"
             ></div>
 
-            <div class="trend-month">{{ t.month.slice(5) }}月</div>
+            <div class="trend-month">{{ formatMonth(t.month) }}月</div>
           </div>
         </div>
       </div>
@@ -156,6 +156,13 @@ const formatNumber = (num) => {
   if (!num) return 0
   if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
   return num
+}
+
+// 从月份字段中提取“月”数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
+const formatMonth = (month) => {
+  if (!month) return ''
+  const part = String(month).split(' ')[0].split('-')[1]
+  return part ? String(parseInt(part, 10)) : String(month)
 }
 
 function openLink(url) {
