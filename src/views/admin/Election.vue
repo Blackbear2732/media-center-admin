@@ -272,8 +272,9 @@ async function createTerm() {
     })
     newTermId.value = Number(res.termId)
     // 加载当前在岗成员作为任命候选，默认沿用原岗位（留任）
-    const list = await adminApi.members(100)
-    rows.value = (Array.isArray(list) ? list : [])
+    const mres = await adminApi.members({ deptId: 100, pageNum: 1, pageSize: 9999 })
+    const list = mres?.rows || []
+    rows.value = list
         .filter(m => Number(m.status) === 1)
         .map(m => {
           const curPost = POST_BY_ROLE[Number(m.role)] || '部员'

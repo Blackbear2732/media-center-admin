@@ -352,11 +352,13 @@ async function openCreate() {
   form.month = new Date().toISOString().slice(0, 7)
   if (userStore.isDirector) {
     // 主任评部长
-    const allMembers = await adminApi.members(ALL_DEPT_ID)
+    const res = await adminApi.members({ deptId: ALL_DEPT_ID, pageNum: 1, pageSize: 9999 })
+    const allMembers = res?.rows || []
     candidates.value = allMembers.filter(m => Number(m.role) === ROLE.MINISTER)
   } else {
     // 部长评本部门部员
-    const deptMembers = await adminApi.members(userStore.deptId)
+    const res2 = await adminApi.members({ deptId: userStore.deptId, pageNum: 1, pageSize: 9999 })
+    const deptMembers = res2?.rows || []
     candidates.value = deptMembers.filter(m => Number(m.role) === ROLE.MEMBER)
   }
   form.selectedMembers = candidates.value.map(m => m.name)
@@ -470,7 +472,8 @@ async function openExtra() {
   extraForm.remark = ''
   // 主任评部长等下属，部长评本部门；复用以成员接口为数据源
   const deptId = userStore.isDirector ? userStore.viewDeptId : userStore.deptId
-  extraMembers.value = await adminApi.members(deptId)
+  const res = await adminApi.members({ deptId, pageNum: 1, pageSize: 9999 })
+  extraMembers.value = res?.rows || []
   extraRecords.value = []
   extraVisible.value = true
 }

@@ -29,9 +29,9 @@
 
     <div class="surface-card" style="padding: 0;">
       <div style="padding: 12px 16px 0;">
-        <span class="muted">共 {{ filteredList.length }} 人</span>
+        <span class="muted">共 {{ total }} 人</span>
       </div>
-      <el-table :data="pagedList" v-loading="loading" stripe style="width: 100%">
+      <el-table :data="list" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column prop="deptId" label="部门" width="120">
           <template #default="{ row }">
@@ -121,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
@@ -135,7 +135,6 @@ import {
   getCheckinStatusType,
   getDeptLabel
 } from '@/utils/dict'
-import { usePagination } from '@/utils/usePagination'
 
 const router = useRouter()
 const date = ref(new Date().toISOString().split('T')[0])
@@ -153,28 +152,42 @@ const statusFilter = ref(-1) // -1 表示全部
 const list = ref([])
 const loading = ref(false)
 
+// 后端分页：页码/每页条数/总数
+const page = ref(1)
+const size = ref(10)
+const pageSizes = [10, 20, 50, 100]
+const total = ref(0)
+
 const deptOptions = computed(() => {
   if (canManageAllDepts.value) return DEPARTMENTS_OPTIONS
   return DEPARTMENTS_OPTIONS.filter(d => Number(d.value) === Number(userStore.deptId))
 })
 
-const filteredList = computed(() => {
-  if (Number(statusFilter.value) === -1) return list.value
-  return list.value.filter(item => Number(item.status) === Number(statusFilter.value))
-})
-
-// 全中心当日打卡名单可能上百条，分页渲染
-const { page, size, pageSizes, total, paged: pagedList } = usePagination(filteredList)
-
 function onDeptChange() {
+  page.value = 1
   loadData()
 }
+
+// 打卡状态筛选（-1 全部）变化时回到第一页重新查询
+watch(statusFilter, () => {
+  page.value = 1
+  loadData()
+})
+// 翻页/改每页条数重新查询
+watch([page, size], () => loadData())
 
 async function loadData() {
   loading.value = true
   try {
-    const res = await adminApi.checkins({ date: date.value, deptId: deptId.value })
-    list.value = res || []
+    const res = await adminApi.checkins({
+      date: date.value,
+      deptId: deptId.value,
+      status: Number(statusFilter.value) === -1 ? null : statusFilter.value,
+      pageNum: page.value,
+      pageSize: size.value
+    })
+    list.value = res?.rows || []
+    total.value = res?.total || 0
   } catch (e) {
     console.error(e)
   } finally {

@@ -28,7 +28,7 @@
 
       <div class="flex-between" style="flex: 1; margin-left: 24px;">
         <div class="muted">
-          符合条件共 <span style="color: var(--brand); font-weight: 600;">{{ displayList.length }}</span> 人
+          符合条件共 <span style="color: var(--brand); font-weight: 600;">{{ total }}</span> 人
         </div>
         <div style="display: flex; gap: 12px;">
           <button class="pill" @click="resetFilter">重置筛选</button>
@@ -39,7 +39,7 @@
 
     <!-- 表格区 -->
     <div class="surface-card" style="padding: 6px 0" v-loading="loading">
-      <el-table :data="pagedList" stripe>
+      <el-table :data="rawList" stripe>
         <el-table-column v-if="userStore.isDirector" prop="deptId" label="所属部门" width="100">
           <template #default="{ row }">
             <el-tag size="small" type="info">{{ getDeptLabel(row.deptId) }}</el-tag>
@@ -173,11 +173,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
-import { usePagination } from '@/utils/usePagination'
 import {
   ALL_DEPT_ID,
   DEPARTMENTS_OPTIONS,
@@ -214,15 +213,6 @@ const form = reactive({
   title: '部员', politicalStatus: '共青团员', phone: ''
 })
 
-const displayList = computed(() => {
-  return rawList.value.filter(m => {
-    if (!isAllDept(deptFilter.value) && Number(m.deptId) !== Number(deptFilter.value)) return false
-    if (roleFilter.value !== '' && Number(m.role) !== Number(roleFilter.value)) return false
-    if (politicalFilter.value && m.politicalStatus !== politicalFilter.value) return false
-    return true
-  })
-})
-
 // 与后端一致：主任可分配部长/部员，部长只能分配部员；系统内置超级管理员不受限
 const roleRank = (role) => (Number(role) === 2 ? 3 : Number(role) === 1 ? 2 : 1)
 const roleOptions = computed(() => {
@@ -236,15 +226,32 @@ function canManageRow(row) {
   return roleRank(userStore.role) > roleRank(row.role)
 }
 
-// 主任可看到全部成员（100+ 人），分页渲染，避免一次渲染整张大表
-const { page, size, pageSizes, total, paged: pagedList } = usePagination(displayList)
+// 后端分页：页码/每页条数/总数
+const page = ref(1)
+const size = ref(10)
+const pageSizes = [10, 20, 50, 100]
+const total = ref(0)
+
+// 筛选条件变化回到第一页重新查询
+watch([deptFilter, roleFilter, politicalFilter], () => {
+  page.value = 1
+  load()
+})
+// 翻页/改每页条数重新查询
+watch([page, size], () => load())
 
 async function load() {
   loading.value = true
   try {
-    // 主任一次性取全量成员，切换部门筛选时走前端过滤
-    const res = await adminApi.members(userStore.isDirector ? ALL_DEPT_ID : userStore.deptId)
-    rawList.value = res || []
+    const res = await adminApi.members({
+      deptId: deptFilter.value,
+      role: roleFilter.value === '' ? null : roleFilter.value,
+      politicalStatus: politicalFilter.value || null,
+      pageNum: page.value,
+      pageSize: size.value
+    })
+    rawList.value = res?.rows || []
+    total.value = res?.total || 0
   } finally {
     loading.value = false
   }

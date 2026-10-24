@@ -215,7 +215,8 @@ async function load() {
   loading.value = true
   try {
     list.value = await adminApi.tasks(deptId)
-    deptMembers.value = await adminApi.members(isAllDept(deptId) ? ALL_DEPT_ID : deptId)
+    const res = await adminApi.members({ deptId: isAllDept(deptId) ? ALL_DEPT_ID : deptId, pageNum: 1, pageSize: 9999 })
+    deptMembers.value = res?.rows || []
 
     list.value.forEach(t => {
       selectedNames[t.id] = []

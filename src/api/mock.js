@@ -739,3 +739,8 @@ export const videos = [
     { id: 3, title: '校运会精彩集锦', duration: '02:38', cover: '' },
     { id: 4, title: '融媒体中心纳新宣传片', duration: '01:56', cover: '' }
 ]
+
+/* ========== 打卡管理授权 / 额外加分（演示数据，空即可） ========== */
+export const evalEvents = []
+export const checkinManagers = []
+export const checkinManagerCandidates = []

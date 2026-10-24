@@ -437,8 +437,8 @@ async function loadMembers() {
   if (!userStore.canManage) return
   try {
     const targetDeptId = userStore.isDirector ? ALL_DEPT_ID : userStore.deptId
-    const res = await adminApi.members(targetDeptId)
-    deptMembers.value = Array.isArray(res) ? res : []
+    const res = await adminApi.members({ deptId: targetDeptId, pageNum: 1, pageSize: 9999 })
+    deptMembers.value = res?.rows || []
   } catch (e) {
     deptMembers.value = []
   }

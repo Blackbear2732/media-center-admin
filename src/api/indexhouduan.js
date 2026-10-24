@@ -146,9 +146,10 @@ export const adminApi = {
     // 入参：deptId 部门ID（100 表示全中心，仅主任可用）
     overview: (deptId) => request.get('/admin/overview', { params: { deptId } }),
 
-    // D-02 成员列表
-    // 入参：deptId 部门ID（100 表示全中心）
-    members: (deptId) => request.get('/admin/members', { params: { deptId } }),
+    // D-02 成员列表（后端分页）
+    // 入参：{ deptId, role?, politicalStatus?, pageNum, pageSize }（deptId 100 表示全中心）
+    // 返回：{ total, rows }
+    members: (params) => request.get('/admin/members', { params }),
 
     // D-02 新增/编辑成员
     // 入参：{ id?, name, studentNo, deptId, role, phone, ... }（有 id 为编辑，无 id 为新增）
@@ -245,9 +246,10 @@ export const adminApi = {
     memberEvalDetail: (memberName, month) =>
         request.get('/admin/evaluations/detail', { params: { memberName, month } }),
 
-    // D-09 本部门素材列表
-    // 入参：deptId 部门ID（100 表示全中心）
-    materials: (deptId) => request.get('/admin/materials', { params: { deptId } }),
+    // D-09 本部门素材列表（后端分页）
+    // 入参：{ deptId, category?, pageNum, pageSize }（deptId 100 表示全中心；category: video_final|video_photo|text）
+    // 返回：{ total, rows, categoryCounts: { video_photo, video_final, text } }
+    materials: (params) => request.get('/admin/materials', { params }),
 
     // D-11 公告列表
     announcements: () => request.get('/admin/announcements'),

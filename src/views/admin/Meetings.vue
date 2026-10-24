@@ -156,8 +156,8 @@ async function load() {
   try {
     list.value = await adminApi.meetings(targetDeptId.value)
     // 拉取全量成员，方便后续按会议部门过滤
-    const res = await adminApi.members(ALL_DEPT_ID)
-    allMembers.value = Array.isArray(res) ? res : []
+    const res = await adminApi.members({ deptId: ALL_DEPT_ID, pageNum: 1, pageSize: 9999 })
+    allMembers.value = res?.rows || []
   } catch (e) {
     console.error('加载会议数据失败', e)
   } finally {

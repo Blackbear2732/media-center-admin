@@ -3,7 +3,7 @@
     <div class="surface-card" style="padding:12px 16px; margin-bottom:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
       <span class="muted">素材分类</span>
       <el-radio-group v-model="category" size="small">
-        <el-radio-button label="all">全部（{{ list.length }}）</el-radio-button>
+        <el-radio-button label="all">全部（{{ total }}）</el-radio-button>
         <el-radio-button v-for="c in MATERIAL_CATEGORY_OPTIONS" :key="c.value" :label="c.value">
           {{ c.label }}（{{ categoryCounts[c.value] || 0 }}）
         </el-radio-button>
@@ -11,7 +11,7 @@
     </div>
 
     <div class="surface-card" style="padding:8px 0">
-      <el-table :data="pagedList" stripe>
+      <el-table :data="list" stripe>
         <el-table-column type="expand">
           <template #default="{ row }">
             <div style="padding: 6px 24px 14px">
@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi, materialApi } from '@/api'
 import { userStore } from '@/store/user'
@@ -123,7 +123,6 @@ import {
   getMaterialTypeLabel,
   getMaterialTypeTagType
 } from '@/utils/dict'
-import { usePagination } from '@/utils/usePagination'
 
 const list = ref([]), loading = ref(false), saving = ref(false)
 const category = ref('all')
@@ -133,26 +132,35 @@ const editForm = reactive({
   videoChannelUrl: '', themeTag: '', sharedDeptIds: []
 })
 
-const categoryCounts = computed(() => {
-  const counts = {}
-  for (const item of list.value) {
-    const key = getMaterialCategory(item.type)
-    counts[key] = (counts[key] || 0) + 1
-  }
-  return counts
-})
+// 分类数量统计由后端按部门维度统计返回（不受分页影响）
+const categoryCounts = ref({})
 
-const displayList = computed(() => {
-  if (category.value === 'all') return list.value
-  return list.value.filter(item => getMaterialCategory(item.type) === category.value)
-})
+// 后端分页：页码/每页条数/总数
+const page = ref(1)
+const size = ref(10)
+const pageSizes = [10, 20, 50, 100]
+const total = ref(0)
 
-const { page, size, pageSizes, total, paged: pagedList } = usePagination(displayList)
+// 分类切换回到第一页重新查询
+watch(category, () => {
+  page.value = 1
+  load()
+})
+// 翻页/改每页条数重新查询
+watch([page, size], () => load())
 
 async function load() {
   loading.value = true
   try {
-    list.value = await adminApi.materials(userStore.viewDeptId)
+    const res = await adminApi.materials({
+      deptId: userStore.viewDeptId,
+      category: category.value === 'all' ? null : category.value,
+      pageNum: page.value,
+      pageSize: size.value
+    })
+    list.value = res?.rows || []
+    total.value = res?.total || 0
+    categoryCounts.value = res?.categoryCounts || {}
   } finally {
     loading.value = false
   }
