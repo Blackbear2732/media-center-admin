@@ -17,6 +17,10 @@
               <el-input v-model="form.email" placeholder="必填，用于接收系统通知" />
               <div class="muted" style="margin-top:4px">邮箱为必填项，任务与会议通知将发送至此邮箱</div>
             </el-form-item>
+            <el-form-item label="MeoW昵称">
+              <el-input v-model="form.meowNick" placeholder="填写后在鸿蒙手机 MeoW 上接收系统通知" />
+              <div class="muted" style="margin-top:4px">可选。在华为鸿蒙手机安装 MeoW 并注册昵称后填写，任务/会议/公告通知将同步推送到手机</div>
+            </el-form-item>
             <el-form-item>
               <el-button type="primary" :loading="saving" @click="save">保存修改</el-button>
               <el-button @click="reset">重置</el-button>
@@ -49,7 +53,7 @@ import { userApi } from '@/api'
 import { userStore } from '@/store/user'
 
 const router = useRouter()
-const form = reactive({ studentNo: '', name: '', nickname: '', college: '', className: '', phone: '', email: '' })
+const form = reactive({ studentNo: '', name: '', nickname: '', college: '', className: '', phone: '', email: '', meowNick: '' })
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const loading = ref(false), saving = ref(false), pwdSaving = ref(false)
 let origin = {}
