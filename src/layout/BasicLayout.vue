@@ -26,8 +26,11 @@
             <router-link to="/materials" class="nav-item" :class="{ active: route.path.startsWith('/materials') }">素材库</router-link>
             <router-link to="/upload" class="nav-item" :class="{ active: route.path === '/upload' }">上传</router-link>
             <router-link to="/device-apply" class="nav-item" :class="{ active: route.path === '/device-apply' }">设备</router-link>
-            <router-link v-if="userStore.canManage" to="/admin" class="nav-item admin-link"
-                         :class="{ active: route.path.startsWith('/admin') }">部门管理</router-link>
+            <router-link v-if="userStore.canManage || userStore.isCheckinManager"
+                         :to="userStore.canManage ? '/admin' : '/admin/checkins'" class="nav-item admin-link"
+                         :class="{ active: route.path.startsWith('/admin') }">
+              {{ userStore.canManage ? '部门管理' : '打卡管理' }}
+            </router-link>
           </template>
         </nav>
 
@@ -81,7 +84,10 @@
           <router-link to="/materials" class="mobile-nav-item" @click="mobileMenuVisible=false">素材库</router-link>
           <router-link to="/upload" class="mobile-nav-item" @click="mobileMenuVisible=false">上传素材</router-link>
           <router-link to="/device-apply" class="mobile-nav-item" @click="mobileMenuVisible=false">设备申请</router-link>
-          <router-link v-if="userStore.canManage" to="/admin" class="mobile-nav-item" @click="mobileMenuVisible=false">部门管理</router-link>
+          <router-link v-if="userStore.canManage || userStore.isCheckinManager"
+                       :to="userStore.canManage ? '/admin' : '/admin/checkins'" class="mobile-nav-item" @click="mobileMenuVisible=false">
+            {{ userStore.canManage ? '部门管理' : '打卡管理' }}
+          </router-link>
 
           <div style="height: 1px; background: var(--border); margin: 16px 0;"></div>
           <router-link to="/profile" class="mobile-nav-item" @click="mobileMenuVisible=false">个人信息</router-link>
