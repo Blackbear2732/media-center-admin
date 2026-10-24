@@ -35,6 +35,7 @@ const routes = [
                     { path: 'tasks', component: () => import('@/views/admin/Tasks.vue'), meta: { title: '任务参与' } },
                     { path: 'meetings', component: () => import('@/views/admin/Meetings.vue'), meta: { title: '会议管理' } },
                     { path: 'evaluations', component: () => import('@/views/admin/Evaluations.vue'), meta: { title: '考评管理' } },
+                    { path: 'eval-templates', component: () => import('@/views/admin/eval-templates.vue'), meta: { title: '考评模板' } },
                     { path: 'materials', component: () => import('@/views/admin/Materials.vue'), meta: { title: '本部门素材' } },
                     { path: 'announcements', component: () => import('@/views/admin/Announcements.vue'), meta: { title: '公告管理' } },
                     { path: 'dept-profile', component: () => import('@/views/admin/DeptProfile.vue'), meta: { title: '部门介绍' } },

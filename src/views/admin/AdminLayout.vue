@@ -64,6 +64,7 @@ const FALLBACK_MENUS = [
   { path: 'tasks', label: '任务参与' },
   { path: 'meetings', label: '会议管理' },
   { path: 'evaluations', label: '考评管理' },
+  { path: 'eval-templates', label: '考评模板' },
   { path: 'materials', label: '本部门素材' },
   { path: 'announcements', label: '公告管理' },
   { path: 'dept-profile', label: '部门介绍' }

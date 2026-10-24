@@ -6,9 +6,14 @@
         <h2>考评管理</h2>
         <p class="muted">共 {{ list.length }} 条考评记录 · 已按总分从高到低排序</p>
       </div>
-      <button class="pill active" @click="openCreate" style="padding: 10px 20px;">
-        <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发起月度考评
-      </button>
+      <div style="display: flex; gap: 10px;">
+        <button class="pill" @click="openExtra" style="padding: 10px 20px;">
+          <el-icon style="margin-right: 4px;"><Aim /></el-icon> 额外加分
+        </button>
+        <button class="pill active" @click="openCreate" style="padding: 10px 20px;">
+          <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发起月度考评
+        </button>
+      </div>
     </div>
 
     <!-- 按月份分类展示 -->
@@ -223,13 +228,54 @@
         <div class="muted" style="background: #f8fafc; padding: 12px; border-radius: 8px;">{{ currentEval.details?.extraNote || '无' }}</div>
       </div>
     </el-dialog>
+
+    <!-- 额外加分弹窗（可多次） -->
+    <el-dialog v-model="extraVisible" title="多次额外加分" width="720px" :close-on-click-modal="false">
+      <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px;">
+        <el-form-item label="归属月份" style="margin-bottom: 0;">
+          <el-date-picker v-model="extraForm.month" type="month" value-format="YYYY-MM" size="small" placeholder="选择月份" @change="loadExtraRecords" />
+        </el-form-item>
+        <el-form-item label="加分成员" style="margin-bottom: 0; min-width: 180px;">
+          <el-select v-model="extraForm.userId" filterable size="small" placeholder="选择成员" style="width: 170px;" @change="loadExtraRecords">
+            <el-option v-for="m in extraMembers" :key="m.userId ?? m.id" :label="m.name" :value="m.userId ?? m.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="加分数值" style="margin-bottom: 0;">
+          <el-input-number v-model="extraForm.score" :min="0" :step="0.5" :precision="1" size="small" style="width: 110px;" />
+        </el-form-item>
+        <el-form-item label="加分备注" style="margin-bottom: 0; flex: 1; min-width: 180px;">
+          <el-input v-model="extraForm.remark" size="small" placeholder="如：全勤奖励 / 特别贡献" />
+        </el-form-item>
+        <el-button type="primary" size="small" :loading="extraSaving" @click="submitExtra">
+          <el-icon style="margin-right: 4px;"><Plus /></el-icon> 添加加分
+        </el-button>
+      </div>
+
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">历史加分记录</div>
+      <el-table :data="extraRecords" stripe size="small" v-loading="extraLoading" :header-cell-style="{ background: '#f8fafc' }">
+        <el-table-column prop="month" label="月份" width="80" align="center" />
+        <el-table-column prop="name" label="成员" width="110" />
+        <el-table-column prop="itemName" label="加分项" min-width="120" />
+        <el-table-column prop="score" label="分值" width="90" align="center">
+          <template #default="{ row }"><span style="color: var(--accent); font-weight: 600;">+{{ row.score }}</span></template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="createdAt" label="时间" width="130" />
+        <el-table-column label="操作" width="80" align="center">
+          <template #default="{ row }">
+            <el-button link type="danger" size="small" @click="removeExtra(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-if="!extraRecords.length && !extraLoading" description="该成员本月暂无额外加分记录" :image-size="60" style="padding: 20px 0;" />
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, h } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Document, User } from '@element-plus/icons-vue'
+import { Plus, Document, User, Aim } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import {
@@ -253,6 +299,14 @@ const previewList = ref([])
 const detailVisible = ref(false)
 const currentEval = ref(null)
 const detailData = ref({ checkinList: [], taskList: [] })
+
+// 额外加分状态
+const extraVisible = ref(false)
+const extraLoading = ref(false)
+const extraSaving = ref(false)
+const extraMembers = ref([])
+const extraRecords = ref([])
+const extraForm = reactive({ month: '', userId: null, score: 0.5, remark: '' })
 
 const groupedList = computed(() => {
   const groups = {}
@@ -405,6 +459,73 @@ async function viewDetail(row) {
     detailData.value = await adminApi.memberEvalDetail(row.member, row.month, row.deptId)
   } finally {
     detailLoading.value = false
+  }
+}
+
+// 额外加分：打开弹窗并加载可加分成员
+async function openExtra() {
+  extraForm.month = new Date().toISOString().slice(0, 7)
+  extraForm.userId = null
+  extraForm.score = 0.5
+  extraForm.remark = ''
+  // 主任评部长等下属，部长评本部门；复用以成员接口为数据源
+  const deptId = userStore.isDirector ? userStore.viewDeptId : userStore.deptId
+  extraMembers.value = await adminApi.members(deptId)
+  extraRecords.value = []
+  extraVisible.value = true
+}
+
+// 拉取当前成员的加分历史（按成员+月份过滤）
+async function loadExtraRecords() {
+  extraRecords.value = []
+  if (!extraForm.userId) return
+  extraLoading.value = true
+  try {
+    const res = await adminApi.evalEvents(extraForm.userId, extraForm.month)
+    extraRecords.value = res || []
+  } finally {
+    extraLoading.value = false
+  }
+}
+
+// 添加一条额外加分
+async function submitExtra() {
+  if (!extraForm.userId) return ElMessage.warning('请选择加分成员')
+  if (extraForm.score === null || extraForm.score === undefined || extraForm.score === 0) {
+    return ElMessage.warning('请输入加分数值')
+  }
+  extraSaving.value = true
+  try {
+    await adminApi.addEvalEvent({
+      userId: extraForm.userId,
+      deptId: userStore.isDirector ? userStore.viewDeptId : userStore.deptId,
+      month: extraForm.month,
+      score: extraForm.score,
+      remark: extraForm.remark
+    })
+    ElMessage.success('已添加加分')
+    await loadExtraRecords()
+  } catch (e) {
+    ElMessage.error('添加失败')
+  } finally {
+    extraSaving.value = false
+  }
+}
+
+// 删除一条额外加分
+async function removeExtra(row) {
+  await ElMessageBox.confirm(`确认删除 ${row.name} 的「${row.itemName}」+${row.score} 分记录？`, '删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning'
+  })
+  try {
+    await adminApi.deleteEvalEvent(row.id)
+    ElMessage.success('已删除')
+    await loadExtraRecords()
+  } catch (error) {
+    if (error === 'cancel') return
+    ElMessage.error('删除失败')
   }
 }
 
