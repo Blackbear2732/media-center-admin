@@ -8,6 +8,8 @@ const routes = [
         children: [
             { path: '', component: () => import('@/views/Home.vue'), meta: { title: '首页', public: true } },
             { path: 'profile', component: () => import('@/views/user/Profile.vue'), meta: { title: '个人信息' } },
+            // 👇 新增：MeoW 昵称获取教程
+            { path: 'profile/meow-guide', component: () => import('@/views/user/MeowGuide.vue'), meta: { title: 'MeoW 昵称获取教程' } },
             { path: 'my/tasks', component: () => import('@/views/user/MyTasks.vue'), meta: { title: '我的任务' } },
             { path: 'my/checkins', component: () => import('@/views/user/MyCheckins.vue'), meta: { title: '我的打卡', roles: [0] } },
             { path: 'my/evaluations', component: () => import('@/views/user/MyEvaluations.vue'), meta: { title: '我的考评' } },

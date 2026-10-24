@@ -17,10 +17,20 @@
               <el-input v-model="form.email" placeholder="必填，用于接收系统通知" />
               <div class="muted" style="margin-top:4px">邮箱为必填项，任务与会议通知将发送至此邮箱</div>
             </el-form-item>
+
+
             <el-form-item label="MeoW昵称">
               <el-input v-model="form.meowNick" placeholder="填写后在鸿蒙手机 MeoW 上接收系统通知" />
-              <div class="muted" style="margin-top:4px">可选。在华为鸿蒙手机安装 MeoW 并注册昵称后填写，任务/会议/公告通知将同步推送到手机</div>
+              <div class="muted" style="margin-top:4px">
+                可选。在华为鸿蒙5以上手机安装 MeoW 并注册昵称后填写，任务/会议/公告通知将同步推送到手机
+                <router-link to="/profile/meow-guide" class="guide-link">
+                  如何获取昵称？ →
+                </router-link>
+              </div>
             </el-form-item>
+
+
+
             <el-form-item>
               <el-button type="primary" :loading="saving" @click="save">保存修改</el-button>
               <el-button @click="reset">重置</el-button>
@@ -51,6 +61,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { userApi } from '@/api'
 import { userStore } from '@/store/user'
+// 可选：如果想让标签更醒目
+import { QuestionFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const form = reactive({ studentNo: '', name: '', nickname: '', college: '', className: '', phone: '', email: '', meowNick: '' })
@@ -88,3 +100,12 @@ async function changePwd() {
   } finally { pwdSaving.value = false }
 }
 </script>
+<style scoped>
+.guide-link {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 4px;
+}
+.guide-link:hover { text-decoration: underline; }
+</style>
