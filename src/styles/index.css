@@ -80,6 +80,8 @@ body {
 .dot-prepare { background: #3d7aab; }
 .dot-doing { background: #e8833a; }
 .dot-done { background: #4a9d6e; }
+.dot-new { background: #e8833a; }
+.dot-old { background: #c9c9c9; }
 
 /* 头像 */
 .avatars { display: flex; }

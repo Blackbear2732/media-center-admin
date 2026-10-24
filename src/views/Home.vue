@@ -126,6 +126,22 @@
     <div class="split">
       <div class="split-main">
         <div class="section-head">
+          <div><h3>最新公告</h3><div class="sub">中心通知与部门公告</div></div>
+          <span class="muted" style="cursor:pointer" @click="router.push(isLogin ? '/announcements' : '/login')">查看全部 →</span>
+        </div>
+        <div class="notice-list">
+          <div v-for="(n, idx) in notices" :key="n.id" class="task-row surface-card" @click="goNotice(n)">
+            <span class="status-dot" :class="idx % 2 === 0 ? 'dot-new' : 'dot-old'"></span>
+            <div class="task-row-main">
+              <div class="task-row-title">{{ n.title }}</div>
+              <div class="task-row-meta">{{ getNoticeScopeLabel(n.scope) }} · {{ n.author }} · {{ n.publishTime || n.createdAt }}</div>
+            </div>
+            <el-icon class="task-arrow"><ArrowRight /></el-icon>
+          </div>
+          <div v-if="notices.length === 0" class="muted" style="padding: 20px 0; text-align:center;">暂无公告</div>
+        </div>
+
+        <div class="section-head" style="margin-top: 28px;">
           <div><h3>最新任务</h3><div class="sub">按发布时间排序</div></div>
           <span class="muted" style="cursor:pointer" @click="router.push(isLogin ? '/tasks' : '/login')">查看全部 →</span>
         </div>
@@ -151,13 +167,14 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { homeApi, adminApi } from '@/api'
 // 顶部引入
-import { getTaskDotClass, getTaskStatusLabel } from '@/utils/dict'
+import { getTaskDotClass, getTaskStatusLabel, getNoticeScopeLabel } from '@/utils/dict'
 
 const router = useRouter()
 const loading = ref(false)
 const center = ref({})
 const departments = ref([])
 const tasks = ref([])
+const notices = ref([])
 const isLogin = computed(() => !!localStorage.getItem('token'))
 const dashboard = ref(null)
 const formatNumber = (num) => {
@@ -174,6 +191,7 @@ const deptGradients = [
 ]
 function goWorkspace() { router.push(isLogin.value ? '/tasks' : '/login') }
 function goTask(t) { router.push(isLogin.value ? '/tasks/' + t.id : '/login') }
+function goNotice(n) { router.push(isLogin.value ? '/announcements' : '/login') }
 function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }) }
 
 // 数据看板：未登录也能看到概览数据，但进入详情需要登录
@@ -191,14 +209,16 @@ onMounted(async () => {
       homeApi.centerInfo(),
       homeApi.departments(),
       homeApi.latestTasks(),
-      adminApi.dashboard()
+      adminApi.dashboard(),
+      adminApi.announcements()
     ])
-    const [c, d, t, dash] = results.map(r => r.status === 'fulfilled' ? r.value : null)
+    const [c, d, t, dash, an] = results.map(r => r.status === 'fulfilled' ? r.value : null)
 
     center.value = c || {}
     departments.value = Array.isArray(d) ? d.filter(Boolean) : []
     tasks.value = Array.isArray(t) ? t.filter(Boolean) : []
     dashboard.value = dash
+    notices.value = Array.isArray(an) ? an.filter(Boolean).slice(0, 4) : []
 
     const failed = results.filter(r => r.status === 'rejected')
     if (failed.length > 0) console.warn('部分首页数据加载失败', failed)

@@ -22,6 +22,7 @@
           <router-link to="/" class="nav-item" :class="{ active: route.path === '/' }">首页</router-link>
           <template v-if="userStore.isLogin">
             <router-link to="/tasks" class="nav-item" :class="{ active: route.path.startsWith('/tasks') }">任务</router-link>
+            <router-link to="/announcements" class="nav-item" :class="{ active: route.path === '/announcements' }">公告栏</router-link>
             <router-link to="/materials" class="nav-item" :class="{ active: route.path.startsWith('/materials') }">素材库</router-link>
             <router-link to="/upload" class="nav-item" :class="{ active: route.path === '/upload' }">上传</router-link>
             <router-link to="/device-apply" class="nav-item" :class="{ active: route.path === '/device-apply' }">设备</router-link>
@@ -76,6 +77,7 @@
         <router-link to="/" class="mobile-nav-item" @click="mobileMenuVisible=false">首页</router-link>
         <template v-if="userStore.isLogin">
           <router-link to="/tasks" class="mobile-nav-item" @click="mobileMenuVisible=false">任务列表</router-link>
+          <router-link to="/announcements" class="mobile-nav-item" @click="mobileMenuVisible=false">公告栏</router-link>
           <router-link to="/materials" class="mobile-nav-item" @click="mobileMenuVisible=false">素材库</router-link>
           <router-link to="/upload" class="mobile-nav-item" @click="mobileMenuVisible=false">上传素材</router-link>
           <router-link to="/device-apply" class="mobile-nav-item" @click="mobileMenuVisible=false">设备申请</router-link>
