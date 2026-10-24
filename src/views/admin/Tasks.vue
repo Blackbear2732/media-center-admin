@@ -201,9 +201,9 @@ const deptParticipants = (row) => {
   return Array.from(new Map(all.map(item => [item.name, item])).values())
 }
 
-// 待确认报名（报名 status 0 = 待确认）
+// 待确认报名（后端字段 applyStatus 0=待确认；兼容旧 status 字段）
 const pendingSignups = (row) => (row.signups || []).filter(s =>
-  Number(s.status) === 0 && (isAllDept(deptId) || Number(s.deptId) === Number(deptId))
+  Number(s.applyStatus ?? s.status) === 0 && (isAllDept(deptId) || Number(s.deptId) === Number(deptId))
 )
 
 function getAvailableMembers(row) {
@@ -297,7 +297,7 @@ async function reject(row, s) {
   try {
     await adminApi.rejectSignup(row.id, s.name)
     const signup = (row.signups || []).find(x => x.name === s.name)
-    if (signup) signup.status = 2 // 2-已拒绝
+    if (signup) signup.applyStatus = 2 // 2-已拒绝
     ElMessage.info('已忽略该报名')
   } catch (e) {
     ElMessage.error('操作失败，请稍后重试')

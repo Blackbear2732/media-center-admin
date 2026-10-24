@@ -297,8 +297,7 @@ async function takeEquipment(deviceId) {
   }
   try {
     await deviceApi.takeEquipment(deviceId, route.params.id)
-    const dev = globalDevices.value.find(d => Number(d.id) === Number(deviceId))
-    if (dev) dev.status = 1
+    await loadGlobalDevices()
     ElMessage.success('已取走设备')
   } catch (e) {
     ElMessage.error('取走失败，请稍后重试')
@@ -317,8 +316,7 @@ async function returnEquipment(deviceId) {
   }
   try {
     await deviceApi.returnEquipment(deviceId, route.params.id)
-    const dev = globalDevices.value.find(d => Number(d.id) === Number(deviceId))
-    if (dev) dev.status = 0
+    await loadGlobalDevices()
     ElMessage.success('设备已归还')
   } catch (e) {
     ElMessage.error('归还失败，请稍后重试')
@@ -375,9 +373,9 @@ const canManageDept = (deptId) => {
   return false
 }
 
-// 待确认报名（部长只看本部门，主任看全部）
+// 待确认报名（后端字段 applyStatus 0=待确认；兼容旧 status 字段）
 const pendingSignups = computed(() => {
-  let signups = (task.value.signups || []).filter(s => Number(s.status) === 0)
+  let signups = (task.value.signups || []).filter(s => Number(s.applyStatus ?? s.status) === 0)
   if (userStore.isMinister) {
     signups = signups.filter(s => Number(s.deptId) === Number(userStore.deptId))
   }
@@ -391,7 +389,7 @@ const myParticipantStatus = computed(() => {
 
   if ((task.value.participants || []).some(isSameMember)) return 'joined'
   // 只有「待确认」的报名才算审核中，已拒绝的记录不应让按钮一直停在 pending
-  if ((task.value.signups || []).some(s => isSameMember(s) && Number(s.status) === 0)) return 'pending'
+  if ((task.value.signups || []).some(s => isSameMember(s) && Number(s.applyStatus ?? s.status) === 0)) return 'pending'
   return 'none'
 })
 
@@ -423,7 +421,7 @@ async function handleSignup() {
     const payload = { name: userStore.name, deptId: userStore.deptId }
     await taskApi.signup(task.value.id, payload)
     if (!task.value.signups) task.value.signups = []
-    task.value.signups.push({ ...payload, status: 0 })
+    task.value.signups.push({ ...payload, applyStatus: 0 })
     ElMessage.success('报名成功，请等待部长确认')
   } catch (e) {
     ElMessage.error('报名失败')
@@ -500,7 +498,7 @@ async function handleReject(s) {
   try {
     await adminApi.rejectSignup(task.value.id, s.name)
     const signup = (task.value.signups || []).find(x => x.name === s.name)
-    if (signup) signup.status = 2 // 2-已拒绝
+    if (signup) signup.applyStatus = 2 // 2-已拒绝
     ElMessage.info('已拒绝该报名')
   } catch (e) {
     ElMessage.error('拒绝报名失败，请稍后重试')
