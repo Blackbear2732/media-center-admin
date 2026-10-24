@@ -377,12 +377,13 @@ export const adminApi = {
         })())
         : request.get('/admin/overview', { params: { deptId } }),
 
-    // D-02 成员管理
-    members: (deptId) => USE_MOCK
-        ? delay(isAllDept(deptId)
+    // D-02 成员管理（后端分页）
+    // 入参：{ deptId, role?, politicalStatus?, pageNum, pageSize }，返回 { total, rows }
+    members: (params = {}) => USE_MOCK
+        ? delay(isAllDept(params.deptId)
             ? (mock.members || [])
-            : (mock.members || []).filter(m => Number(m.deptId) === Number(deptId)))
-        : request.get('/admin/members', { params: { deptId } }),
+            : (mock.members || []).filter(m => Number(m.deptId) === Number(params.deptId)))
+        : request.get('/admin/members', { params }),
 
     // 保存成员（加入内存）
     saveMember: (data) => USE_MOCK
@@ -764,12 +765,13 @@ export const adminApi = {
         })())
         : request.get('/admin/evaluations/detail', { params: { memberName, month, deptId } }),
 
-    // D-09 本部门素材
-    materials: (deptId) => USE_MOCK
-        ? delay(isAllDept(deptId)
+    // D-09 本部门素材（后端分页）
+    // 入参：{ deptId, category?, pageNum, pageSize }，返回 { total, rows, categoryCounts }
+    materials: (params = {}) => USE_MOCK
+        ? delay(isAllDept(params.deptId)
             ? mock.materials
-            : mock.materials.filter(m => Number(m.deptId) === Number(deptId)))
-        : request.get('/admin/materials', { params: { deptId } }),
+            : mock.materials.filter(m => Number(m.deptId) === Number(params.deptId)))
+        : request.get('/admin/materials', { params }),
 
     // D-11 公告管理
     announcements: () => USE_MOCK ? delay(mock.announcements) : request.get('/admin/announcements'),
