@@ -24,11 +24,13 @@
       </div>
       <div style="display:flex; gap:10px; align-items:center;">
         <el-button v-if="canGrant" size="small" @click="openManagerDialog">权限管理</el-button>
-        <span class="muted">共 {{ filteredList.length }} 人</span>
       </div>
     </div>
 
     <div class="surface-card" style="padding: 0;">
+      <div style="padding: 12px 16px 0;">
+        <span class="muted">共 {{ filteredList.length }} 人</span>
+      </div>
       <el-table :data="pagedList" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column prop="deptId" label="部门" width="120">
@@ -145,7 +147,8 @@ const canManageAllDepts = computed(() =>
 const canGrant = computed(() =>
   userStore.isDirector || Number(userStore.deptId) === 101
 )
-const deptId = ref(canManageAllDepts.value ? ALL_DEPT_ID : (userStore.deptId ?? ALL_DEPT_ID))
+// 打卡管理默认展示综合部（101），管理全中心者可切换到全部部门
+const deptId = ref(canManageAllDepts.value ? 101 : (userStore.deptId ?? ALL_DEPT_ID))
 const statusFilter = ref(-1) // -1 表示全部
 const list = ref([])
 const loading = ref(false)
