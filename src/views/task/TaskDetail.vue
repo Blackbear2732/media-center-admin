@@ -9,7 +9,15 @@
           <template #header>
             <div class="flex-between">
               <b>{{ task.title }}</b>
-              <el-tag :type="getTaskTagType(task.status)">{{ getTaskStatusLabel(task.status) }}</el-tag>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <template v-if="canManageStatus">
+                  <el-select :model-value="Number(task.status)" size="small" style="width:110px;" @change="changeTaskStatus">
+                    <el-option v-for="s in TASK_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+                  </el-select>
+                  <span class="muted" style="font-size:12px;">状态管理</span>
+                </template>
+                <el-tag v-else :type="getTaskTagType(task.status)">{{ getTaskStatusLabel(task.status) }}</el-tag>
+              </div>
             </div>
           </template>
           <el-descriptions :column="2" border>
@@ -248,6 +256,7 @@ import {
   ALL_DEPT_ID,
   DEVICE_MANAGE_DEPT_ID,
   MATERIAL_TYPE,
+  TASK_STATUS_OPTIONS,
   getDeptLabel,
   getMaterialTypeLabel,
   getMaterialTypeTagType,
@@ -371,6 +380,25 @@ const canManageDept = (deptId) => {
   if (userStore.isDirector) return true
   if (userStore.isMinister && Number(deptId) === Number(userStore.deptId)) return true
   return false
+}
+
+// 任务状态管理权限：主任可管理全部任务，部长仅可管理本部门参与/联动的任务
+const canManageStatus = computed(() => {
+  if (!userStore.canManage) return false
+  if (userStore.isDirector) return true
+  const myDept = Number(userStore.deptId)
+  return (task.value.deptIds || []).some(id => Number(id) === myDept)
+      || (task.value.relatedDeptIds || []).some(id => Number(id) === myDept)
+})
+
+async function changeTaskStatus(val) {
+  try {
+    await adminApi.updateTask(task.value.id, { status: val })
+    task.value.status = val
+    ElMessage.success('任务状态已更新为「' + getTaskStatusLabel(val) + '」')
+  } catch (e) {
+    ElMessage.error('任务状态更新失败')
+  }
 }
 
 // 待确认报名（后端字段 applyStatus 0=待确认；兼容旧 status 字段）
