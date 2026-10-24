@@ -44,7 +44,8 @@ const routes = [
                     { path: 'checkins', component: () => import('@/views/admin/Checkins.vue'), meta: { title: '打卡管理' } },
                     { path: 'devices', component: () => import('@/views/admin/Devices.vue'), meta: { title: '设备管理' } },
                     { path: 'module-config', component: () => import('@/views/admin/ModuleConfig.vue'), meta: { title: '模块配置', roles: [2] } },
-                    { path: 'mail-batches', component: () => import('@/views/admin/MailBatches.vue'), meta: { title: '邮件管理', roles: [2] } }
+                    { path: 'mail-batches', component: () => import('@/views/admin/MailBatches.vue'), meta: { title: '邮件管理', roles: [2] } },
+                    { path: 'election', component: () => import('@/views/admin/Election.vue'), meta: { title: '换届管理', roles: [2] } }
                 ]
             }
         ]

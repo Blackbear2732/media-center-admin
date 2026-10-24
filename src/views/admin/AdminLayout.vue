@@ -90,6 +90,9 @@ async function loadMenus() {
   if (userStore.isDirector && !list.some(m => m.path === 'mail-batches')) {
     list.push({ path: 'mail-batches', label: '邮件管理' })
   }
+  if (userStore.isDirector && !list.some(m => m.path === 'election')) {
+    list.push({ path: 'election', label: '换届管理' })
+  }
   // 打卡管理归综合部：接口异常兜底时也只有主任/综合部显示
   const canCheckin = userStore.isDirector || Number(userStore.deptId) === 101
   if (canCheckin && !list.some(m => m.path === 'checkins')) {

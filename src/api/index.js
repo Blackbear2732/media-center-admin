@@ -986,4 +986,25 @@ export const adminApi = {
             return { success: true }
         })())
         : request.put(`/admin/tasks/${taskId}/score`, { memberName, score, reason }),
+
+    // ================= 换届管理 =================
+
+    // 届次列表
+    electionTerms: () => request.get('/admin/election/terms'),
+
+    // 任职列表（termId 空=当前届）
+    electionAppointments: (termId, deptId) =>
+        request.get('/admin/election/appointments', { params: { termId, deptId } }),
+
+    // 发起换届（创建新届，上一届自动结束）
+    startElection: (data) => request.post('/admin/election/start', data),
+
+    // 批量任命（写入新届任职并同步岗位/角色）
+    applyElection: (data) => request.post('/admin/election/apply', data),
+
+    // 当前届组织架构
+    electionCurrent: () => request.get('/admin/election/current'),
+
+    // 成员任职履历
+    electionHistory: (userId) => request.get('/admin/election/history', { params: { userId } }),
 }
