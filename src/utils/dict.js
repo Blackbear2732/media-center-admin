@@ -282,10 +282,11 @@ export const getMeetingStatusType = (status) => dictTagType({
     1: 'success', 2: 'warning', 3: 'info', 4: 'danger'
 }, status)
 
-// 个人参会状态（0待参加 1已参加）
-export const MEETING_JOIN_STATUS_MAP = { 0: '待参加', 1: '已参加' }
+// 个人参会状态（0待参加 1参加 2迟到 3请假 4缺席）
+export const MEETING_JOIN_STATUS_MAP = { 0: '待参加', 1: '参加', 2: '迟到', 3: '请假', 4: '缺席' }
 export const getMeetingJoinStatusLabel = (status) => dictLabel(MEETING_JOIN_STATUS_MAP, status, '待参加')
-export const getMeetingJoinStatusType = (status) => (Number(status) === 1 ? 'success' : 'info')
+export const getMeetingJoinStatusType = (status) =>
+    Number(status) === 1 ? 'success' : (Number(status) === 2 ? 'warning' : (Number(status) === 4 ? 'danger' : 'info'))
 
 /* ==========================================
  * 12. 考评等级（biz_evaluation_detail：0不合格 1合格 2良好 3优秀）

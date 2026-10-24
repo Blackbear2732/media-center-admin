@@ -20,9 +20,17 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="参会情况" width="170">
+          <template #default="{ row }">
+            <template v-if="row.records && row.records.length">
+              <span class="muted" style="font-size: 13px;">{{ rollSummary(row.records) }}</span>
+            </template>
+            <el-tag v-else size="small" type="info" effect="plain">未点名</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openRoll(row)">点名</el-button>
+            <el-button link type="primary" @click="openRoll(row)">{{ row.records && row.records.length ? '点名/修改' : '点名' }}</el-button>
             <el-button link type="danger" @click="removeMeeting(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -128,6 +136,21 @@ const currentMembers = computed(() => {
   return allMembers.value.filter(m => Number(m.deptId) === Number(current.value.deptId) && Number(m.status) === 1)
 })
 
+// 点名结果概要：如 "5 到场 · 1 迟到 · 1 缺席"
+function rollSummary(records) {
+  const count = { 1: 0, 2: 0, 3: 0, 4: 0 }
+  for (const r of records) {
+    const k = Number(r.status)
+    if (count[k] != null) count[k]++
+  }
+  const parts = []
+  if (count[1]) parts.push(count[1] + ' 到场')
+  if (count[2]) parts.push(count[2] + ' 迟到')
+  if (count[3]) parts.push(count[3] + ' 请假')
+  if (count[4]) parts.push(count[4] + ' 缺席')
+  return parts.join(' · ') || '已点名'
+}
+
 async function load() {
   loading.value = true
   try {
@@ -166,7 +189,9 @@ async function createMeeting() {
       deptId: form.deptId,
       records: []
     }
-    await adminApi.createMeeting(newMeeting)
+    const res = await adminApi.createMeeting(newMeeting)
+    // 用后端返回的真实 id 替换临时 id，避免点名/删除时会议不存在
+    if (res && res.id) newMeeting.id = res.id
     // 当前视角能覆盖到该会议时才插入列表
     if (isAllDept(targetDeptId.value) || Number(targetDeptId.value) === Number(form.deptId)) {
       list.value.unshift(newMeeting)
@@ -200,9 +225,13 @@ async function removeMeeting(row) {
 
 function openRoll(row) {
   current.value = row
-  // 默认全部到场
+  // 用已保存的点名记录初始化状态；没有记录（未点名）才默认全部到场
+  const saved = {}
+  for (const r of row.records || []) {
+    if (r.userId != null) saved[Number(r.userId)] = Number(r.status)
+  }
   currentMembers.value.forEach(m => {
-    rollState[m.id] = MEETING_STATUS.PRESENT
+    rollState[m.id] = saved[Number(m.id)] ?? MEETING_STATUS.PRESENT
   })
   rollVisible.value = true
 }
@@ -217,6 +246,11 @@ async function saveRoll() {
       status: rollState[m.id]
     }))
     await adminApi.saveMeetingRecords(current.value.id, records)
+    // 回写已保存状态，再次打开点名弹窗能显示最新结果
+    current.value.records = currentMembers.value.map(m => ({
+      userId: m.id,
+      status: rollState[m.id]
+    }))
     ElMessage.success('点名结果已保存')
     rollVisible.value = false
   } catch (e) {
