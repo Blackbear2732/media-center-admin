@@ -853,14 +853,14 @@ export const adminApi = {
         ? delay((() => {
             const target = (mock.checkinRecords || []).find(r => String(r.id) === String(id))
             if (target) {
-                target.status = Number(status)
+                target.status = status == null ? null : Number(status)
             } else if (record) {
                 mock.checkinRecords.push({
                     id: Date.now(),
                     date: record.date,
                     deptId: Number(record.deptId),
                     member: record.member,
-                    status: Number(status)
+                    status: status == null ? null : Number(status)
                 })
             }
             return { success: true }

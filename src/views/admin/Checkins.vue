@@ -69,6 +69,7 @@
                   plain
                   @click="mark(row, CHECKIN_STATUS.NOT_DONE)"
               >取消打卡</el-button>
+              <el-button size="small" plain @click="mark(row, null)">清除状态</el-button>
             </template>
           </template>
         </el-table-column>
@@ -149,7 +150,7 @@ async function mark(row, status) {
   try {
     await adminApi.markCheckin(row.id, status, row)
     row.status = status
-    ElMessage.success(`已标记为${getCheckinStatusLabel(status)}`)
+    ElMessage.success(status == null ? '已清除打卡状态' : `已标记为${getCheckinStatusLabel(status)}`)
   } catch (e) {
     console.error(e)
   }
