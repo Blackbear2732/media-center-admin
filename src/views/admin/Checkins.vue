@@ -22,7 +22,10 @@
           </el-select>
         </div>
       </div>
-      <div class="muted">共 {{ filteredList.length }} 人</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <el-button v-if="canGrant" size="small" @click="openManagerDialog">权限管理</el-button>
+        <span class="muted">共 {{ filteredList.length }} 人</span>
+      </div>
     </div>
 
     <div class="surface-card" style="padding: 0;">
@@ -86,6 +89,32 @@
         />
       </div>
     </div>
+
+    <el-dialog v-model="managerVisible" title="打卡管理权限" width="560px">
+      <div class="muted" style="margin-bottom:12px;">
+        综合部部长可将打卡管理权限授予部员，被授权部员可进入本页标记全中心（含综合部）的打卡记录。
+      </div>
+      <div class="muted" style="margin-bottom:8px;">已授权管理员</div>
+      <div v-if="managers.length === 0" class="muted" style="margin-bottom:12px;">暂无</div>
+      <div v-for="m in managers" :key="m.userId" class="manager-row">
+        <span>{{ m.name }}（{{ m.studentNo }}）· {{ m.deptLabel }} · 由{{ m.grantedByName }}授权 {{ m.grantedAt }}</span>
+        <el-button type="danger" size="small" plain @click="revoke(m)">取消权限</el-button>
+      </div>
+      <el-divider />
+      <div class="muted" style="margin-bottom:8px;">可授权部员</div>
+      <el-input
+        v-model="candidateKeyword"
+        placeholder="搜索部员姓名 / 学号"
+        clearable
+        style="margin-bottom:10px;"
+        @input="loadCandidates"
+      />
+      <div v-for="c in candidates" :key="c.userId" class="manager-row">
+        <span>{{ c.name }}（{{ c.studentNo }}）· {{ c.deptLabel }}</span>
+        <el-button type="primary" size="small" plain @click="grant(c)">授权</el-button>
+      </div>
+      <el-empty v-if="candidates.length === 0" description="暂无可授权部员" :image-size="60" />
+    </el-dialog>
   </div>
 </template>
 
@@ -108,8 +137,12 @@ import { usePagination } from '@/utils/usePagination'
 
 const router = useRouter()
 const date = ref(new Date().toISOString().split('T')[0])
-// 打卡管理归综合部：主任和综合部部长可处理全部部门，其他部长不可进入
+// 打卡管理归综合部：主任和综合部部长可处理全部部门，被授权部员同权限
 const canManageAllDepts = computed(() =>
+  userStore.isDirector || Number(userStore.deptId) === 101 || userStore.isCheckinManager
+)
+// 授权操作仅主任/综合部部长（被授权部员不可再授权他人）
+const canGrant = computed(() =>
   userStore.isDirector || Number(userStore.deptId) === 101
 )
 const deptId = ref(canManageAllDepts.value ? ALL_DEPT_ID : (userStore.deptId ?? ALL_DEPT_ID))
@@ -156,6 +189,57 @@ async function mark(row, status) {
   }
 }
 
+// ===== 打卡管理授权（仅主任/综合部部长可见） =====
+const managerVisible = ref(false)
+const managers = ref([])
+const candidates = ref([])
+const candidateKeyword = ref('')
+
+async function loadManagers() {
+  try {
+    managers.value = await adminApi.checkinManagers() || []
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function loadCandidates() {
+  try {
+    candidates.value = await adminApi.checkinManagerCandidates(candidateKeyword.value) || []
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+function openManagerDialog() {
+  managerVisible.value = true
+  candidateKeyword.value = ''
+  loadManagers()
+  loadCandidates()
+}
+
+async function grant(c) {
+  try {
+    await adminApi.grantCheckinManager(c.userId)
+    ElMessage.success(`已授权 ${c.name} 管理打卡`)
+    loadManagers()
+    loadCandidates()
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function revoke(m) {
+  try {
+    await adminApi.revokeCheckinManager(m.userId)
+    ElMessage.success(`已取消 ${m.name} 的打卡管理权限`)
+    loadManagers()
+    loadCandidates()
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 onMounted(() => {
   if (!canManageAllDepts.value) {
     ElMessage.warning('打卡管理仅综合部可用')
@@ -165,3 +249,14 @@ onMounted(() => {
   loadData()
 })
 </script>
+
+<style scoped>
+.manager-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border, #eee);
+  font-size: 13px;
+}
+</style>

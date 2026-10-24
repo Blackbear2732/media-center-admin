@@ -44,7 +44,11 @@ import { ALL_DEPT_ID, DEPT_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict
 
 const route = useRoute()
 const router = useRouter()
-const roleLabel = computed(() => userStore.isDirector ? '中心主任' : '部长')
+const roleLabel = computed(() => {
+  if (userStore.isDirector) return '中心主任'
+  if (userStore.isMinister) return '部长'
+  return userStore.isCheckinManager ? '打卡管理员' : '部员'
+})
 
 // 当前管理视角部门：数字 deptId（100 = 全中心），只读，写入统一走 changeDept
 const deptId = computed(() => userStore.viewDeptId)
@@ -93,8 +97,8 @@ async function loadMenus() {
   if (userStore.isDirector && !list.some(m => m.path === 'election')) {
     list.push({ path: 'election', label: '换届管理' })
   }
-  // 打卡管理归综合部：接口异常兜底时也只有主任/综合部显示
-  const canCheckin = userStore.isDirector || Number(userStore.deptId) === 101
+  // 打卡管理归综合部：接口异常兜底时也只有主任/综合部/被授权部员显示
+  const canCheckin = userStore.isDirector || Number(userStore.deptId) === 101 || userStore.isCheckinManager
   if (canCheckin && !list.some(m => m.path === 'checkins')) {
     list.push({ path: 'checkins', label: '打卡管理' })
   }
@@ -102,6 +106,10 @@ async function loadMenus() {
   const canDevices = userStore.isDirector || Number(userStore.deptId) === 104
   if (canDevices && !list.some(m => m.path === 'devices')) {
     list.push({ path: 'devices', label: '设备管理' })
+  }
+  // 被授权打卡管理的部员：仅保留概览与打卡管理菜单
+  if (!userStore.isMinister && !userStore.isDirector && userStore.isCheckinManager) {
+    list = list.filter(m => m.path === 'checkins' || m.path === 'overview')
   }
   menus.value = list
 

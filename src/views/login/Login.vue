@@ -69,10 +69,10 @@ async function handleLogin() {
     userStore.login(res.token, res.role, res.user)
     ElMessage.success(`欢迎回来，${res.user?.name || form.username}`)
 
-    // 根据角色跳转：主任/部长去管理后台，部员去前台首页
+    // 根据角色跳转：主任/部长去管理后台；被授权打卡管理的部员直接进打卡管理；普通部员去前台首页
     let redirect = route.query.redirect
     if (!redirect) {
-      redirect = Number(res.role) > 0 ? '/admin/overview' : '/'
+      redirect = Number(res.role) > 0 ? '/admin/overview' : (res.user?.checkinManager ? '/admin/checkins' : '/')
     }
     router.replace(redirect)
   } catch (e) {

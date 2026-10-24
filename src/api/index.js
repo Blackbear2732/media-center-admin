@@ -879,6 +879,32 @@ export const adminApi = {
         })())
         : request.put(`/admin/checkins/appeals/${id}`, { status }),
 
+    // 打卡管理授权（综合部部长/主任分配）
+    // 已授权的打卡管理员列表
+    checkinManagers: () => USE_MOCK ? delay(mock.checkinManagers || []) : request.get('/admin/checkins/managers'),
+
+    // 可授权部员候选列表（排除部长/主任/已授权者），支持 keyword 模糊过滤
+    checkinManagerCandidates: (keyword) => USE_MOCK
+        ? delay((mock.checkinManagerCandidates || []).filter(c => !keyword || c.name.includes(keyword)))
+        : request.get('/admin/checkins/managers/candidates', { params: { keyword } }),
+
+    // 授权部员为打卡管理员
+    grantCheckinManager: (userId) => USE_MOCK
+        ? delay((() => {
+            if (!mock.checkinManagers) mock.checkinManagers = []
+            mock.checkinManagers.push({ userId, name: 'mock部员', grantedAt: new Date().toLocaleString() })
+            return { success: true }
+        })())
+        : request.put('/admin/checkins/managers', { userId }),
+
+    // 取消部员的打卡管理权限
+    revokeCheckinManager: (userId) => USE_MOCK
+        ? delay((() => {
+            mock.checkinManagers = (mock.checkinManagers || []).filter(m => String(m.userId) !== String(userId))
+            return { success: true }
+        })())
+        : request.delete(`/admin/checkins/managers/${userId}`),
+
     // D-16 综合部：打卡统计
     checkinStats: () => USE_MOCK ? delay(mock.checkinStats) : request.get('/admin/checkins/stats'),
 

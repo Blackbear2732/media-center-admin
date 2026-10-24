@@ -71,6 +71,16 @@ router.beforeEach((to, from, next) => {
         return next('/')
     }
     if (to.meta.roles && !to.meta.roles.includes(role)) {
+        // 被授权打卡管理的部员可进入管理区，但仅放行打卡管理页
+        if (role === 0) {
+            let checkinManager = false
+            try {
+                checkinManager = !!(JSON.parse(localStorage.getItem('user') || '{}').checkinManager)
+            } catch (e) { /* ignore */ }
+            if (checkinManager && to.path.startsWith('/admin')) {
+                return next(to.path.startsWith('/admin/checkins') ? undefined : { path: '/admin/checkins' })
+            }
+        }
         return next({ path: '/' })
     }
     next()

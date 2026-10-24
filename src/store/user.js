@@ -64,6 +64,10 @@ export const userStore = reactive({
     get canManage() {
         return this.isMinister || this.isDirector
     },
+    // 是否被授权打卡管理（综合部部长/主任授予的部员）
+    get isCheckinManager() {
+        return !!this.userInfo.checkinManager
+    },
     // 当前用户所属部门 ID
     get deptId() {
         return normalizeDeptId(this.userInfo.deptId)
