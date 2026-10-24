@@ -53,9 +53,10 @@
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注 / 配件清单" min-width="200" show-overflow-tooltip />
-          <el-table-column label="操作" width="100" fixed="right">
+          <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="danger" @click="remove(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -152,7 +153,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import {
@@ -231,6 +232,23 @@ async function save() {
     editVisible.value = false
     load()
   } finally { saving.value = false }
+}
+
+async function remove(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除设备「${row.name}」吗？删除后档案将不再显示。`,
+      '删除确认',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+  } catch { return }
+  try {
+    await adminApi.deleteDevice(row.id)
+    ElMessage.success('删除成功')
+    load()
+  } catch (e) {
+    ElMessage.error(e?.message || '删除失败，请检查设备是否在借用中')
+  }
 }
 
 async function review(row, status) {

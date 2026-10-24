@@ -900,6 +900,15 @@ export const adminApi = {
         })())
         : (data.id ? request.put(`/admin/devices/${data.id}`, data) : request.post('/admin/devices', data)),
 
+    // 删除设备档案
+    deleteDevice: (id) => USE_MOCK
+        ? delay((() => {
+            const i = mock.deviceList.findIndex(d => String(d.id) === String(id))
+            if (i >= 0) mock.deviceList.splice(i, 1)
+            return { success: true }
+        })())
+        : request.delete(`/admin/devices/${id}`),
+
     // D-19 摄制部：设备申请审核
     deviceApplications: () => USE_MOCK ? delay(mock.deviceApplications) : request.get('/admin/device-applications'),
 
