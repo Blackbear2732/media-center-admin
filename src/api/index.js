@@ -814,6 +814,19 @@ export const adminApi = {
         })())
         : request.put('/admin/dept-profile', { deptId, ...data }),
 
+    // 保存全中心简介（后端固定写入 dept_id=100，字段结构与部门简介一致）
+    saveCenterInfo: (data) => USE_MOCK
+        ? delay((() => {
+            const key = 100
+            if (mock.deptProfiles[key]) {
+                Object.assign(mock.deptProfiles[key], data)
+            } else {
+                mock.deptProfiles[key] = { ...data }
+            }
+            return { success: true }
+        })())
+        : request.put('/admin/center-info', data),
+
     // D-13/D-17 数据看板
     dashboard: () => USE_MOCK ? delay(mock.dashboardData) : request.get('/admin/dashboard'),
     dashboardImports: () => USE_MOCK ? delay([]) : request.get('/admin/dashboard/imports'),

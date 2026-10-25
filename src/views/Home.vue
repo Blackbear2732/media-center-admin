@@ -45,9 +45,6 @@
         <div class="dept-body">
           <div class="dept-name">{{ d.name }}</div>
           <div class="dept-intro">{{ d.intro }}</div>
-          <div class="dept-photos">
-            <div v-for="n in 3" :key="n" class="photo-thumb"></div>
-          </div>
         </div>
       </div>
     </div>

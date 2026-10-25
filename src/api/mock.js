@@ -683,6 +683,12 @@ export const deptProfiles = Object.fromEntries(
         members: members.filter(m => m.deptId === d.id && m.status === 1).map(m => ({ name: m.name, title: m.title }))
     }])
 )
+// 全中心简介（dept_id = 100），与部门简介字段结构保持一致
+deptProfiles[100] = {
+    intro: '融媒体中心是学校统一宣传平台，统筹新闻、影音、摄制、设计等业务……', contact: '0354-6288xxx',
+    logo: '', cover: '', photos: [],
+    members: members.filter(m => m.status === 1).map(m => ({ name: m.name, title: m.title }))
+}
 
 /* ========== 筛选工具 ========== */
 // 注意这里前端如果传参也会变成数字

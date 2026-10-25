@@ -1,19 +1,26 @@
 <template>
   <div v-loading="loading" style="max-width:760px">
     <el-alert
-        v-if="isCenterView"
+        v-if="isCenterView && canEditCenter"
+        type="warning"
+        :closable="false"
+        class="mb"
+        title="当前为全中心视角，此处编辑的是整个融媒体中心的介绍（含 Logo / 封面 / 精选照片）。"
+    />
+    <el-alert
+        v-else-if="isCenterView"
         type="info"
         :closable="false"
         class="mb"
-        title="当前为全中心视角，请先在右上角切换到具体部门后再编辑部门介绍。"
+        title="全中心介绍仅主任可编辑。"
     />
 
     <div class="surface-card" style="padding:22px">
       <div class="flex-between" style="margin-bottom:16px">
-        <b>{{ deptLabel }} · 部门介绍</b>
+        <b>{{ deptLabel }} · {{ isCenterView ? '中心介绍' : '部门介绍' }}</b>
       </div>
 
-      <el-form :model="form" label-width="90px" :disabled="isCenterView">
+      <el-form :model="form" label-width="90px" :disabled="isCenterView && !canEditCenter">
         <el-form-item label="部门简介">
           <el-input v-model="form.intro" type="textarea" :rows="4" />
         </el-form-item>
@@ -35,7 +42,7 @@
           </div>
         </el-form-item>
         <el-form-item>
-          <button class="pill active" type="button" :disabled="saving || isCenterView" @click="save">
+          <button class="pill active" type="button" :disabled="saving || (isCenterView && !canEditCenter)" @click="save">
             {{ saving ? '保存中…' : '保存修改' }}
           </button>
         </el-form-item>
@@ -49,12 +56,14 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
-import { getDeptLabel, isAllDept } from '@/utils/dict'
+import { getDeptLabel, isAllDept, ALL_DEPT_ID } from '@/utils/dict'
 
-// 部门介绍只能针对具体部门维护，全中心视角不可编辑
+// 部门介绍/全中心介绍同样可维护：非全中心视角编辑具体部门，全中心视角编辑整中心（dept 100）
+// 全中心介绍仅主任（role=2）可编辑
 const isCenterView = computed(() => isAllDept(userStore.viewDeptId))
-const deptId = computed(() => (isCenterView.value ? null : userStore.viewDeptId))
-const deptLabel = computed(() => (deptId.value ? getDeptLabel(deptId.value) : '全中心'))
+const canEditCenter = computed(() => isCenterView.value && userStore.isDirector)
+const deptId = computed(() => (isCenterView.value ? ALL_DEPT_ID : userStore.viewDeptId))
+const deptLabel = computed(() => (isCenterView.value ? '全中心' : getDeptLabel(deptId.value)))
 
 const loading = ref(false), saving = ref(false)
 const photoInput = ref('')
@@ -70,8 +79,17 @@ async function save() {
   if (!deptId.value) return ElMessage.warning('请先选择具体部门')
   saving.value = true
   try {
-    await adminApi.saveDeptProfile(deptId.value, { ...form })
-    ElMessage.success('部门介绍已更新')
+    if (isCenterView.value) {
+      if (!userStore.isDirector) {
+        ElMessage.warning('全中心介绍仅主任可编辑')
+        return
+      }
+      await adminApi.saveCenterInfo({ ...form })
+      ElMessage.success('中心介绍已更新')
+    } else {
+      await adminApi.saveDeptProfile(deptId.value, { ...form })
+      ElMessage.success('部门介绍已更新')
+    }
   } finally { saving.value = false }
 }
 
