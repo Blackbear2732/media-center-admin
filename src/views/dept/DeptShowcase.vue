@@ -22,10 +22,14 @@
               :src="p"
               :preview-src-list="form.photos"
               :initial-index="i"
-              fit="cover"
+              fit="contain"
               class="showcase-img"
               lazy
-          />
+          >
+            <template #error>
+              <div class="img-error"><el-icon><Picture /></el-icon><span>图片加载失败</span></div>
+            </template>
+          </el-image>
         </div>
       </div>
 
@@ -92,9 +96,21 @@ onMounted(load)
   gap: 12px;
 }
 .showcase-img {
+  display: block;
   width: 100%;
-  height: 160px;
+  aspect-ratio: 4 / 3;
   border-radius: 8px;
   cursor: zoom-in;
+  background: #f6f7f9;
+}
+.img-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  color: #999;
+  font-size: 12px;
 }
 </style>
