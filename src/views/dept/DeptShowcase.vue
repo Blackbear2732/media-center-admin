@@ -3,9 +3,12 @@
     <div class="surface-card" style="padding:24px">
       <div class="flex-between" style="margin-bottom:20px">
         <b style="font-size:18px">{{ deptLabel }} · 部门风采</b>
-        <el-select v-model="deptId" style="width:160px" @change="load">
-          <el-option v-for="d in DEPT_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
-        </el-select>
+        <div style="display:flex;align-items:center;gap:14px">
+          <span class="back-home" @click="router.push('/')">返回首页 →</span>
+          <el-select v-model="deptId" style="width:160px" @change="load">
+            <el-option v-for="d in DEPT_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+          </el-select>
+        </div>
       </div>
 
       <div v-if="form.intro" class="showcase-intro">
@@ -84,6 +87,15 @@ onMounted(load)
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-color, #eee);
+}
+.back-home {
+  color: var(--brand, #2a6fb5);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.back-home:hover {
+  text-decoration: underline;
 }
 .showcase-intro {
   line-height: 1.9;

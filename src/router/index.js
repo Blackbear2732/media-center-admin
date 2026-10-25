@@ -57,7 +57,7 @@ const routes = [
     { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
-const router = createRouter({ history: createWebHistory(), routes })
+const router = createRouter({ history: createWebHistory(), scrollBehavior() { return { top: 0 } }, routes })
 
 router.beforeEach((to, from, next) => {
     document.title = `${to.meta.title || ''} - 山西农业大学青年融媒体中心`
