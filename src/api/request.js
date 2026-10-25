@@ -64,14 +64,15 @@ service.interceptors.response.use(
         return Promise.reject(new Error(msg || '请求失败'))
     },
     err => {
-        // 在 401 处理逻辑里加上：
-        if (code === 401) {
+        // 修复：err 回调里 code/msg 未声明会导致 ReferenceError，错误提示全部失效
+        const errMsg = err.response?.data?.msg || err.message || '网络异常'
+        if (err.response?.data?.code === 401) {
             ElMessage.closeAll() // 👈 关掉前面可能弹出的多个错误提示
             clearAuth()
             redirectToLogin()
-            return Promise.reject(new Error(msg || '登录状态已过期'))
+            return Promise.reject(new Error(errMsg || '登录状态已过期'))
         }
-        ElMessage.error(err.response?.data?.msg || err.message || '网络异常')
+        ElMessage.error(errMsg)
         return Promise.reject(err)
     }
 )

@@ -15,8 +15,12 @@ import { setApiBase } from '@/api/request'
 // 本地开发拉取失败时自动回退到默认（本地 Mock + /api）。
 async function bootstrap() {
   const cfg = await loadRuntimeConfig()
-  setUseMock(cfg.useMock)
-  setApiBase(cfg.apiBase)
+  // 仅当 /config 返回合法配置（Cloudflare Pages 部署）时才覆盖构建时环境变量；
+  // 本地开发无 /config，保持 .env.development 的 VITE_USE_MOCK=false 走真实后端。
+  if (cfg.loaded) {
+    setUseMock(cfg.useMock)
+    setApiBase(cfg.apiBase)
+  }
 
   const app = createApp(App)
   for (const [k, v] of Object.entries(ElementPlusIconsVue)) app.component(k, v)

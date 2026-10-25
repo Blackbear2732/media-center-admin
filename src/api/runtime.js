@@ -7,18 +7,19 @@ const DEFAULTS = {
   apiBase: '/api' // 默认走 /api，由 CF 的 functions/api/[[path]].js 代理到真实后端
 }
 
-const state = { ...DEFAULTS }
+const state = { ...DEFAULTS, loaded: false }
 
 export async function loadRuntimeConfig() {
   try {
     const res = await fetch('/config', { cache: 'no-store' })
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() // 本地开发 /config 返回 index.html 会在此抛错
+      state.loaded = true
       if (typeof data.useMock === 'boolean') state.useMock = data.useMock
       if (data.apiBase) state.apiBase = data.apiBase
     }
   } catch (e) {
-    // 本地开发无 /config，保持默认值
+    // 本地开发无 /config（或返回 HTML 无法解析），保持构建时环境变量的默认值
   }
   return state
 }
