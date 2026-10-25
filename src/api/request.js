@@ -30,6 +30,10 @@ const redirectToLogin = () => {
     if (window.location.pathname !== '/login') window.location.replace('/login')
 }
 
+// 请求是否携带了登录令牌：带令牌的请求 401 = 登录过期（跳登录）；
+// 未携带令牌的匿名请求 401 = 该接口需登录（如首页公开数据），静默失败即可，不强制跳转
+const hasAuthHeader = (cfg) => !!(cfg && cfg.headers && cfg.headers.Authorization)
+
 const cacheKey = (method, url, token) => method + '|' + url + '|' + (token || '')
 
 const clearGetCache = () => getCache.clear()
@@ -56,9 +60,13 @@ service.interceptors.response.use(
         const { code, data, msg } = res.data
         if (code === 200 || code === 0) return data
         if (code === 401) {
-            clearAuth()
-            redirectToLogin()
-            return Promise.reject(new Error(msg || '登录状态已过期'))
+            if (hasAuthHeader(res.config)) {
+                clearAuth()
+                redirectToLogin()
+                return Promise.reject(new Error(msg || '登录状态已过期'))
+            }
+            // 匿名请求 401：不跳登录、不弹错（首页为公开页，未登录浏览时接口失败属预期）
+            return Promise.reject(new Error(msg || '请求失败'))
         }
         ElMessage.error(msg || '请求失败')
         return Promise.reject(new Error(msg || '请求失败'))
@@ -67,10 +75,13 @@ service.interceptors.response.use(
         // 修复：err 回调里 code/msg 未声明会导致 ReferenceError，错误提示全部失效
         const errMsg = err.response?.data?.msg || err.message || '网络异常'
         if (err.response?.data?.code === 401) {
-            ElMessage.closeAll() // 👈 关掉前面可能弹出的多个错误提示
-            clearAuth()
-            redirectToLogin()
-            return Promise.reject(new Error(errMsg || '登录状态已过期'))
+            if (hasAuthHeader(err.config)) {
+                ElMessage.closeAll() // 👈 关掉前面可能弹出的多个错误提示
+                clearAuth()
+                redirectToLogin()
+            }
+            // 匿名请求 401：静默失败，不跳登录、不弹错
+            return Promise.reject(new Error(errMsg || '请求失败'))
         }
         ElMessage.error(errMsg)
         return Promise.reject(err)
