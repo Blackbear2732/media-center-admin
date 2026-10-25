@@ -26,10 +26,13 @@
         </el-form-item>
         <el-form-item label="精选照片">
           <el-input v-model="photoInput" placeholder="输入图片 URL 后回车添加" @keyup.enter="addPhoto" />
-          <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
-            <div v-for="(p, i) in form.photos" :key="i" class="photo-chip">
-              <span>{{ p }}</span>
-              <el-icon style="cursor:pointer" @click="form.photos.splice(i, 1)"><Close /></el-icon>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+            <div v-for="(p, i) in form.photos" :key="i" class="photo-row">
+              <img :src="p" class="photo-thumb" alt="" @error="onThumbError($event)" />
+              <span class="photo-url" :title="p">{{ p }}</span>
+              <el-icon class="photo-op" :class="{ 'op-disabled': i === 0 }" title="上移" @click="movePhoto(i, -1)"><ArrowUp /></el-icon>
+              <el-icon class="photo-op" :class="{ 'op-disabled': i === form.photos.length - 1 }" title="下移" @click="movePhoto(i, 1)"><ArrowDown /></el-icon>
+              <el-icon class="photo-op" title="删除" @click="form.photos.splice(i, 1)"><Close /></el-icon>
             </div>
           </div>
         </el-form-item>
@@ -72,6 +75,19 @@ function addPhoto() {
   photoInput.value = ''
 }
 
+function movePhoto(i, dir) {
+  const j = i + dir
+  if (j < 0 || j >= form.photos.length) return
+  const arr = form.photos
+  const tmp = arr[i]
+  arr[i] = arr[j]
+  arr[j] = tmp
+}
+
+function onThumbError(e) {
+  e.target.style.visibility = 'hidden'
+}
+
 async function save() {
   if (!deptId.value) return ElMessage.warning('请先选择具体部门')
   saving.value = true
@@ -96,3 +112,42 @@ onMounted(async () => {
   try { Object.assign(form, await adminApi.deptProfile(deptId.value)) } finally { loading.value = false }
 })
 </script>
+
+<style scoped>
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.photo-thumb {
+  width: 56px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eee;
+}
+.photo-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #666;
+}
+.photo-op {
+  cursor: pointer;
+  font-size: 14px;
+  color: #888;
+  flex-shrink: 0;
+}
+.photo-op:hover {
+  color: var(--brand, #2a6fb5);
+}
+.op-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+</style>

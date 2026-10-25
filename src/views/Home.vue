@@ -45,6 +45,9 @@
         <div class="dept-body">
           <div class="dept-name">{{ d.name }}</div>
           <div class="dept-intro">{{ d.intro }}</div>
+          <div style="margin-top:10px;color:var(--brand,#2a6fb5);font-size:13px;cursor:pointer" @click="router.push(isLogin ? `/dept/${d.id}` : '/login')">
+            {{ isLogin ? '查看部门风采 →' : '登录后查看 →' }}
+          </div>
         </div>
       </div>
     </div>
