@@ -1,8 +1,13 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { userStore } from '@/store/user'
+import { runtimeConfig } from '@/api/runtime'
 
 const service = axios.create({ baseURL: '/api', timeout: 15000 })
+
+// 运行时更新后端地址：默认 /api（走 CF 的 Functions 代理），
+// 若 /config 里配置了完整 API_BASE_URL（如 https://xxx.com），则直达该后端
+export const setApiBase = (url) => { service.defaults.baseURL = url || '/api' }
 
 /*
  * 轻量 GET 响应缓存：本地开发/频繁切换菜单时减少重复请求。
@@ -30,6 +35,8 @@ const cacheKey = (method, url, token) => method + '|' + url + '|' + (token || ''
 const clearGetCache = () => getCache.clear()
 
 service.interceptors.request.use(config => {
+    // 保证 baseURL 与运行时配置一致（默认 /api -> CF Functions 代理）
+    config.baseURL = runtimeConfig.apiBase
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
 
