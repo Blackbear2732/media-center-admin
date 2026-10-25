@@ -24,6 +24,15 @@
         <el-form-item label="部门简介">
           <el-input v-model="form.intro" type="textarea" :rows="5" />
         </el-form-item>
+        <el-form-item label="精选照片">
+          <el-input v-model="photoInput" placeholder="输入图片 URL 后回车添加" @keyup.enter="addPhoto" />
+          <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+            <div v-for="(p, i) in form.photos" :key="i" class="photo-chip">
+              <span>{{ p }}</span>
+              <el-icon style="cursor:pointer" @click="form.photos.splice(i, 1)"><Close /></el-icon>
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="成员名单">
           <div>
             <span v-for="m in form.members || []" :key="m.name" class="tag-soft" style="margin-right:6px">{{ m.name }}</span>
@@ -54,7 +63,14 @@ const deptId = computed(() => (isCenterView.value ? ALL_DEPT_ID : userStore.view
 const deptLabel = computed(() => (isCenterView.value ? '全中心' : getDeptLabel(deptId.value)))
 
 const loading = ref(false), saving = ref(false)
-const form = reactive({ intro: '', members: [] })
+const photoInput = ref('')
+const form = reactive({ intro: '', photos: [], members: [] })
+
+function addPhoto() {
+  const v = photoInput.value.trim()
+  if (v && !form.photos.includes(v)) form.photos.push(v)
+  photoInput.value = ''
+}
 
 async function save() {
   if (!deptId.value) return ElMessage.warning('请先选择具体部门')

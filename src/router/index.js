@@ -23,7 +23,8 @@ const routes = [
             { path: 'materials/:id', component: () => import('@/views/material/MaterialDetail.vue'), meta: { title: '素材详情' } },
             { path: 'upload', component: () => import('@/views/material/Upload.vue'), meta: { title: '上传素材' } },
             { path: 'device-apply', component: () => import('@/views/device/DeviceApply.vue'), meta: { title: '设备申请' } },
-            { path: 'data-panel/:type', component: () => import('@/views/data/DataDetail.vue'), meta: { title: '数据详情' } }
+            { path: 'data-panel/:type', component: () => import('@/views/data/DataDetail.vue'), meta: { title: '数据详情' } },
+            { path: 'dept/:deptId', component: () => import('@/views/dept/DeptShowcase.vue'), meta: { title: '部门风采' } }
         ]
     },
     {
