@@ -20,7 +20,7 @@
         <b>{{ deptLabel }} · {{ isCenterView ? '中心介绍' : '部门介绍' }}</b>
       </div>
 
-      <el-form :model="form" label-width="90px" :disabled="isCenterView && !canEditCenter">
+      <el-form :model="form" label-width="90px" :disabled="isCenterView && !canEditCenter" @submit.prevent>
         <el-form-item label="部门简介">
           <el-input v-model="form.intro" type="textarea" :rows="5" />
         </el-form-item>
