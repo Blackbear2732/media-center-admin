@@ -32,7 +32,7 @@
               <span class="photo-url" :title="p">{{ p }}</span>
               <el-icon class="photo-op" :class="{ 'op-disabled': i === 0 }" title="上移" @click="movePhoto(i, -1)"><ArrowUp /></el-icon>
               <el-icon class="photo-op" :class="{ 'op-disabled': i === form.photos.length - 1 }" title="下移" @click="movePhoto(i, 1)"><ArrowDown /></el-icon>
-              <el-icon class="photo-op" title="删除" @click="form.photos.splice(i, 1)"><Close /></el-icon>
+              <el-icon class="photo-op" title="删除" @click="removePhoto(i)"><Close /></el-icon>
             </div>
           </div>
         </el-form-item>
@@ -71,7 +71,10 @@ const form = reactive({ intro: '', photos: [], members: [] })
 
 function addPhoto() {
   const v = photoInput.value.trim()
-  if (v && !form.photos.includes(v)) form.photos.push(v)
+  if (v && !form.photos.includes(v)) {
+    form.photos.push(v)
+    persistPhotos()
+  }
   photoInput.value = ''
 }
 
@@ -82,28 +85,41 @@ function movePhoto(i, dir) {
   const tmp = arr[i]
   arr[i] = arr[j]
   arr[j] = tmp
+  persistPhotos()
+}
+
+function removePhoto(i) {
+  form.photos.splice(i, 1)
+  persistPhotos()
 }
 
 function onThumbError(e) {
   e.target.style.visibility = 'hidden'
 }
 
+// 照片增删/排序后立即持久化，回车添加即入库，无需再点"保存修改"。
+// 与保存按钮共用同一请求逻辑，仅在按钮点击时弹出成功提示。
+async function doSave() {
+  if (!deptId.value) return
+  if (isCenterView.value && !userStore.isDirector) return
+  if (isCenterView.value) return adminApi.saveCenterInfo({ ...form })
+  return adminApi.saveDeptProfile(deptId.value, { ...form })
+}
+
+function persistPhotos() {
+  doSave().catch(() => {}) // 失败由请求拦截器统一弹错误提示
+}
+
 async function save() {
   if (!deptId.value) return ElMessage.warning('请先选择具体部门')
+  if (isCenterView.value && !userStore.isDirector) return ElMessage.warning('全中心介绍仅主任可编辑')
   saving.value = true
   try {
-    if (isCenterView.value) {
-      if (!userStore.isDirector) {
-        ElMessage.warning('全中心介绍仅主任可编辑')
-        return
-      }
-      await adminApi.saveCenterInfo({ ...form })
-      ElMessage.success('中心介绍已更新')
-    } else {
-      await adminApi.saveDeptProfile(deptId.value, { ...form })
-      ElMessage.success('部门介绍已更新')
-    }
-  } finally { saving.value = false }
+    await doSave()
+    ElMessage.success(isCenterView.value ? '中心介绍已更新' : '部门介绍已更新')
+  } finally {
+    saving.value = false
+  }
 }
 
 onMounted(async () => {
