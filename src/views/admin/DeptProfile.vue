@@ -5,14 +5,14 @@
         type="warning"
         :closable="false"
         class="mb"
-        title="当前为全中心视角，此处编辑的是整个融媒体中心的介绍（含 Logo / 封面 / 精选照片）。"
+        title="当前为全中心视角，此处编辑的是整个融媒体中心的简介。"
     />
     <el-alert
         v-else-if="isCenterView"
         type="info"
         :closable="false"
         class="mb"
-        title="全中心介绍仅主任可编辑。"
+        title="全中心简介仅主任可编辑。"
     />
 
     <div class="surface-card" style="padding:22px">
@@ -22,19 +22,7 @@
 
       <el-form :model="form" label-width="90px" :disabled="isCenterView && !canEditCenter">
         <el-form-item label="部门简介">
-          <el-input v-model="form.intro" type="textarea" :rows="4" />
-        </el-form-item>
-        <el-form-item label="联系方式"><el-input v-model="form.contact" /></el-form-item>
-        <el-form-item label="Logo 链接"><el-input v-model="form.logo" placeholder="图片 URL" /></el-form-item>
-        <el-form-item label="封面链接"><el-input v-model="form.cover" placeholder="图片 URL" /></el-form-item>
-        <el-form-item label="精选照片">
-          <el-input v-model="photoInput" placeholder="输入图片 URL 后回车添加" @keyup.enter="addPhoto" />
-          <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
-            <div v-for="(p, i) in form.photos" :key="i" class="photo-chip">
-              <span>{{ p }}</span>
-              <el-icon style="cursor:pointer" @click="form.photos.splice(i, 1)"><Close /></el-icon>
-            </div>
-          </div>
+          <el-input v-model="form.intro" type="textarea" :rows="5" />
         </el-form-item>
         <el-form-item label="成员名单">
           <div>
@@ -66,14 +54,7 @@ const deptId = computed(() => (isCenterView.value ? ALL_DEPT_ID : userStore.view
 const deptLabel = computed(() => (isCenterView.value ? '全中心' : getDeptLabel(deptId.value)))
 
 const loading = ref(false), saving = ref(false)
-const photoInput = ref('')
-const form = reactive({ intro: '', contact: '', logo: '', cover: '', photos: [], members: [] })
-
-function addPhoto() {
-  const v = photoInput.value.trim()
-  if (v && !form.photos.includes(v)) form.photos.push(v)
-  photoInput.value = ''
-}
+const form = reactive({ intro: '', members: [] })
 
 async function save() {
   if (!deptId.value) return ElMessage.warning('请先选择具体部门')
