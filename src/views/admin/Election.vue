@@ -23,8 +23,8 @@
         </el-table-column>
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag size="small" :type="Number(row.status) === 1 ? 'success' : 'info'" effect="plain">
-              {{ Number(row.status) === 1 ? '进行中' : '已结束' }}
+            <el-tag size="small" :type="termStatusType(row.status)" effect="plain">
+              {{ termStatusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -98,7 +98,7 @@
             <el-date-picker v-model="form.startDate" type="date" value-format="YYYY-MM-DD" style="width:280px;" />
           </el-form-item>
           <div class="muted" style="font-size:13px; line-height:1.7; margin-top:4px;">
-            创建新届后，上一届将自动标记为已结束；随后进入批量任命，将本届组织架构写入新届并同步成员的岗位与登录角色。
+            创建新届（待任命）后进入批量任命；提交任命生效后，新届才转为进行中、上一届才结束并同步成员的岗位与登录角色。若中途取消，不影响当前届。
           </div>
         </el-form>
       </template>
@@ -241,8 +241,12 @@ const POST_BY_ROLE = { 0: '部员', 1: '部长', 2: '主任' }
 
 const activeTermLabel = computed(() => {
   const t = terms.value.find(x => Number(x.id) === Number(selectedTermId.value))
-  return t ? `${t.term_name}${Number(t.status) === 1 ? '（进行中）' : '（已结束）'}` : ''
+  return t ? `${t.term_name}（${termStatusLabel(t.status)}）` : ''
 })
+
+// 届次状态：1 进行中 / 2 待任命 / 0 已结束（新届提交任命后才转为进行中）
+const termStatusLabel = (s) => Number(s) === 1 ? '进行中' : (Number(s) === 2 ? '待任命' : '已结束')
+const termStatusType = (s) => Number(s) === 1 ? 'success' : (Number(s) === 2 ? 'warning' : 'info')
 
 // 新增人员行数（外部调入）
 const newRowCount = computed(() => rows.value.filter(r => r.newUser).length)
@@ -270,7 +274,7 @@ function removeNewRow(row) {
   if (i > -1) rows.value.splice(i, 1)
 }
 
-const termLabel = (t) => `${t.term_name} · ${Number(t.status) === 1 ? '进行中' : '已结束'}`
+const termLabel = (t) => `${t.term_name} · ${termStatusLabel(t.status)}`
 
 const fmtDate = (v) => {
   if (!v) return '—'
