@@ -115,7 +115,27 @@
             <el-icon style="margin-right:4px;"><Plus /></el-icon> 新增人员
           </el-button>
         </div>
-        <el-table :data="rows" stripe max-height="420">
+        <!-- 批量修改条：勾选多行后统一设置岗位/任职类型/部门 -->
+        <div
+            v-if="selectedCount > 0"
+            style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 12px; margin-bottom:10px; background:#f5f7fa; border-radius:6px;"
+        >
+          <span style="font-size:13px; font-weight:600;">已选 {{ selectedCount }} 人</span>
+          <span class="muted" style="font-size:13px;">批量设置：</span>
+          <el-select v-model="batchPost" size="small" style="width:110px;" placeholder="新岗位">
+            <el-option v-for="p in POST_OPTIONS" :key="p" :label="p" :value="p" />
+          </el-select>
+          <el-select v-model="batchRetire" size="small" style="width:105px;" placeholder="任职类型">
+            <el-option v-for="r in RETIRE_BATCH_OPTIONS" :key="r" :label="r" :value="r" />
+          </el-select>
+          <el-select v-model="batchDept" size="small" style="width:120px;" placeholder="部门">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+          </el-select>
+          <el-button type="primary" size="small" @click="applyBatch">应用</el-button>
+          <el-button size="small" @click="clearSelection">取消选择</el-button>
+        </div>
+        <el-table ref="appointTable" :data="rows" stripe max-height="420" @selection-change="onSelectionChange">
+          <el-table-column type="selection" width="44" />
           <el-table-column label="姓名" width="120">
             <template #default="{ row }">
               <el-input v-if="row.newUser" v-model="row.name" size="small" placeholder="必填：姓名" />
@@ -226,6 +246,44 @@ import { getDeptLabel, DEPARTMENTS_OPTIONS } from '@/utils/dict'
 const loading = ref(false), appointLoading = ref(false), saving = ref(false)
 const terms = ref([]), selectedTermId = ref(null), appointments = ref([])
 
+// 批量修改：勾选多行后统一设置
+const appointTable = ref(null)
+const selection = ref([])
+const batchPost = ref(''), batchRetire = ref(''), batchDept = ref(null)
+const RETIRE_BATCH_OPTIONS = ['留任', '升职', '退休']
+const selectedCount = computed(() => selection.value.length)
+
+function onSelectionChange(list) {
+  selection.value = list
+}
+
+// 批量应用：新岗位/任职类型/部门，仅设置已选择的下拉项
+function applyBatch() {
+  const targets = selection.value
+  if (targets.length === 0) return
+  if (batchPost.value) targets.forEach(r => { r.post = batchPost.value })
+  if (batchRetire.value) targets.filter(r => !r.newUser).forEach(r => { r.retireType = batchRetire.value })
+  if (batchDept.value != null) {
+    targets
+        .filter(r => r.newUser || r.retireType === '升职')
+        .forEach(r => {
+          r.deptId = batchDept.value
+          r.deptName = getDeptLabel(batchDept.value)
+        })
+  }
+  batchPost.value = ''
+  batchRetire.value = ''
+  batchDept.value = null
+  ElMessage.success(`已批量修改 ${targets.length} 人`)
+}
+
+function clearSelection() {
+  batchPost.value = ''
+  batchRetire.value = ''
+  batchDept.value = null
+  appointTable.value && appointTable.value.clearSelection()
+}
+
 // 发起换届
 const startVisible = ref(false), step = ref(1)
 const form = reactive({ termName: '', startDate: '' })
@@ -326,6 +384,10 @@ function openStart() {
   form.startDate = ''
   newTermId.value = null
   rows.value = []
+  batchPost.value = ''
+  batchRetire.value = ''
+  batchDept.value = null
+  selection.value = []
   startVisible.value = true
 }
 
