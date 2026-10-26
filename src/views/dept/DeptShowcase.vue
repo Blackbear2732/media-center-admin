@@ -125,4 +125,11 @@ onMounted(load)
   color: #999;
   font-size: 12px;
 }
+/* 移动端照片墙双列紧凑展示 */
+@media (max-width: 768px) {
+  .showcase-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
 </style>

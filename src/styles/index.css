@@ -599,3 +599,134 @@ body {
     }
 }
 
+/* ========================================================
+   移动端加固适配 (通用优化) — 针对表格/按钮/弹窗/间距
+   ======================================================== */
+@media screen and (max-width: 768px) {
+
+    /* 1. el-row + gutter 产生的负 margin 会造成水平溢出 */
+    .el-row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    .el-row [class*="el-col-"] {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* 2. 按钮：放大触控目标，相邻按钮拉开间距避免误触 */
+    .el-button {
+        min-height: 36px;
+    }
+    .el-button + .el-button {
+        margin-left: 8px;
+    }
+    /* 表格操作列：按钮紧凑但保持可点击，长文案允许换行 */
+    .el-table__cell .el-button {
+        min-height: 30px;
+        padding: 0 8px;
+        white-space: nowrap;
+    }
+
+    /* 3. 表格：减小编号与内边距，提升窄屏信息密度 */
+    .el-table th.el-table__cell,
+    .el-table td.el-table__cell {
+        padding: 8px 6px;
+    }
+    .el-table .cell {
+        font-size: 12px;
+    }
+
+    /* 4. 弹窗：贴合屏宽但限制高度，内容可滚动兜底 */
+    .el-dialog {
+        max-height: 90%;
+        display: flex;
+        flex-direction: column;
+    }
+    .el-dialog .el-dialog__body {
+        overflow-y: auto;
+        padding: 16px !important;
+    }
+    .el-drawer__body {
+        padding: 16px;
+    }
+
+    /* 5. 下拉面板：不超过屏宽，避免被裁切；日期面板保持原生宽度避免压缩 */
+    .el-select-dropdown {
+        max-width: 92vw !important;
+    }
+    .el-date-editor,
+    .el-date-editor.el-input,
+    .el-date-editor.el-input__wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* 6. 筛选工具栏：输入/下拉控件全宽，条件纵向堆叠 */
+    .filter-item,
+    .filter-bar .el-form-item,
+    .search-card .el-form--inline .el-form-item {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .search-card .el-form--inline .el-form-item {
+        display: flex;
+        flex-direction: column;
+        margin-right: 0;
+    }
+    .filter-item .el-input,
+    .filter-item .el-select,
+    .filter-item .el-date-editor,
+    .search-card .el-input,
+    .search-card .el-select {
+        width: 100% !important;
+    }
+    .search-card .el-form--inline .el-input,
+    .search-card .el-form--inline .el-select,
+    .search-card .el-form--inline .el-date-editor {
+        width: 100% !important;
+    }
+    .filter-bar .el-button {
+        flex: 1;
+    }
+
+    /* 7. 卡片与标题间距收窄，减少移动端留白 */
+    .surface-card,
+    .material-card,
+    .task-card {
+        padding: 14px;
+    }
+    .section-head {
+        margin: 20px 0 12px;
+    }
+    .section-head h3 {
+        font-size: 17px;
+    }
+    .list-head h2 {
+        font-size: 20px;
+    }
+    .main-inner {
+        padding: 10px 12px !important;
+    }
+
+    /* 8. 概览统计卡：窄屏双列，数字适中 */
+    .stat-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .stat-num {
+        font-size: 22px;
+    }
+
+    /* 9. 页头：标题与操作区允许换行，避免挤出屏幕 */
+    .admin-head,
+    .list-head {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .admin-actions {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+}
+
