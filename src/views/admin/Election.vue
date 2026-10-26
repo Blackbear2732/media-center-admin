@@ -28,8 +28,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
+            <el-button v-if="Number(row.status) === 2" link type="warning" @click="continueAppoint(row)">继续任命</el-button>
             <el-button link type="primary" @click="viewTerm(row)">查看架构</el-button>
           </template>
         </el-table-column>
@@ -83,7 +84,7 @@
     <!-- 发起换届弹窗 -->
     <el-dialog
         v-model="startVisible"
-        title="发起换届"
+        :title="form.termName ? '任命：' + form.termName : '发起换届'"
         width="880px"
         :close-on-click-modal="false"
         class="start-dialog"
@@ -401,26 +402,9 @@ async function createTerm() {
       startDate: form.startDate
     })
     newTermId.value = Number(res.termId)
-    // 加载当前在岗成员作为任命候选，默认沿用原岗位（留任）
-    const mres = await adminApi.members({ deptId: 100, pageNum: 1, pageSize: 9999 })
-    const list = mres?.rows || []
-    rows.value = list
-        .filter(m => Number(m.status) === 1)
-        .map(m => {
-          const curPost = POST_BY_ROLE[Number(m.role)] || '部员'
-          return {
-            userId: m.id,
-            name: m.name,
-            deptId: m.deptId,
-            deptName: getDeptLabel(m.deptId),
-            curPost,
-            post: curPost,
-            retireType: '留任',
-            remark: ''
-          }
-        })
+    await buildRows()
     if (rows.value.length === 0) {
-      ElMessage.warning('没有在岗成员可任命，届次已创建')
+      ElMessage.warning('没有在岗成员可任命，届次已创建（待任命）')
       startVisible.value = false
       return await load()
     }
@@ -430,6 +414,42 @@ async function createTerm() {
   } finally {
     saving.value = false
   }
+}
+
+// 加载当前在岗成员作为任命候选，默认沿用原岗位（留任）
+async function buildRows() {
+  const mres = await adminApi.members({ deptId: 100, pageNum: 1, pageSize: 9999 })
+  const list = mres?.rows || []
+  rows.value = list
+      .filter(m => Number(m.status) === 1)
+      .map(m => {
+        const curPost = POST_BY_ROLE[Number(m.role)] || '部员'
+        return {
+          userId: m.id,
+          name: m.name,
+          deptId: m.deptId,
+          deptName: getDeptLabel(m.deptId),
+          curPost,
+          post: curPost,
+          retireType: '留任',
+          remark: ''
+        }
+      })
+}
+
+// 继续任命：待任命（status=2）届次直接进入批量任命编辑
+async function continueAppoint(row) {
+  form.termName = row.term_name
+  form.startDate = fmtDate(row.start_date)
+  newTermId.value = Number(row.id)
+  batchPost.value = ''
+  batchRetire.value = ''
+  batchDept.value = null
+  selection.value = []
+  step.value = 2
+  startVisible.value = true
+  await buildRows()
+  if (rows.value.length === 0) ElMessage.warning('没有在岗成员可任命')
 }
 
 async function apply() {
