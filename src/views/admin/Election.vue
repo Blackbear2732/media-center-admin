@@ -105,15 +105,47 @@
 
       <!-- 第二步：批量任命 -->
       <template v-else>
-        <div class="muted" style="font-size:13px; margin-bottom:10px;">
-          已创建「{{ form.termName }}」。默认沿用全部在岗成员当前岗位（留任），请按本届变动调整「新岗位 / 任职类型」，退休或升职的成员旧届任职将自动收尾。
+        <div class="flex-between" style="margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+          <span class="muted" style="font-size:13px; line-height:1.7;">
+            已创建「{{ form.termName }}」。默认沿用全部在岗成员当前岗位（留任），请按本届变动调整「新岗位 / 任职类型」；
+            升职可另选部门，退休或升职的成员旧届任职将自动收尾。
+            外部调入的新成员可点「新增人员」录入，直接任部长 / 主任 / 部员。
+          </span>
+          <el-button type="primary" plain size="small" @click="addNewRow">
+            <el-icon style="margin-right:4px;"><Plus /></el-icon> 新增人员
+          </el-button>
         </div>
         <el-table :data="rows" stripe max-height="420">
-          <el-table-column prop="name" label="姓名" width="100" />
-          <el-table-column prop="deptName" label="部门" width="120" />
+          <el-table-column label="姓名" width="120">
+            <template #default="{ row }">
+              <el-input v-if="row.newUser" v-model="row.name" size="small" placeholder="必填：姓名" />
+              <span v-else>{{ row.name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="rows.some(r => r.newUser)" label="学号" width="130">
+            <template #default="{ row }">
+              <el-input v-if="row.newUser" v-model="row.studentNo" size="small" placeholder="必填：登录学号" />
+              <span v-else class="muted" style="font-size:13px;">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="部门" width="140">
+            <template #default="{ row }">
+              <el-select
+                  v-if="row.newUser || row.retireType === '升职'"
+                  v-model="row.deptId"
+                  size="small"
+                  style="width:120px;"
+                  @change="row.deptName = getDeptLabel(row.deptId)"
+              >
+                <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+              </el-select>
+              <span v-else class="muted" style="font-size:13px;">{{ row.deptName }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="原岗位" width="90">
             <template #default="{ row }">
-              <el-tag size="small" effect="plain" :type="postTagType(row.curPost)">{{ row.curPost }}</el-tag>
+              <el-tag v-if="!row.newUser" size="small" effect="plain" :type="postTagType(row.curPost)">{{ row.curPost }}</el-tag>
+              <span v-else class="muted" style="font-size:13px;">—</span>
             </template>
           </el-table-column>
           <el-table-column label="新岗位" width="120">
@@ -123,11 +155,12 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="任职类型" width="120">
+          <el-table-column label="任职类型" width="110">
             <template #default="{ row }">
-              <el-select v-model="row.retireType" size="small" style="width:100px;">
+              <el-select v-if="!row.newUser" v-model="row.retireType" size="small" style="width:100px;">
                 <el-option v-for="r in RETIRE_OPTIONS" :key="r" :label="r" :value="r" />
               </el-select>
+              <el-tag v-else size="small" type="success" effect="plain">新增</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="备注" min-width="140">
@@ -135,9 +168,14 @@
               <el-input v-model="row.remark" size="small" placeholder="选填" />
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="70" fixed="right">
+            <template #default="{ row }">
+              <el-button v-if="row.newUser" link type="danger" @click="removeNewRow(row)">移除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
         <div class="flex-between" style="margin-top:12px;">
-          <span class="muted" style="font-size:13px;">共 {{ rows.length }} 名在岗成员</span>
+          <span class="muted" style="font-size:13px;">共 {{ rows.length }} 名任命成员（含新增 {{ newRowCount }} 人）</span>
           <div>
             <el-button @click="step = 1">上一步</el-button>
           </div>
@@ -181,9 +219,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Plus } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
-import { getDeptLabel } from '@/utils/dict'
+import { getDeptLabel, DEPARTMENTS_OPTIONS } from '@/utils/dict'
 
 const loading = ref(false), appointLoading = ref(false), saving = ref(false)
 const terms = ref([]), selectedTermId = ref(null), appointments = ref([])
@@ -205,6 +243,32 @@ const activeTermLabel = computed(() => {
   const t = terms.value.find(x => Number(x.id) === Number(selectedTermId.value))
   return t ? `${t.term_name}${Number(t.status) === 1 ? '（进行中）' : '（已结束）'}` : ''
 })
+
+// 新增人员行数（外部调入）
+const newRowCount = computed(() => rows.value.filter(r => r.newUser).length)
+
+// 新增一行外部调入人员：默认落到第一个业务部门、部员，任职类型固定「新增」
+function addNewRow() {
+  const deptId = DEPARTMENTS_OPTIONS[0].value
+  rows.value.push({
+    userId: null,
+    newUser: true,
+    name: '',
+    studentNo: '',
+    phone: '',
+    deptId,
+    deptName: getDeptLabel(deptId),
+    curPost: '—',
+    post: '部员',
+    retireType: '新增',
+    remark: ''
+  })
+}
+
+function removeNewRow(row) {
+  const i = rows.value.indexOf(row)
+  if (i > -1) rows.value.splice(i, 1)
+}
 
 const termLabel = (t) => `${t.term_name} · ${Number(t.status) === 1 ? '进行中' : '已结束'}`
 
@@ -303,17 +367,23 @@ async function createTerm() {
 }
 
 async function apply() {
-  const items = rows.value.map(r => ({
-    userId: r.userId,
-    deptId: r.deptId,
-    post: r.post,
-    retireType: r.retireType,
-    remark: r.remark
-  }))
+  // 新增人员行不传 userId，后端据姓名/学号创建账号后写入任职
+  const items = rows.value.map(r => {
+    const base = { deptId: r.deptId, post: r.post, retireType: r.retireType, remark: r.remark }
+    if (r.newUser) return { ...base, name: r.name, studentNo: r.studentNo, phone: r.phone || '' }
+    return { ...base, userId: r.userId }
+  })
+  for (const r of rows.value) {
+    if (r.newUser) {
+      if (!r.name.trim()) return ElMessage.warning('请填写新增人员的姓名')
+      if (!r.studentNo.trim()) return ElMessage.warning(`请填写「${r.name}」的学号（登录账号）`)
+    }
+  }
   if (items.length === 0) return ElMessage.warning('没有可任命的成员')
+  const extra = newRowCount.value ? `（含新增 ${newRowCount.value} 名成员，将自动创建登录账号）` : ''
   try {
     await ElMessageBox.confirm(
-      `将按本次任命写入「${form.termName}」的 ${items.length} 条任职，并同步调整成员的岗位与登录角色，确定提交吗？`,
+      `将按本次任命写入「${form.termName}」的 ${items.length} 条任职${extra}，并同步调整成员的岗位与登录角色，确定提交吗？`,
       '提交任命确认',
       { type: 'warning', confirmButtonText: '确认提交', cancelButtonText: '再检查一下' }
     )
