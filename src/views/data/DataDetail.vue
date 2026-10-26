@@ -31,7 +31,13 @@
 
     <!-- 趋势图 -->
     <div class="surface-card" style="padding: 24px; margin-bottom: 24px;">
-      <div style="font-weight: 600; margin-bottom: 20px;">月度趋势（{{ isWx ? '阅读' : '播放' }}量）</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="font-weight: 600;">月度趋势（{{ isWx ? '阅读' : '播放' }}量）</div>
+        <el-select v-model="selectedYear" style="width: 140px;" aria-label="年份筛选">
+          <el-option label="全部年份" value="" />
+          <el-option v-for="y in yearOptions" :key="y" :label="y + '年'" :value="y" />
+        </el-select>
+      </div>
       <div class="trend-scroll">
         <div class="trend-track" :style="{ minWidth: trendMinWidth }">
           <div v-for="t in trend" :key="t.month" class="trend-item">
@@ -113,7 +119,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
@@ -129,25 +135,63 @@ const type = computed(() => String(route.params.type || 'wx'))
 const isValidType = computed(() => VALID_TYPES.includes(type.value))
 const isWx = computed(() => type.value === 'wx')
 
-// 使用计算属性安全地解构数据
-const summary = computed(() => {
-  return dashboard.value.summary || {}
-})
-
-const trend = computed(() => {
-  return dashboard.value.trend || []
-})
-
 const list = computed(() => {
   return dashboard.value.list || []
 })
 
+// 年份筛选：空字符串表示全部年份，各年份选项由数据中的发布时间自动提取
+const selectedYear = ref('')
+const yearOptions = computed(() => {
+  const years = new Set()
+  for (const d of list.value) {
+    const y = formatYear(d.date)
+    if (y) years.add(y)
+  }
+  return [...years].sort().reverse()
+})
+const yearList = computed(() => {
+  if (!selectedYear.value) return list.value
+  return list.value.filter(d => formatYear(d.date) === selectedYear.value)
+})
+watch(selectedYear, () => {
+  page.value = 1
+})
+
+// 统计卡片：全部年份沿用后端聚合值；按年筛选时由该年数据本地重算
+const summary = computed(() => {
+  if (!selectedYear.value) return dashboard.value.summary || {}
+  let totalViews = 0
+  let totalLikes = 0
+  for (const d of yearList.value) {
+    totalViews += d.views || 0
+    totalLikes += d.likes || 0
+  }
+  return { totalViews, totalLikes, totalCount: yearList.value.length }
+})
+
+// 月度趋势：全部年份沿用后端按月聚合；按年筛选时由该年数据本地按月归组
+const trend = computed(() => {
+  if (!selectedYear.value) return dashboard.value.trend || []
+  const map = new Map()
+  for (const d of yearList.value) {
+    const month = localMonth(d.date)
+    if (!month) continue
+    const v = map.get(month) || { views: 0, likes: 0 }
+    v.views += d.views || 0
+    v.likes += d.likes || 0
+    map.set(month, v)
+  }
+  return [...map.entries()]
+    .map(([month, v]) => ({ month, views: v.views, likes: v.likes }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+})
+
 const page = ref(1)
 const pageSize = ref(20)
-const total = computed(() => list.value.length)
+const total = computed(() => yearList.value.length)
 const pagedList = computed(() => {
   const start = (page.value - 1) * pageSize.value
-  return list.value.slice(start, start + pageSize.value)
+  return yearList.value.slice(start, start + pageSize.value)
 })
 const trendMinWidth = computed(() => `${Math.max(600, trend.value.length * COLUMN_PITCH)}px`)
 const indexMethod = (index) => (page.value - 1) * pageSize.value + index + 1
@@ -197,6 +241,13 @@ const formatMonth = (month) => {
   if (!month) return ''
   const part = String(month).split(' ')[0].split('-')[1]
   return part ? String(parseInt(part, 10)) : String(month)
+}
+
+// 从日期字段中提取“yyyy-MM”，用于按年筛选时本地按月归组
+const localMonth = (date) => {
+  if (!date) return ''
+  const part = String(date).split(' ')[0]
+  return part.length >= 7 ? part.slice(0, 7) : ''
 }
 
 function openLink(url) {
