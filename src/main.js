@@ -6,32 +6,23 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import '@/styles/index.css'  // 引入全局公共样式
-import { loadRuntimeConfig } from '@/api/runtime'
+
+// 数据来源（真实后端 / 本地 Mock）由构建时 VITE_USE_MOCK 环境变量决定：
+//   - .env.development : VITE_USE_MOCK=false → 本地联调真实后端（8080）
+//   - .env.api         : VITE_USE_MOCK=false → 生产构建真实后端
+//   - .env.production  : VITE_USE_MOCK=true  → 演示构建本地 Mock
+// 该切换由 vite.config.js 的别名劫持 + 下方 setUseMock 保证，无运行时配置。
 import { setUseMock } from '@/api'
-import { setApiBase } from '@/api/request'
 
-// 启动前先拉取运行时配置（Cloudflare Pages /config），
-// 用于在 CF 后台切换「本地 Mock / 真实 API」及修改 API 地址，无需重新构建。
-// 本地开发拉取失败时自动回退到默认（本地 Mock + /api）。
-async function bootstrap() {
-  const cfg = await loadRuntimeConfig()
-  // 仅当 /config 返回合法配置（Cloudflare Pages 部署）时才覆盖构建时环境变量；
-  // 本地开发无 /config，保持 .env.development 的 VITE_USE_MOCK=false 走真实后端。
-  if (cfg.loaded) {
-    setUseMock(cfg.useMock)
-    setApiBase(cfg.apiBase)
-  }
+setUseMock(import.meta.env.VITE_USE_MOCK !== 'false')
 
-  const app = createApp(App)
-  for (const [k, v] of Object.entries(ElementPlusIconsVue)) app.component(k, v)
+const app = createApp(App)
+for (const [k, v] of Object.entries(ElementPlusIconsVue)) app.component(k, v)
 
-  // 全局错误边界：渲染期异常不再直接白屏，至少给出可理解的提示
-  app.config.errorHandler = (err, instance, info) => {
-    console.error('[Vue Error]', err, info)
-    ElMessage.error('页面发生错误，请刷新重试')
-  }
-
-  app.use(ElementPlus, { locale: zhCn }).use(router).mount('#app')
+// 全局错误边界：渲染期异常不再直接白屏，至少给出可理解的提示
+app.config.errorHandler = (err, instance, info) => {
+  console.error('[Vue Error]', err, info)
+  ElMessage.error('页面发生错误，请刷新重试')
 }
 
-bootstrap()
+app.use(ElementPlus, { locale: zhCn }).use(router).mount('#app')

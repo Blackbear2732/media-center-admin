@@ -3,8 +3,7 @@ import request from './request'
 import * as mock from '@/api/mock'
 import { ALL_DEPT_ID, ROLE, isAllDept } from '@/utils/dict'
 
-// 是否使用 Mock 数据：初始值由环境变量控制（.env.development / .env.production / .env.api），
-// 部署到 Cloudflare Pages 后可由 /config 运行时配置覆盖（见 runtime.js / main.js）
+// 是否使用 Mock 数据：由构建时环境变量决定（.env.development / .env.production / .env.api）
 export let USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 export const setUseMock = (v) => { USE_MOCK = !!v }
 
