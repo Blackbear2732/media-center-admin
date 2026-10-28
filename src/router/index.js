@@ -2,6 +2,7 @@
 import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 import { reactive } from 'vue'
 import BasicLayout from '@/layout/BasicLayout.vue'
+import { abortPendingRequests } from '@/api/request'
 
 // 全局路由 loading 状态：供 BasicLayout 显示切换遮罩
 export const routeLoading = reactive({ value: false, text: '' })
@@ -64,6 +65,9 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), scrollBehavior() { return { top: 0 } }, routes })
 
 router.beforeEach((to, from, next) => {
+    // 路由切换时取消上一页所有未完成的请求，避免旧数据回填 + 节省带宽
+    if (from !== START_LOCATION) abortPendingRequests()
+
     document.title = `${to.meta.title || ''} - 山西农业大学青年融媒体中心`
     // 只在跨 chunk 切换（目标组件是懒加载）时才显示 loading，已预加载过的瞬间切换不会闪
     if (to !== from) {

@@ -6,8 +6,26 @@ import { userStore } from '@/store/user'
 // 自带 Functions 目录上传到 Cloudflare Pages 时，/api 由 functions/api/[[path]].js 代理到真实后端。
 const service = axios.create({ baseURL: '/api', timeout: 30000 })
 
-/*
- * 轻量 GET 响应缓存：本地开发/频繁切换菜单时减少重复请求。
+/* ===================== 请求取消机制 =====================
+ * 快速切换页面时，上一页未完成的请求会被取消：
+ * - 避免旧请求返回的数据覆盖新页面状态
+ * - 节省带宽（尤其是移动端或网络差的环境）
+ * - 避免多个请求竞争导致的 loading 闪烁
+ * 使用：在路由 beforeEach 开头调 abortPendingRequests()
+ *       手动单请求取消：config.abort = true（默认所有请求都参与取消）
+ */
+let currentAbortCtrl = null
+const pendingRequests = new Set()
+
+export function abortPendingRequests() {
+    if (currentAbortCtrl) {
+        currentAbortCtrl.abort()
+        currentAbortCtrl = null
+        pendingRequests.clear()
+    }
+}
+
+/* ===================== 轻量 GET 响应缓存 =====================
  * - 只缓存 GET，写请求（POST/PUT/DELETE）一律透传不缓存
  * - 键 = 请求方法 + URL + 登录 token（避免跨账号串数据）
  * - 短 TTL，过期自动失效；写请求会清除整体缓存防止脏读
@@ -39,6 +57,15 @@ service.interceptors.request.use(config => {
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
 
+    // 请求取消：为参与管理的请求挂上 AbortController signal
+    if (config.abort !== false) {
+        if (!currentAbortCtrl) currentAbortCtrl = new AbortController()
+        config.signal = currentAbortCtrl.signal
+        pendingRequests.add(config)
+        // 请求完成后从集合中移除
+        config.signal.addEventListener('abort', () => pendingRequests.delete(config))
+    }
+
     // 写操作会改变数据，立即失效所有读缓存避免拿到旧数据
     const method = (config.method || 'get').toLowerCase()
     if (method !== 'get') clearGetCache()
@@ -52,6 +79,8 @@ service.interceptors.request.use(config => {
  */
 service.interceptors.response.use(
     res => {
+        // 正常返回，从 pending 集合移除
+        pendingRequests.delete(res.config)
         const { code, data, msg } = res.data
         if (code === 200 || code === 0) return data
         if (code === 401) {
@@ -67,11 +96,17 @@ service.interceptors.response.use(
         return Promise.reject(new Error(msg || '请求失败'))
     },
     err => {
-        // 修复：err 回调里 code/msg 未声明会导致 ReferenceError，错误提示全部失效
+        pendingRequests.delete(err.config || {})
+
+        // 被取消的请求静默忽略，不弹错、不跳转
+        if (axios.isCancel(err) || err.code === 'ERR_CANCELED') {
+            return new Promise(() => {}) // 返回永远不 resolve 的 promise = 静默吞掉
+        }
+
         const errMsg = err.response?.data?.msg || err.message || '网络异常'
         if (err.response?.data?.code === 401) {
             if (hasAuthHeader(err.config)) {
-                ElMessage.closeAll() // 👈 关掉前面可能弹出的多个错误提示
+                ElMessage.closeAll() // 关掉前面可能弹出的多个错误提示
                 clearAuth()
                 redirectToLogin()
             }

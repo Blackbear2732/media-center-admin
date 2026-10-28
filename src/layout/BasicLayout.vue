@@ -181,12 +181,21 @@ async function updateMsgCount() {
   } catch (e) {}
 }
 
+let msgDebounce = null
+function debouncedUpdateMsg() {
+  if (msgDebounce) clearTimeout(msgDebounce)
+  msgDebounce = setTimeout(updateMsgCount, 500) // 500ms 防抖
+}
+
 onMounted(() => {
   updateMsgCount()
-  window.addEventListener('update-unread-count', updateMsgCount)
+  window.addEventListener('update-unread-count', debouncedUpdateMsg)
 })
-onUnmounted(() => window.removeEventListener('update-unread-count', updateMsgCount))
-watch(() => route.path, () => { updateMsgCount(); mobileMenuVisible.value = false; })
+onUnmounted(() => {
+  if (msgDebounce) clearTimeout(msgDebounce)
+  window.removeEventListener('update-unread-count', debouncedUpdateMsg)
+})
+watch(() => route.path, () => { debouncedUpdateMsg(); mobileMenuVisible.value = false; })
 
 async function onCommand(cmd) {
   if (cmd === 'logout') {
