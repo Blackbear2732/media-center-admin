@@ -41,9 +41,15 @@
 
         <el-form-item label="参与部门" required>
           <el-select v-model="form.deptIds" multiple placeholder="请选择负责本任务的主力部门" style="width:100%">
-            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value"
+                       :disabled="lockedDeptId !== null && d.value === lockedDeptId" />
           </el-select>
-          <div class="muted" style="margin-top:4px">参与部门将收到任务通知，并由部长安排具体人员</div>
+          <div class="muted" style="margin-top:4px">
+            <template v-if="lockedDeptId !== null">
+              本部门（{{ userStore.deptLabel }}）已锁定为参与部门，不可移除；如需其他部门协同，可继续添加
+            </template>
+            <template v-else>参与部门将收到任务通知，并由部长安排具体人员</template>
+          </div>
         </el-form-item>
 
         <el-form-item label="联动部门">
@@ -100,14 +106,21 @@ const availableDevices = computed(() => {
   )
 })
 
+// 部长发布任务时，本部门必须是参与部门且不可移除：
+// 否则可能出现「网宣部部长只把任务派给影音部，自己在任务列表里看不到该任务」的情况。
+// 主任（全中心视角）不锁定，可自由选择参与部门。
+const lockedDeptId = computed(() =>
+  userStore.isMinister && userStore.deptId ? userStore.deptId : null
+)
+
 const form = reactive({
   title: '', startTime: '', endTime: '', location: '', description: '',
   tags: [], deptIds: [], relatedDeptIds: [], equipmentIds: []
 })
 
-// 部长发布任务时默认带上自己的部门
-if (userStore.isMinister && userStore.deptId) {
-  form.deptIds = [userStore.deptId]
+// 部长进入页面时默认带上自己的部门
+if (lockedDeptId.value !== null) {
+  form.deptIds = [lockedDeptId.value]
 }
 
 function addTag() {
