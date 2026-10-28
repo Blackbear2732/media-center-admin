@@ -7,6 +7,25 @@ import { abortPendingRequests } from '@/api/request'
 // 全局路由 loading 状态：供 BasicLayout 显示切换遮罩
 export const routeLoading = reactive({ value: false, text: '' })
 
+// loading 引用计数 + 兜底超时，防止任何竞态/异常导致 loading 永远不关
+let loadingCount = 0
+let loadingFallbackTimer = null
+
+function openLoading(text) {
+    loadingCount++
+    routeLoading.text = text || '加载中'
+    routeLoading.value = true
+    // 兜底：10 秒后强制关，防止任何情况下忘记关
+    if (loadingFallbackTimer) clearTimeout(loadingFallbackTimer)
+    loadingFallbackTimer = setTimeout(() => closeLoading(true), 10000)
+}
+
+function closeLoading(force = false) {
+    if (loadingFallbackTimer) { clearTimeout(loadingFallbackTimer); loadingFallbackTimer = null }
+    loadingCount = force ? 0 : Math.max(0, loadingCount - 1)
+    if (loadingCount === 0) routeLoading.value = false
+}
+
 const routes = [
     {
         path: '/', component: BasicLayout,
@@ -70,10 +89,7 @@ router.beforeEach((to, from, next) => {
 
     document.title = `${to.meta.title || ''} - 山西农业大学青年融媒体中心`
     // 只在跨 chunk 切换（目标组件是懒加载）时才显示 loading，已预加载过的瞬间切换不会闪
-    if (to !== from) {
-        routeLoading.text = to.meta.title || '加载中'
-        routeLoading.value = true
-    }
+    if (to !== from) openLoading(to.meta.title || '加载中')
 
     const token = localStorage.getItem('token')
     // 角色统一为数字：0 部员 / 1 部长 / 2 主任
@@ -81,7 +97,7 @@ router.beforeEach((to, from, next) => {
     const role = rawRole === null || rawRole === '' ? null : Number(rawRole)
 
     if (!to.meta.public && !token) {
-        routeLoading.value = false
+        closeLoading(true)
         return next({ path: '/login', query: { redirect: to.fullPath } })
     }
     // 已登录用户访问登录页：直接回到首页，避免重复登录
@@ -99,7 +115,7 @@ router.beforeEach((to, from, next) => {
                 return next(to.path.startsWith('/admin/checkins') ? undefined : { path: '/admin/checkins' })
             }
         }
-        routeLoading.value = false
+        closeLoading(true)
         return next({ path: '/' })
     }
     next()
@@ -108,7 +124,7 @@ router.beforeEach((to, from, next) => {
 // 懒加载组件下载完成后关掉 loading
 router.afterEach(() => {
     // 延迟 50ms 再关，避免组件刚挂载完还在 onMounted 里做重活就又没遮罩了
-    setTimeout(() => { routeLoading.value = false }, 50)
+    setTimeout(closeLoading, 50)
 })
 
 // 预加载 admin 管理区所有 chunk：首页加载完后浏览器空闲时偷偷下载，

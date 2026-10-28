@@ -10,18 +10,14 @@ const service = axios.create({ baseURL: '/api', timeout: 30000 })
  * 快速切换页面时，上一页未完成的请求会被取消：
  * - 避免旧请求返回的数据覆盖新页面状态
  * - 节省带宽（尤其是移动端或网络差的环境）
- * - 避免多个请求竞争导致的 loading 闪烁
  * 使用：在路由 beforeEach 开头调 abortPendingRequests()
- *       手动单请求取消：config.abort = true（默认所有请求都参与取消）
  */
 let currentAbortCtrl = null
-const pendingRequests = new Set()
 
 export function abortPendingRequests() {
     if (currentAbortCtrl) {
         currentAbortCtrl.abort()
         currentAbortCtrl = null
-        pendingRequests.clear()
     }
 }
 
@@ -29,7 +25,6 @@ export function abortPendingRequests() {
  * - 只缓存 GET，写请求（POST/PUT/DELETE）一律透传不缓存
  * - 键 = 请求方法 + URL + 登录 token（避免跨账号串数据）
  * - 短 TTL，过期自动失效；写请求会清除整体缓存防止脏读
- * - 可选 config.cache = false 强制本次不透传缓存
  */
 const GET_CACHE_TTL = 4000
 const getCache = new Map()
@@ -57,13 +52,10 @@ service.interceptors.request.use(config => {
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
 
-    // 请求取消：为参与管理的请求挂上 AbortController signal
+    // 请求取消：所有默认请求都挂到同一个 AbortController
     if (config.abort !== false) {
         if (!currentAbortCtrl) currentAbortCtrl = new AbortController()
         config.signal = currentAbortCtrl.signal
-        pendingRequests.add(config)
-        // 请求完成后从集合中移除
-        config.signal.addEventListener('abort', () => pendingRequests.delete(config))
     }
 
     // 写操作会改变数据，立即失效所有读缓存避免拿到旧数据
@@ -79,8 +71,6 @@ service.interceptors.request.use(config => {
  */
 service.interceptors.response.use(
     res => {
-        // 正常返回，从 pending 集合移除
-        pendingRequests.delete(res.config)
         const { code, data, msg } = res.data
         if (code === 200 || code === 0) return data
         if (code === 401) {
@@ -96,11 +86,10 @@ service.interceptors.response.use(
         return Promise.reject(new Error(msg || '请求失败'))
     },
     err => {
-        pendingRequests.delete(err.config || {})
-
-        // 被取消的请求静默忽略，不弹错、不跳转
-        if (axios.isCancel(err) || err.code === 'ERR_CANCELED') {
-            return new Promise(() => {}) // 返回永远不 resolve 的 promise = 静默吞掉
+        // 被取消的请求：resolve(null) 而不是 reject，这样组件的 await api.xxx()
+        // 不会抛异常（避免 try/catch 满天飞），组件内部判断 null 即可跳过处理
+        if (axios.isCancel(err) || err.code === 'ERR_CANCELED' || err.name === 'CanceledError') {
+            return Promise.resolve(null)
         }
 
         const errMsg = err.response?.data?.msg || err.message || '网络异常'
