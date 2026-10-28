@@ -1,0 +1,14 @@
+# index.html 不缓存，每次都向 Cloudflare 验证是否有新版本
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 带 hash 的 JS/CSS 文件可以长期强缓存（内容变了 hash 就变了）
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# 图片也可以长期缓存
+/image/*
+  Cache-Control: public, max-age=31536000, immutable

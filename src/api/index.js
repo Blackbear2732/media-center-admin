@@ -1,7 +1,10 @@
 import request from './request'
 // 通过别名引用：VITE_USE_MOCK=false 时构建会替换为空实现（见 vite.config.js）
-import * as mock from '@/api/mock'
+import * as mockNs from '@/api/mock'
 import { ALL_DEPT_ID, ROLE, isAllDept } from '@/utils/dict'
+
+// ESM 命名空间导入只读，用解构拿到可变的对象引用
+const mock = { ...mockNs }
 
 // 是否使用 Mock 数据：由构建时环境变量决定（.env.development / .env.production / .env.api）
 export let USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
