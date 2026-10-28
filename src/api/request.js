@@ -4,7 +4,7 @@ import { userStore } from '@/store/user'
 
 // 统一 /api 前缀：本地开发由 vite.config.js 代理到真实后端(8080)；
 // 自带 Functions 目录上传到 Cloudflare Pages 时，/api 由 functions/api/[[path]].js 代理到真实后端。
-const service = axios.create({ baseURL: '/api', timeout: 15000 })
+const service = axios.create({ baseURL: '/api', timeout: 30000 })
 
 /*
  * 轻量 GET 响应缓存：本地开发/频繁切换菜单时减少重复请求。

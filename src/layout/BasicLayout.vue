@@ -100,7 +100,18 @@
     </el-drawer>
 
     <main class="main-area">
-      <div class="main-inner"><router-view /></div>
+      <div class="main-inner">
+        <!-- 懒加载组件下载时显示的 loading 遮罩，替代白屏闪一下 -->
+        <div v-if="routeLoading.value" class="route-loading-mask">
+          <div class="route-loading-spinner"></div>
+          <span class="route-loading-text">{{ routeLoading.text || '加载中...' }}</span>
+        </div>
+        <router-view v-slot="{ Component }">
+          <transition name="route-fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </div>
     </main>
 
     <footer class="footer">
@@ -147,6 +158,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { messageApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
+import { routeLoading } from '@/router'
 import { Menu } from '@element-plus/icons-vue'
 // 如果你没引入 ChatDotRound，请加上
 import { ChatDotRound } from '@element-plus/icons-vue'
@@ -282,6 +294,42 @@ async function onCommand(cmd) {
   }
 }
 
+/* 路由切换 loading 遮罩：替代白屏闪一下 */
+.route-loading-mask {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding-top: 64px; /* 避开顶部导航栏 */
+}
+.route-loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e8ecf1;
+    border-top-color: var(--brand, #409eff);
+    border-radius: 50%;
+    animation: route-spin 0.7s linear infinite;
+}
+.route-loading-text {
+    font-size: 13px;
+    color: var(--text-sub, #909399);
+}
+@keyframes route-spin {
+    to { transform: rotate(360deg); }
+}
 
-
+/* 路由切换淡入淡出过渡 */
+.route-fade-enter-active,
+.route-fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+.route-fade-enter-from,
+.route-fade-leave-to {
+    opacity: 0;
+}
 </style>

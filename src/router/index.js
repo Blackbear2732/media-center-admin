@@ -1,6 +1,10 @@
 // 👇 1. 把 createWebHashHistory 换成 createWebHistory
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
+import { reactive } from 'vue'
 import BasicLayout from '@/layout/BasicLayout.vue'
+
+// 全局路由 loading 状态：供 BasicLayout 显示切换遮罩
+export const routeLoading = reactive({ value: false, text: '' })
 
 const routes = [
     {
@@ -61,12 +65,19 @@ const router = createRouter({ history: createWebHistory(), scrollBehavior() { re
 
 router.beforeEach((to, from, next) => {
     document.title = `${to.meta.title || ''} - 山西农业大学青年融媒体中心`
+    // 只在跨 chunk 切换（目标组件是懒加载）时才显示 loading，已预加载过的瞬间切换不会闪
+    if (to !== from) {
+        routeLoading.text = to.meta.title || '加载中'
+        routeLoading.value = true
+    }
+
     const token = localStorage.getItem('token')
     // 角色统一为数字：0 部员 / 1 部长 / 2 主任
     const rawRole = localStorage.getItem('role')
     const role = rawRole === null || rawRole === '' ? null : Number(rawRole)
 
     if (!to.meta.public && !token) {
+        routeLoading.value = false
         return next({ path: '/login', query: { redirect: to.fullPath } })
     }
     // 已登录用户访问登录页：直接回到首页，避免重复登录
@@ -84,7 +95,52 @@ router.beforeEach((to, from, next) => {
                 return next(to.path.startsWith('/admin/checkins') ? undefined : { path: '/admin/checkins' })
             }
         }
+        routeLoading.value = false
         return next({ path: '/' })
+    }
+    next()
+})
+
+// 懒加载组件下载完成后关掉 loading
+router.afterEach(() => {
+    // 延迟 50ms 再关，避免组件刚挂载完还在 onMounted 里做重活就又没遮罩了
+    setTimeout(() => { routeLoading.value = false }, 50)
+})
+
+// 预加载 admin 管理区所有 chunk：首页加载完后浏览器空闲时偷偷下载，
+// 用户第一次点管理菜单时 chunk 已经在缓存里了，不会闪一下
+const adminChunks = () => [
+    import('@/views/admin/AdminLayout.vue'),
+    import('@/views/admin/Overview.vue'),
+    import('@/views/admin/Members.vue'),
+    import('@/views/admin/Tasks.vue'),
+    import('@/views/admin/Meetings.vue'),
+    import('@/views/admin/Evaluations.vue'),
+    import('@/views/admin/eval-templates.vue'),
+    import('@/views/admin/Materials.vue'),
+    import('@/views/admin/Announcements.vue'),
+    import('@/views/admin/DeptProfile.vue'),
+    import('@/views/admin/Dashboard.vue'),
+    import('@/views/admin/Checkins.vue'),
+    import('@/views/admin/Devices.vue'),
+    import('@/views/admin/ModuleConfig.vue'),
+    import('@/views/admin/MailBatches.vue'),
+    import('@/views/admin/Election.vue'),
+    import('@/views/login/Login.vue'),
+]
+function idlePrefetch() {
+    // requestIdleCallback 在浏览器空闲时执行（不阻塞主线程）
+    const cb = () => { adminChunks() }
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(cb, { timeout: 10000 })
+    } else {
+        setTimeout(cb, 3000) // 降级：3s 后
+    }
+}
+// 首页（首次路由 resolve 后）才触发预加载，避免非管理用户也下载一堆没用的
+router.beforeResolve((to, _from, next) => {
+    if (_from === START_LOCATION) {
+        idlePrefetch()
     }
     next()
 })
