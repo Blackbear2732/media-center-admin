@@ -9,18 +9,27 @@ export const routeLoading = reactive({ value: false, text: '' })
 
 // loading 引用计数 + 兜底超时，防止任何竞态/异常导致 loading 永远不关
 let loadingCount = 0
+let loadingShowTimer = null
 let loadingFallbackTimer = null
 
+// 延迟 220ms 才显示遮罩：chunk 已缓存 / 接口秒回（mock 调试）时切换是瞬时的，
+// 立即显示遮罩会造成每次点标签页都白闪一下
 function openLoading(text) {
     loadingCount++
     routeLoading.text = text || '加载中'
-    routeLoading.value = true
-    // 兜底：10 秒后强制关，防止任何情况下忘记关
-    if (loadingFallbackTimer) clearTimeout(loadingFallbackTimer)
-    loadingFallbackTimer = setTimeout(() => closeLoading(true), 10000)
+    if (routeLoading.value || loadingShowTimer) return
+    loadingShowTimer = setTimeout(() => {
+        loadingShowTimer = null
+        if (loadingCount <= 0) return
+        routeLoading.value = true
+        // 遮罩真正可见后才挂兜底计时
+        if (loadingFallbackTimer) clearTimeout(loadingFallbackTimer)
+        loadingFallbackTimer = setTimeout(() => closeLoading(true), 10000)
+    }, 220)
 }
 
 function closeLoading(force = false) {
+    if (loadingShowTimer) { clearTimeout(loadingShowTimer); loadingShowTimer = null }
     if (loadingFallbackTimer) { clearTimeout(loadingFallbackTimer); loadingFallbackTimer = null }
     loadingCount = force ? 0 : Math.max(0, loadingCount - 1)
     if (loadingCount === 0) routeLoading.value = false

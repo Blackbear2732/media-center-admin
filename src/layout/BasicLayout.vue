@@ -106,11 +106,7 @@
           <div class="route-loading-spinner"></div>
           <span class="route-loading-text">{{ routeLoading.text || '加载中...' }}</span>
         </div>
-        <router-view v-slot="{ Component }">
-          <transition name="route-fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
+        <router-view />
       </div>
     </main>
 
@@ -330,15 +326,5 @@ async function onCommand(cmd) {
 }
 @keyframes route-spin {
     to { transform: rotate(360deg); }
-}
-
-/* 路由切换淡入淡出过渡 */
-.route-fade-enter-active,
-.route-fade-leave-active {
-    transition: opacity 0.2s ease;
-}
-.route-fade-enter-from,
-.route-fade-leave-to {
-    opacity: 0;
 }
 </style>
