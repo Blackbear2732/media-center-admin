@@ -130,8 +130,12 @@
 
         <el-form-item label="参与部门">
           <el-select v-model="editForm.deptIds" multiple placeholder="请选择主力部门" style="width:100%">
-            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value"
+                       :disabled="lockedDeptId !== null && d.value === lockedDeptId" />
           </el-select>
+          <div v-if="lockedDeptId !== null" class="muted" style="margin-top:4px">
+            本部门（{{ userStore.deptLabel }}）为参与部门，不可移除
+          </div>
         </el-form-item>
 
         <el-form-item label="联动部门">
@@ -156,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi, taskApi } from '@/api'
@@ -189,6 +193,12 @@ const editVisible = ref(false)
 const savingEdit = ref(false)
 const tagInput = ref('')
 const availableDevices = ref([])
+
+// 部长编辑任务时，本部门同样不能被移出参与部门：
+// 否则把本部门删掉后，该任务会从自己的任务列表里消失
+const lockedDeptId = computed(() =>
+  userStore.isMinister && userStore.deptId ? userStore.deptId : null
+)
 
 const editForm = reactive({
   id: null, title: '', status: 0, startTime: '', endTime: '',

@@ -51,12 +51,14 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Picture } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { DEPT_OPTIONS, getDeptLabel } from '@/utils/dict'
 
 const route = useRoute()
 const router = useRouter()
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const deptId = ref(Number(route.params.deptId) || 101)
 const form = reactive({ intro: '', photos: [], members: [] })
 const deptLabel = computed(() => getDeptLabel(deptId.value))

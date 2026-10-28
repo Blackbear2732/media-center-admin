@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import https from 'node:https'
+import http from 'node:http'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
@@ -10,6 +10,11 @@ import viteCompression from 'vite-plugin-compression'
 const srcPath = fileURLToPath(new URL('./src', import.meta.url))
 const mockPath = fileURLToPath(new URL('./src/api/mock.js', import.meta.url))
 const mockStubPath = fileURLToPath(new URL('./src/api/mock.stub.js', import.meta.url))
+
+// Element Plus 整体打成一个 chunk：
+// 曾尝试按组件目录拆分（拆分后首页只需下载用到的组件），但 Element Plus 内部
+// 组件与 core 之间存在交叉引用，拆分必然产生 Circular chunk 告警与潜在的初始化顺序问题，
+// 因此保持整包；配合 _headers 里 assets 的 1 年 immutable 强缓存，二次访问零成本。
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
@@ -62,7 +67,7 @@ export default defineConfig(({ mode }) => {
                     }
                 }
             },
-            chunkSizeWarningLimit: 500 // 把告警阈值从 500 提到 500KB，避免 element-plus chunk 重复告警
+            // 默认阈值 500KB：element-plus 单包约 950KB 会命中该告警，属预期内的整体分包
         },
         server: {
             host: '0.0.0.0',
@@ -70,21 +75,21 @@ export default defineConfig(({ mode }) => {
             strictPort: false,
             proxy: {
                 '/api': {
-                    target: 'https://api.blackbearcode.dpdns.org',
+                    // 本地后端是明文 HTTP（Tomcat 8080），必须用 http://。
+                    // 之前指向 https://localhost:8080 时，TLS 握手字节被发到 HTTP 端口，
+                    // Tomcat 会报 "Invalid character found in method name [0x160x030x01...]" 且请求全部失败
+                    target: 'http://127.0.0.1:8080',
                     changeOrigin: true,
-                    secure: false,
                     followRedirects: true,
                     timeout: 30000,
                     proxyTimeout: 30000,
-                    // 关键：自定义 HTTPS Agent 解决并发瓶颈
-                    // node-http-proxy 默认 Agent 的 maxSockets=256 但 keepAlive=false，
-                    // 每个请求都要新建 TLS 连接 → 并发多了握手排队超时
-                    agent: new https.Agent({
+                    // 复用长连接：node-http-proxy 默认 keepAlive=false，
+                    // 每个请求都新建 TCP 连接，并发多了会打满后端 accept 队列
+                    agent: new http.Agent({
                         keepAlive: true,
                         keepAliveMsecs: 1000,
                         maxSockets: 20,
-                        maxFreeSockets: 10,
-                        rejectUnauthorized: false
+                        maxFreeSockets: 10
                     })
                 }
             }

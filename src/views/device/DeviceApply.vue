@@ -123,7 +123,8 @@ import {
 
 const deviceList = ref([])
 const applications = ref([])
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const loadingDevices = ref(false)
 const submitting = ref(false)
 

@@ -62,7 +62,8 @@ const MSG_TYPE_LABEL = { 1: '任务', 2: '素材', 3: '设备', 4: '考评', 5: 
 
 const batches = ref([])
 const recipients = ref([])
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const detailLoading = ref(false)
 const sending = ref(false)
 const detailVisible = ref(false)

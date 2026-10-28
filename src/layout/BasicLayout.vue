@@ -106,11 +106,7 @@
           <div class="route-loading-spinner"></div>
           <span class="route-loading-text">{{ routeLoading.text || '加载中...' }}</span>
         </div>
-        <router-view v-slot="{ Component }">
-          <transition name="route-fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
+        <router-view />
       </div>
     </main>
 
@@ -159,9 +155,7 @@ import { messageApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
 import { routeLoading } from '@/router'
-import { Menu } from '@element-plus/icons-vue'
-// 如果你没引入 ChatDotRound，请加上
-import { ChatDotRound } from '@element-plus/icons-vue'
+import { Menu, Bell, ArrowDown, ChatDotRound } from '@element-plus/icons-vue'
 const surveyVisible = ref(false) // 问卷弹窗开关
 const route = useRoute()
 const router = useRouter()
@@ -330,15 +324,5 @@ async function onCommand(cmd) {
 }
 @keyframes route-spin {
     to { transform: rotate(360deg); }
-}
-
-/* 路由切换淡入淡出过渡 */
-.route-fade-enter-active,
-.route-fade-leave-active {
-    transition: opacity 0.2s ease;
-}
-.route-fade-enter-from,
-.route-fade-leave-to {
-    opacity: 0;
 }
 </style>

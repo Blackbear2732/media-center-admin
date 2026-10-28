@@ -165,12 +165,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ArrowRight } from '@element-plus/icons-vue'
 import { homeApi, adminApi } from '@/api'
 // 顶部引入
 import { getTaskDotClass, getTaskStatusLabel, getNoticeScopeLabel } from '@/utils/dict'
 
 const router = useRouter()
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const center = ref({})
 const departments = ref([])
 const tasks = ref([])

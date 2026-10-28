@@ -75,6 +75,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { UploadFilled } from '@element-plus/icons-vue'
 import { userApi, materialApi, taskApi } from '@/api'
 import { DEPARTMENTS_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 import { validateUploadFile } from '@/utils/validate'
@@ -83,7 +84,8 @@ const deptId = ref(null)
 const isDirector = ref(false)
 const fields = ref([])
 const tasks = ref([])
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const submitting = ref(false)
 const form = reactive({ taskId: null, sharedDeptIds: [], remark: '' })
 

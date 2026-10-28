@@ -127,7 +127,8 @@ import { ArrowRight } from '@element-plus/icons-vue'
 import { getDeptLabel, getEvalLevelLabel, getEvalLevelType } from '@/utils/dict'
 
 const list = ref([])
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const detailVisible = ref(false)
 const currentEval = ref(null)
 

@@ -244,7 +244,8 @@ import { Refresh, Plus } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { getDeptLabel, DEPARTMENTS_OPTIONS } from '@/utils/dict'
 
-const loading = ref(false), appointLoading = ref(false), saving = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), appointLoading = ref(false), saving = ref(false)
 const terms = ref([]), selectedTermId = ref(null), appointments = ref([])
 
 // 批量修改：勾选多行后统一设置

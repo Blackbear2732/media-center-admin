@@ -47,6 +47,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Plus } from '@element-plus/icons-vue'
 import { taskApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getDeptLabel, getTaskDotClass, getTaskStatusLabel, TASK_STATUS_FILTER_OPTIONS } from '@/utils/dict'
@@ -54,7 +55,8 @@ import { getDeptLabel, getTaskDotClass, getTaskStatusLabel, TASK_STATUS_FILTER_O
 const router = useRouter()
 const activeStatus = ref(-1) // -1 表示全部
 const list = ref([])
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 
 async function load() {
   loading.value = true

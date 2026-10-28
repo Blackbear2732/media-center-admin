@@ -150,7 +150,8 @@ const canGrant = computed(() =>
 const deptId = ref(canManageAllDepts.value ? 101 : (userStore.deptId ?? ALL_DEPT_ID))
 const statusFilter = ref(-1) // -1 表示全部
 const list = ref([])
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 
 // 后端分页：页码/每页条数/总数
 const page = ref(1)

@@ -41,7 +41,8 @@ import { getNoticeScopeLabel } from '@/utils/dict'
 import { ArrowDown } from '@element-plus/icons-vue'
 
 const list = ref([])
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const openIndex = ref(-1)
 
 function toggle(idx) {

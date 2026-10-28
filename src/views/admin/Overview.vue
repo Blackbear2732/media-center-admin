@@ -63,12 +63,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ArrowRight } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getTaskDotClass, getTaskStatusLabel, isAllDept } from '@/utils/dict'
 
 const router = useRouter()
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 
 // 当前管理视角部门（100 = 全中心）
 const deptId = computed(() => userStore.viewDeptId)

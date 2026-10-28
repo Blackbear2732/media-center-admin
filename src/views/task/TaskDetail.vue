@@ -251,6 +251,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Refresh, Link } from '@element-plus/icons-vue'
 import { taskApi, adminApi, deviceApi } from '@/api'
 import {
   ALL_DEPT_ID,
@@ -267,7 +268,8 @@ import { userStore } from '@/store/user'
 
 const route = useRoute()
 const router = useRouter()
-const loading = ref(false), matLoading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), matLoading = ref(false)
 const task = ref({})
 const materials = ref([]), opened = ref([])
 let timer = null

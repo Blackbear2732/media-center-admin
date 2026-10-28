@@ -289,7 +289,8 @@ import {
   getEvalLevelType
 } from '@/utils/dict'
 
-const loading = ref(false), saving = ref(false), detailLoading = ref(false), previewLoading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), saving = ref(false), detailLoading = ref(false), previewLoading = ref(false)
 const list = ref([])
 const activeMonths = ref([])
 const createVisible = ref(false)
