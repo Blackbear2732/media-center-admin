@@ -262,12 +262,17 @@ onMounted(async () => {
   }
   loading.value = true
   try {
-    const res = await adminApi.dashboard()
+    // dashboard 后端查询慢，设置 20s 超时；超时后友好提示，防止无限转圈
+    const res = await adminApi.dashboard({ timeout: 20000 })
     if (res) {
       dashboard.value = isWx.value ? (res.wx || {}) : (res.yy || {})
     }
   } catch (e) {
-    console.error('加载详情数据失败', e)
+    if (e?.code === 'ERR_CANCELED' || e?.code === 'ECONNABORTED' || e?.message?.includes('timeout')) {
+      ElMessage.warning('数据看板加载较慢，请稍后刷新重试')
+    } else {
+      console.error('加载详情数据失败', e)
+    }
   } finally {
     loading.value = false
   }

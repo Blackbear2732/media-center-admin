@@ -204,25 +204,30 @@ function openPanel(type) {
 onMounted(async () => {
   loading.value = true
   try {
-    // 首页是公开页：任何单个接口失败都不应拖垮整页（dashboard 已开放匿名访问，未登录也能看到看板数据）
-    const results = await Promise.allSettled([
+    // 首页是公开页：任何单个接口失败都不应拖垮整页
+    // dashboard 后端查询极慢（约 30-40s），单独异步加载，不阻塞首页主流程
+    Promise.allSettled([
       homeApi.centerInfo(),
       homeApi.departments(),
       homeApi.latestTasks(),
-      adminApi.dashboard(),
       adminApi.announcements()
-    ])
-    const [c, d, t, dash, an] = results.map(r => r.status === 'fulfilled' ? r.value : null)
+    ]).then(results => {
+      const [c, d, t, an] = results.map(r => r.status === 'fulfilled' ? r.value : null)
+      center.value = c || {}
+      departments.value = Array.isArray(d) ? d.filter(Boolean) : []
+      tasks.value = Array.isArray(t) ? t.filter(Boolean) : []
+      notices.value = Array.isArray(an) ? an.filter(Boolean).slice(0, 4) : []
 
-    center.value = c || {}
-    departments.value = Array.isArray(d) ? d.filter(Boolean) : []
-    tasks.value = Array.isArray(t) ? t.filter(Boolean) : []
-    dashboard.value = dash
-    notices.value = Array.isArray(an) ? an.filter(Boolean).slice(0, 4) : []
+      const failed = results.filter(r => r.status === 'rejected')
+      if (failed.length > 0) console.warn('部分首页数据加载失败', failed)
+      loading.value = false // 主数据到齐立即关 loading
+    }).catch(() => { loading.value = false })
 
-    const failed = results.filter(r => r.status === 'rejected')
-    if (failed.length > 0) console.warn('部分首页数据加载失败', failed)
-  } finally {
+    // dashboard 异步加载，15s 超时兜底，失败直接不显示看板数据
+    adminApi.dashboard({ timeout: 15000 }).then(dash => {
+      dashboard.value = dash
+    }).catch(() => { /* dashboard 慢/超时，静默忽略 */ })
+  } catch (e) {
     loading.value = false
   }
 })
