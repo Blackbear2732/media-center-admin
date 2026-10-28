@@ -126,7 +126,8 @@ import { adminApi } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const dashboard = ref({})
 
 // 路由参数只允许 wx / yy，避免用户手输 /data-panel/foo 时把未知类型当成影音数据展示

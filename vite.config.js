@@ -11,6 +11,11 @@ const srcPath = fileURLToPath(new URL('./src', import.meta.url))
 const mockPath = fileURLToPath(new URL('./src/api/mock.js', import.meta.url))
 const mockStubPath = fileURLToPath(new URL('./src/api/mock.stub.js', import.meta.url))
 
+// Element Plus 整体打成一个 chunk：
+// 曾尝试按组件目录拆分（拆分后首页只需下载用到的组件），但 Element Plus 内部
+// 组件与 core 之间存在交叉引用，拆分必然产生 Circular chunk 告警与潜在的初始化顺序问题，
+// 因此保持整包；配合 _headers 里 assets 的 1 年 immutable 强缓存，二次访问零成本。
+
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
     const useMock = env.VITE_USE_MOCK !== 'false'
@@ -62,7 +67,7 @@ export default defineConfig(({ mode }) => {
                     }
                 }
             },
-            chunkSizeWarningLimit: 500 // 把告警阈值从 500 提到 500KB，避免 element-plus chunk 重复告警
+            // 默认阈值 500KB：element-plus 单包约 950KB 会命中该告警，属预期内的整体分包
         },
         server: {
             host: '0.0.0.0',

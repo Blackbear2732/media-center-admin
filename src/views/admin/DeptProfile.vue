@@ -28,7 +28,7 @@
           <el-input v-model="photoInput" placeholder="输入图片 URL 后回车添加" @keyup.enter="addPhoto" />
           <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
             <div v-for="(p, i) in form.photos" :key="i" class="photo-row">
-              <img :src="p" class="photo-thumb" alt="" @error="onThumbError($event)" />
+              <img :src="p" class="photo-thumb" alt="" loading="lazy" decoding="async" @error="onThumbError($event)" />
               <span class="photo-url" :title="p">{{ p }}</span>
               <el-icon class="photo-op" :class="{ 'op-disabled': i === 0 }" title="上移" @click="movePhoto(i, -1)"><ArrowUp /></el-icon>
               <el-icon class="photo-op" :class="{ 'op-disabled': i === form.photos.length - 1 }" title="下移" @click="movePhoto(i, 1)"><ArrowDown /></el-icon>
@@ -54,6 +54,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { ArrowUp, ArrowDown, Close } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getDeptLabel, isAllDept, ALL_DEPT_ID } from '@/utils/dict'
@@ -65,7 +66,8 @@ const canEditCenter = computed(() => isCenterView.value && userStore.isDirector)
 const deptId = computed(() => (isCenterView.value ? ALL_DEPT_ID : userStore.viewDeptId))
 const deptLabel = computed(() => (isCenterView.value ? '全中心' : getDeptLabel(deptId.value)))
 
-const loading = ref(false), saving = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), saving = ref(false)
 const photoInput = ref('')
 const form = reactive({ intro: '', photos: [], members: [] })
 

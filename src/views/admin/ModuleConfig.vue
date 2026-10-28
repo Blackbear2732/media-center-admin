@@ -60,7 +60,8 @@ import { DEPARTMENTS_OPTIONS, MODULE_LABEL, getDeptLabel } from '@/utils/dict'
 const CHECKIN_DEPT_ID = 101
 const DEVICE_DEPT_ID = 104
 
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const saving = ref(false)
 const tableData = ref([])
 

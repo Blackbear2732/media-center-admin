@@ -63,7 +63,8 @@ import { userApi } from '@/api'
 import { ATTENDANCE_STATUS, getAttendanceStatusLabel, getAttendanceStatusType } from '@/utils/dict'
 
 const data = ref({ rate: 0, total: 0, normal: 0, late: 0, absent: 0, records: [] })
-const loading = ref(false), appealVisible = ref(false), submitting = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), appealVisible = ref(false), submitting = ref(false)
 const appealForm = reactive({ date: '', reason: '', proof: '' })
 
 const statCards = computed(() => [

@@ -77,7 +77,8 @@ import { getDeptLabel, getMaterialTypeLabel, getMaterialTypeTagType } from '@/ut
 
 const route = useRoute()
 const router = useRouter()
-const loading = ref(false), extracting = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), extracting = ref(false)
 const data = ref({}), versions = ref([]), extractLogs = ref([])
 
 async function load() {

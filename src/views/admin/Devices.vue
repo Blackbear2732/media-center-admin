@@ -177,7 +177,8 @@ const canManageDevices = computed(() =>
   userStore.isDirector || Number(userStore.deptId) === 104
 )
 const active = ref('archive')
-const loading = ref(false), saving = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), saving = ref(false)
 const devices = ref([]), applications = ref([]), usage = ref([])
 const editVisible = ref(false)
 

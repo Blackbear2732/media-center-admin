@@ -112,7 +112,8 @@ import { UploadFilled, Document } from '@element-plus/icons-vue'
 const DATA_FILE_ACCEPT = ['.xlsx', '.xls', '.csv']
 const DATA_FILE_MAX_MB = 20
 
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const fileWx = ref(null)
 const fileYy = ref(null)
 const uploadingWx = ref(false)

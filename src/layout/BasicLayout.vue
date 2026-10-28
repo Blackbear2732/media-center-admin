@@ -155,9 +155,7 @@ import { messageApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
 import { routeLoading } from '@/router'
-import { Menu } from '@element-plus/icons-vue'
-// 如果你没引入 ChatDotRound，请加上
-import { ChatDotRound } from '@element-plus/icons-vue'
+import { Menu, Bell, ArrowDown, ChatDotRound } from '@element-plus/icons-vue'
 const surveyVisible = ref(false) // 问卷弹窗开关
 const route = useRoute()
 const router = useRouter()

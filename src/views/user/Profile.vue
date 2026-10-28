@@ -67,7 +67,8 @@ import { QuestionFilled } from '@element-plus/icons-vue'
 const router = useRouter()
 const form = reactive({ studentNo: '', name: '', nickname: '', college: '', className: '', phone: '', email: '', meowNick: '' })
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
-const loading = ref(false), saving = ref(false), pwdSaving = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), saving = ref(false), pwdSaving = ref(false)
 let origin = {}
 
 onMounted(async () => {

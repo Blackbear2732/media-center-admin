@@ -114,7 +114,8 @@ import {
   isAllDept
 } from '@/utils/dict'
 
-const loading = ref(false), saving = ref(false), savingRoll = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), saving = ref(false), savingRoll = ref(false)
 const list = ref([]), allMembers = ref([])
 const createVisible = ref(false), rollVisible = ref(false)
 const current = ref(null)

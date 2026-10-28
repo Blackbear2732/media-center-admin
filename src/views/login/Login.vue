@@ -45,13 +45,14 @@ import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
-import { authApi } from '@/api'
+import { authApi, USE_MOCK } from '@/api'
 import { userStore } from '@/store/user'
 
 const router = useRouter()
 const route = useRoute()
 const form = reactive({ username: '', password: '' }) // 不在页面预填账号密码
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 
 async function handleLogin() {
   if (!form.username || !form.password) {
@@ -63,7 +64,12 @@ async function handleLogin() {
     // 调用后端登录接口，后端应返回 { token, role, user }
     const res = await authApi.login({ username: form.username, password: form.password })
 
-    if (!res || !res.token) throw new Error('登录返回数据异常')
+    // Mock 模式下账号/密码不匹配时接口静默返回 null（真实后端异常由拦截器弹提示），
+    // 这里补一个提示，避免点击登录后没有任何反馈
+    if (!res || !res.token) {
+      ElMessage.warning(USE_MOCK ? '账号或密码错误（Mock 演示密码为 123456）' : '登录失败，请稍后重试')
+      return
+    }
 
     // 存入 Store
     userStore.login(res.token, res.role, res.user)

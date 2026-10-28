@@ -73,7 +73,8 @@ import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import { DEPARTMENTS_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 
-const loading = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading()
 const saving = ref(false)
 const deptId = ref(null)
 const templateId = ref(null)

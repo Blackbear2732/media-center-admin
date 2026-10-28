@@ -203,7 +203,8 @@ const roleFilter = ref('')
 const politicalFilter = ref('')
 
 const rawList = ref([])
-const loading = ref(false), saving = ref(false)
+import { useDelayedLoading } from '@/utils/loading'
+const loading = useDelayedLoading(), saving = ref(false)
 const editVisible = ref(false), detailVisible = ref(false), detailLoading = ref(false)
 const current = ref(null)
 const detail = ref({ tasks: [], checkins: [] })
