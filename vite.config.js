@@ -1,36 +1,91 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
+import https from 'node:https'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import viteCompression from 'vite-plugin-compression'
 
 const srcPath = fileURLToPath(new URL('./src', import.meta.url))
 const mockPath = fileURLToPath(new URL('./src/api/mock.js', import.meta.url))
 const mockStubPath = fileURLToPath(new URL('./src/api/mock.stub.js', import.meta.url))
 
 export default defineConfig(({ mode }) => {
-    // 与 src/api/index.js 的 USE_MOCK 判断保持同一套规则：
-    // 只有显式设置 VITE_USE_MOCK=false（见 .env.api）才关闭 Mock
     const env = loadEnv(mode, process.cwd(), '')
     const useMock = env.VITE_USE_MOCK !== 'false'
+    const isProd = mode === 'production' || mode === 'api'
 
     return {
-        plugins: [vue()],
+        plugins: [
+            vue(),
+            // Element Plus 自动按需引入组件和 API
+            AutoImport({
+                imports: ['vue', 'vue-router'],
+                resolvers: [ElementPlusResolver()],
+                dts: false
+            }),
+            Components({
+                resolvers: [ElementPlusResolver()],
+                dts: false
+            }),
+            // gzip 压缩（Cloudflare 会自动 gzip，但预生成可减少服务器开销）
+            viteCompression({
+                verbose: false,
+                disable: !isProd,
+                threshold: 1024, // 大于 1KB 才压缩
+                algorithm: 'gzip',
+                ext: '.gz'
+            })
+        ],
         resolve: {
             alias: [
-                // 关闭 Mock 时把数据模块指向空实现，演示数据不会进入构建产物
                 { find: '@/api/mock', replacement: useMock ? mockPath : mockStubPath },
                 { find: '@', replacement: srcPath }
             ]
         },
+        build: {
+            target: 'es2019',
+            cssCodeSplit: true, // CSS 代码分割
+            sourcemap: false,
+            // rollup 分包策略：把大依赖拆成独立 chunk 便于浏览器缓存
+            rollupOptions: {
+                output: {
+                    manualChunks(id) {
+                        if (id.includes('node_modules')) {
+                            if (id.includes('element-plus')) return 'element-plus'
+                            if (id.includes('@element-plus/icons-vue')) return 'ep-icons'
+                            if (id.includes('vue-router')) return 'vue-router'
+                            if (id.includes('axios')) return 'axios'
+                            if (id.includes('vue/') || id.includes('\\vue\\')) return 'vue-vendor'
+                        }
+                    }
+                }
+            },
+            chunkSizeWarningLimit: 500 // 把告警阈值从 500 提到 500KB，避免 element-plus chunk 重复告警
+        },
         server: {
-            host: '0.0.0.0', // 允许局域网访问（同事/手机可通过 IP 访问你的电脑）
-            port: 5173,      // Vite 默认端口：80 端口在 Windows 需要管理员权限，macOS/Linux 需要 sudo
+            host: '0.0.0.0',
+            port: 5173,
             strictPort: false,
             proxy: {
                 '/api': {
-                    target: 'http://localhost:8080',
-                    changeOrigin: true
-                    // 注意：如果你们的后端接口本身没有 /api 前缀，这里需要加 rewrite
-                    // rewrite: (path) => path.replace(/^\/api/, '')
+                    target: 'https://api.blackbearcode.dpdns.org',
+                    changeOrigin: true,
+                    secure: false,
+                    followRedirects: true,
+                    timeout: 30000,
+                    proxyTimeout: 30000,
+                    // 关键：自定义 HTTPS Agent 解决并发瓶颈
+                    // node-http-proxy 默认 Agent 的 maxSockets=256 但 keepAlive=false，
+                    // 每个请求都要新建 TLS 连接 → 并发多了握手排队超时
+                    agent: new https.Agent({
+                        keepAlive: true,
+                        keepAliveMsecs: 1000,
+                        maxSockets: 20,
+                        maxFreeSockets: 10,
+                        rejectUnauthorized: false
+                    })
                 }
             }
         }
