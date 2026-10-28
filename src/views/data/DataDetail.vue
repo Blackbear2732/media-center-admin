@@ -268,9 +268,8 @@ onMounted(async () => {
       dashboard.value = isWx.value ? (res.wx || {}) : (res.yy || {})
     }
   } catch (e) {
-    if (e?.code === 'ERR_CANCELED' || e?.code === 'ECONNABORTED' || e?.message?.includes('timeout')) {
-      ElMessage.warning('数据看板加载较慢，请稍后刷新重试')
-    } else {
+    // 超时/网络错误已由 request.js 拦截器统一弹出友好提示，这里仅复位加载状态
+    if (e?.code !== 'ERR_CANCELED' && e?.code !== 'ECONNABORTED' && !e?.message?.includes('timeout')) {
       console.error('加载详情数据失败', e)
     }
   } finally {

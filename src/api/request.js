@@ -92,7 +92,21 @@ service.interceptors.response.use(
             return Promise.resolve(null)
         }
 
-        const errMsg = err.response?.data?.msg || err.message || '网络异常'
+        // 将常见网络错误的原始英文信息映射为友好中文提示，
+        // 避免直接把 "timeout of 30000ms exceeded" 这类技术文案弹给用户
+        let errMsg = err.response?.data?.msg
+        if (!errMsg) {
+            const raw = err.message || ''
+            if (raw.includes('timeout')) {
+                errMsg = '系统接口请求超时'
+            } else if (raw === 'Network Error') {
+                errMsg = '后端接口连接异常'
+            } else if (raw.includes('Request failed with status code')) {
+                errMsg = '系统接口' + raw.slice(-3) + '异常'
+            } else {
+                errMsg = raw || '网络异常'
+            }
+        }
         if (err.response?.data?.code === 401) {
             if (hasAuthHeader(err.config)) {
                 ElMessage.closeAll() // 关掉前面可能弹出的多个错误提示
