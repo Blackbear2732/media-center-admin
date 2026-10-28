@@ -1,5 +1,9 @@
 import { createApp } from 'vue'
 import { ElMessage } from 'element-plus'
+// ElMessage / ElMessageBox 是函数式调用，unplugin 的按需样式注入覆盖不到，
+// 不手动引样式时提示框会以"裸文字"形式出现（没有背景、居中、图标）
+import 'element-plus/es/components/message/style/css'
+import 'element-plus/es/components/message-box/style/css'
 import App from './App.vue'
 import router from './router'
 import '@/styles/index.css'

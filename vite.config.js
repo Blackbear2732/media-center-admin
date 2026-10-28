@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import https from 'node:https'
+import http from 'node:http'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
@@ -75,21 +75,21 @@ export default defineConfig(({ mode }) => {
             strictPort: false,
             proxy: {
                 '/api': {
-                    target: 'https://api.blackbearcode.dpdns.org',
+                    // 本地后端是明文 HTTP（Tomcat 8080），必须用 http://。
+                    // 之前指向 https://localhost:8080 时，TLS 握手字节被发到 HTTP 端口，
+                    // Tomcat 会报 "Invalid character found in method name [0x160x030x01...]" 且请求全部失败
+                    target: 'http://127.0.0.1:8080',
                     changeOrigin: true,
-                    secure: false,
                     followRedirects: true,
                     timeout: 30000,
                     proxyTimeout: 30000,
-                    // 关键：自定义 HTTPS Agent 解决并发瓶颈
-                    // node-http-proxy 默认 Agent 的 maxSockets=256 但 keepAlive=false，
-                    // 每个请求都要新建 TLS 连接 → 并发多了握手排队超时
-                    agent: new https.Agent({
+                    // 复用长连接：node-http-proxy 默认 keepAlive=false，
+                    // 每个请求都新建 TCP 连接，并发多了会打满后端 accept 队列
+                    agent: new http.Agent({
                         keepAlive: true,
                         keepAliveMsecs: 1000,
                         maxSockets: 20,
-                        maxFreeSockets: 10,
-                        rejectUnauthorized: false
+                        maxFreeSockets: 10
                     })
                 }
             }
