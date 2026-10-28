@@ -27,6 +27,10 @@
             <el-input v-model="form.password" type="password" placeholder="密码" :prefix-icon="Lock" show-password />
           </el-form-item>
 
+          <div class="forgot-row">
+            <el-link type="primary" :underline="false" @click="openForgot">忘记密码？</el-link>
+          </div>
+
           <button class="login-submit" type="button" :disabled="loading" @click.prevent="handleLogin">
             {{ loading ? '登 录 中…' : '登 录' }}
           </button>
@@ -37,14 +41,54 @@
         </div>
       </div>
     </div>
+
+    <!-- 找回密码对话框 -->
+    <el-dialog
+      v-model="forgotVisible"
+      title="找回密码"
+      width="420px"
+      :close-on-click-modal="false"
+      @closed="resetForgotForm"
+    >
+      <el-form label-position="top" size="large">
+        <el-form-item label="绑定邮箱">
+          <div class="code-row">
+            <el-input v-model="forgotForm.email" placeholder="请输入账号绑定的邮箱" :prefix-icon="Message" clearable />
+            <el-button
+              type="primary"
+              plain
+              class="code-btn"
+              :disabled="countdown > 0"
+              :loading="sending"
+              @click="sendCode"
+            >
+              {{ countdown > 0 ? `${countdown}s 后重发` : '发送验证码' }}
+            </el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="邮箱验证码">
+          <el-input v-model="forgotForm.code" placeholder="6 位数字验证码" :prefix-icon="Key" maxlength="6" clearable />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="forgotForm.password" type="password" placeholder="6-20 位新密码" :prefix-icon="Lock" show-password />
+        </el-form-item>
+        <el-form-item label="确认新密码">
+          <el-input v-model="forgotForm.confirm" type="password" placeholder="再次输入新密码" :prefix-icon="Lock" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="forgotVisible = false">取 消</el-button>
+        <el-button type="primary" :loading="resetting" @click="handleReset">确认重置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, Message, Key } from '@element-plus/icons-vue'
 import { authApi, USE_MOCK } from '@/api'
 import { userStore } from '@/store/user'
 
@@ -88,6 +132,91 @@ async function handleLogin() {
     loading.value = false
   }
 }
+
+/* ================= 找回密码 ================= */
+const forgotVisible = ref(false)
+const sending = ref(false)
+const resetting = ref(false)
+const countdown = ref(0)
+const forgotForm = reactive({ email: '', code: '', password: '', confirm: '' })
+let countdownTimer = null
+
+function openForgot() {
+  forgotVisible.value = true
+}
+
+function resetForgotForm() {
+  forgotForm.email = ''
+  forgotForm.code = ''
+  forgotForm.password = ''
+  forgotForm.confirm = ''
+  countdown.value = 0
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+}
+
+async function sendCode() {
+  if (!forgotForm.email) {
+    return ElMessage.warning('请输入账号绑定的邮箱')
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(forgotForm.email)) {
+    return ElMessage.warning('邮箱格式不正确')
+  }
+  sending.value = true
+  try {
+    await authApi.sendForgotCode(forgotForm.email.trim())
+    ElMessage.success('验证码已发送，10 分钟内有效')
+    countdown.value = 60
+    countdownTimer = setInterval(() => {
+      countdown.value -= 1
+      if (countdown.value <= 0) {
+        clearInterval(countdownTimer)
+        countdownTimer = null
+      }
+    }, 1000)
+  } catch (e) {
+    console.error(e)
+    // 错误信息由 request.js 拦截器统一弹出
+  } finally {
+    sending.value = false
+  }
+}
+
+async function handleReset() {
+  if (!forgotForm.code) {
+    return ElMessage.warning('请输入邮箱验证码')
+  }
+  if (!forgotForm.password || forgotForm.password.length < 6 || forgotForm.password.length > 20) {
+    return ElMessage.warning('新密码长度需在 6-20 位之间')
+  }
+  if (forgotForm.password !== forgotForm.confirm) {
+    return ElMessage.warning('两次输入的密码不一致')
+  }
+  resetting.value = true
+  try {
+    await authApi.resetByEmail({
+      email: forgotForm.email.trim(),
+      code: forgotForm.code.trim(),
+      password: forgotForm.password
+    })
+    ElMessage.success('密码已重置，请使用新密码登录')
+    forgotVisible.value = false
+  } catch (e) {
+    console.error(e)
+    // 错误信息由 request.js 拦截器统一弹出
+  } finally {
+    resetting.value = false
+  }
+}
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+})
 </script>
 
 <style scoped>
@@ -105,6 +234,10 @@ async function handleLogin() {
 .login-panel { display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 32px; }
 .login-box { width: 380px; }
 .login-box h2 { margin: 0 0 6px; font-size: 24px; }
+.forgot-row { display: flex; justify-content: flex-end; margin: -8px 0 10px; font-size: 13px; }
+.code-row { display: flex; gap: 8px; width: 100%; }
+.code-row .el-input { flex: 1; }
+.code-btn { flex-shrink: 0; min-width: 112px; }
 .login-submit { width: 100%; height: 44px; border: none; border-radius: 12px; cursor: pointer; background: var(--brand); color: #fff; font-size: 15px; font-weight: 600; transition: all .2s; margin-top: 10px; }
 .login-submit:hover { background: var(--brand-deep); }
 @media (max-width: 900px) {

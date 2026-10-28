@@ -79,7 +79,14 @@ export const authApi = {
             }
         })())
         : request.post('/auth/login', payload),
-    logout: pick(() => request.post('/auth/logout'), () => delay({ success: true }))
+    logout: pick(() => request.post('/auth/logout'), () => delay({ success: true })),
+    // 找回密码：发送邮箱验证码 / 验证码校验并重置密码（Mock 模式直接成功，便于演示流程）
+    sendForgotCode: (email) => USE_MOCK
+        ? delay({})
+        : request.post('/auth/forgot/code', { email }),
+    resetByEmail: (payload = {}) => USE_MOCK
+        ? delay({})
+        : request.post('/auth/forgot/reset', payload)
 }
 
 /* ================= 个人区 F-02 ~ F-06 ================= */
