@@ -4,6 +4,23 @@
     <div class="filter-bar surface-card">
       <div class="filter-group">
         <div class="filter-item">
+          <span class="filter-label">姓名</span>
+          <el-input
+            v-model="nameFilter"
+            size="small"
+            clearable
+            placeholder="姓名 / 学号"
+            style="width: 160px"
+            @keyup.enter="onNameSearch"
+            @clear="onNameSearch"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+
+        <div class="filter-item">
           <span class="filter-label">部门</span>
           <el-select v-model="deptFilter" size="small" :disabled="!userStore.isDirector" style="width: 140px">
             <el-option label="全部部门" :value="ALL_DEPT_ID" />
@@ -175,6 +192,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import {
@@ -198,6 +216,7 @@ import {
 // 政治面貌是人员属性（varchar 存储），不是后端枚举，这里集中一份选项
 const POLITICAL_OPTIONS = ['中共党员', '中共预备党员', '共青团员', '群众']
 
+const nameFilter = ref('')
 const deptFilter = ref(userStore.isDirector ? ALL_DEPT_ID : userStore.deptId)
 const roleFilter = ref('')
 const politicalFilter = ref('')
@@ -234,12 +253,17 @@ const pageSizes = [10, 20, 50, 100]
 const total = ref(0)
 
 // 筛选条件变化回到第一页重新查询
-watch([deptFilter, roleFilter, politicalFilter], () => {
+watch([nameFilter, deptFilter, roleFilter, politicalFilter], () => {
   page.value = 1
   load()
 })
 // 翻页/改每页条数重新查询
 watch([page, size], () => load())
+
+function onNameSearch() {
+  page.value = 1
+  load()
+}
 
 async function load() {
   loading.value = true
@@ -248,6 +272,7 @@ async function load() {
       deptId: deptFilter.value,
       role: roleFilter.value === '' ? null : roleFilter.value,
       politicalStatus: politicalFilter.value || null,
+      nameLike: nameFilter.value || null,
       pageNum: page.value,
       pageSize: size.value
     })
@@ -259,6 +284,7 @@ async function load() {
 }
 
 function resetFilter() {
+  nameFilter.value = ''
   if (userStore.isDirector) deptFilter.value = ALL_DEPT_ID
   roleFilter.value = ''
   politicalFilter.value = ''
