@@ -672,6 +672,66 @@ export const dashboardData = {
     }
 }
 
+// 生成媒体数据 mock 列表（2025-2026 混合，支持年份筛选 + 分页）
+function buildMockMediaList(type) {
+    const items = []
+    const titles = type === 'yy'
+        ? ['你好，新同学！', '执笔书梦 青春诗行', '春日校园漫步', '运动会精彩瞬间', '社团招新集锦', '毕业季特辑', '迎新晚会回顾', '中秋灯谜会', '冬至包饺子', '元旦跨年晚会', '军训实录', '图书馆一天', '食堂探店', '宿舍文化节', '校园歌手大赛']
+        : ['纳新｜你的热爱，值得一个舞台', '丁香艺术团招新', '校园春色', '运动会纪实', '社团文化节', '毕业寄语', '迎新特刊', '中秋祝福', '冬日暖阳', '新年献词', '军训感言', '书香校园', '美食地图', '寝室故事', '十佳歌手']
+    const types = type === 'yy'
+        ? ['迎新', '毕业季', '校园生活', '活动', '宣传片']
+        : ['原创', '转载', '活动报道', '通知', '推文']
+    for (let i = 0; i < 80; i++) {
+        const year = i % 3 === 0 ? 2025 : 2026
+        const month = String(((i * 7) % 12) + 1).padStart(2, '0')
+        const day = String(((i * 13) % 28) + 1).padStart(2, '0')
+        items.push({
+            id: i + 1,
+            title: titles[i % titles.length] + (i >= titles.length ? ` #${Math.floor(i / titles.length) + 1}` : ''),
+            type: types[i % types.length],
+            date: `${year}-${month}-${day}`,
+            views: Math.floor(Math.random() * 50000) + 500,
+            likes: Math.floor(Math.random() * 2000) + 20,
+            url: `https://${type === 'yy' ? 'channels.weixin.qq.com' : 'mp.weixin.qq.com'}/xxx${i}`
+        })
+    }
+    return items.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+const mockWxList = buildMockMediaList('wx')
+const mockYyList = buildMockMediaList('yy')
+
+export function mediaListData(params) {
+    const { type, year, pageNum = 1, pageSize = 20 } = params || {}
+    const allList = type === 'yy' ? mockYyList : mockWxList
+    const filtered = year ? allList.filter(d => d.date.startsWith(year)) : allList
+    const page = Math.max(1, pageNum)
+    const size = Math.max(1, pageSize)
+    const start = (page - 1) * size
+    const rows = filtered.slice(start, start + size)
+
+    let totalViews = 0, totalLikes = 0, totalOriginal = 0
+    for (const d of filtered) {
+        totalViews += d.views
+        totalLikes += d.likes
+        if (d.type === '原创') totalOriginal++
+    }
+    const summary = { totalViews, totalLikes, totalOriginal, totalVideos: filtered.length, totalCount: filtered.length }
+
+    const trendMap = {}
+    for (const d of filtered) {
+        const month = d.date.slice(0, 7)
+        if (!trendMap[month]) trendMap[month] = { views: 0, likes: 0 }
+        trendMap[month].views += d.views
+        trendMap[month].likes += d.likes
+    }
+    const trend = Object.entries(trendMap)
+        .map(([month, v]) => ({ month, views: v.views, likes: v.likes }))
+        .sort((a, b) => a.month.localeCompare(b.month))
+
+    return { summary, trend, total: filtered.length, rows }
+}
+
 export const announcements = [
     { id: 1, title: '关于 2024 年秋季运动会宣传工作的通知', author: '王主任', scope: 1, createdAt: '2024-11-01 09:00', content: '各相关部门：\n\n为做好秋季运动会宣传工作，请新闻部、摄制部提前做好人员安排与设备准备……' },
     { id: 2, title: '融媒体中心 10 月考评结果公示', author: '王主任', scope: 1, createdAt: '2024-11-02 15:00', content: '10 月考评结果已出，请各部门部长登录部门管理区查看详情。' }

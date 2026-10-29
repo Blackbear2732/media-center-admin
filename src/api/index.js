@@ -842,6 +842,11 @@ export const adminApi = {
     dashboard: () => USE_MOCK ? delay(mock.dashboardData) : request.get('/admin/dashboard'),
     dashboardImports: () => USE_MOCK ? delay([]) : request.get('/admin/dashboard/imports'),
 
+    // 媒体数据详情页（后端分页 + 年份筛选）
+    mediaList: (params) => USE_MOCK
+        ? delay(mock.mediaListData(params))
+        : request.get('/admin/media/list', { params }),
+
     uploadCsv: (type, file) => USE_MOCK ? delay({ success: true, rows: 128 }) : (() => {
         const fd = new FormData();
         fd.append('file', file);

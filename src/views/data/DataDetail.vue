@@ -128,7 +128,6 @@ const route = useRoute()
 const router = useRouter()
 import { useDelayedLoading } from '@/utils/loading'
 const loading = useDelayedLoading()
-const dashboard = ref({})
 
 // 路由参数只允许 wx / yy，避免用户手输 /data-panel/foo 时把未知类型当成影音数据展示
 const VALID_TYPES = ['wx', 'yy']
@@ -136,64 +135,32 @@ const type = computed(() => String(route.params.type || 'wx'))
 const isValidType = computed(() => VALID_TYPES.includes(type.value))
 const isWx = computed(() => type.value === 'wx')
 
-const list = computed(() => {
-  return dashboard.value.list || []
-})
+// 后端返回的数据源
+const summary = ref({})
+const trend = ref([])
+const rows = ref([])
+const total = ref(0)
 
-// 年份筛选：空字符串表示全部年份，各年份选项由数据中的发布时间自动提取
+// 分页状态
+const page = ref(1)
+const pageSize = ref(20)
+
+// 年份筛选
 const selectedYear = ref('')
+
+// 年份选项：从后端返回的 trend 中提取（trend.month 格式为 yyyy-MM）
 const yearOptions = computed(() => {
   const years = new Set()
-  for (const d of list.value) {
-    const y = formatYear(d.date)
+  for (const t of trend.value) {
+    const y = formatYear(t.month)
     if (y) years.add(y)
   }
   return [...years].sort().reverse()
 })
-const yearList = computed(() => {
-  if (!selectedYear.value) return list.value
-  return list.value.filter(d => formatYear(d.date) === selectedYear.value)
-})
-watch(selectedYear, () => {
-  page.value = 1
-})
 
-// 统计卡片：全部年份沿用后端聚合值；按年筛选时由该年数据本地重算
-const summary = computed(() => {
-  if (!selectedYear.value) return dashboard.value.summary || {}
-  let totalViews = 0
-  let totalLikes = 0
-  for (const d of yearList.value) {
-    totalViews += d.views || 0
-    totalLikes += d.likes || 0
-  }
-  return { totalViews, totalLikes, totalCount: yearList.value.length }
-})
+// 表格直接展示后端返回的 rows
+const pagedList = computed(() => rows.value)
 
-// 月度趋势：全部年份沿用后端按月聚合；按年筛选时由该年数据本地按月归组
-const trend = computed(() => {
-  if (!selectedYear.value) return dashboard.value.trend || []
-  const map = new Map()
-  for (const d of yearList.value) {
-    const month = localMonth(d.date)
-    if (!month) continue
-    const v = map.get(month) || { views: 0, likes: 0 }
-    v.views += d.views || 0
-    v.likes += d.likes || 0
-    map.set(month, v)
-  }
-  return [...map.entries()]
-    .map(([month, v]) => ({ month, views: v.views, likes: v.likes }))
-    .sort((a, b) => a.month.localeCompare(b.month))
-})
-
-const page = ref(1)
-const pageSize = ref(20)
-const total = computed(() => yearList.value.length)
-const pagedList = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return yearList.value.slice(start, start + pageSize.value)
-})
 const trendMinWidth = computed(() => `${Math.max(600, trend.value.length * COLUMN_PITCH)}px`)
 const indexMethod = (index) => (page.value - 1) * pageSize.value + index + 1
 
@@ -204,7 +171,7 @@ const COLUMN_PITCH = 56
 const yearGroups = computed(() => {
   const groups = []
   let cur = null
-  trend.value.forEach((t, i) => {
+  trend.value.forEach((t) => {
     const y = formatYear(t.month)
     if (!cur) cur = { year: y, count: 1 }
     else if (cur.year === y) cur.count++
@@ -230,30 +197,62 @@ const formatNumber = (num) => {
   return num
 }
 
-// 从月份字段中提取“年”数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
+// 从月份字段中提取"年"数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
 const formatYear = (month) => {
   if (!month) return ''
   const part = String(month).split(' ')[0].split('-')[0]
   return part ? part : String(month)
 }
 
-// 从月份字段中提取“月”数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
+// 从月份字段中提取"月"数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
 const formatMonth = (month) => {
   if (!month) return ''
   const part = String(month).split(' ')[0].split('-')[1]
   return part ? String(parseInt(part, 10)) : String(month)
 }
 
-// 从日期字段中提取“yyyy-MM”，用于按年筛选时本地按月归组
-const localMonth = (date) => {
-  if (!date) return ''
-  const part = String(date).split(' ')[0]
-  return part.length >= 7 ? part.slice(0, 7) : ''
-}
-
 function openLink(url) {
   if (url) window.open(url, '_blank')
 }
+
+/** 调用后端分页接口加载数据 */
+async function loadData() {
+  loading.value = true
+  try {
+    const params = {
+      type: type.value,
+      pageNum: page.value,
+      pageSize: pageSize.value
+    }
+    if (selectedYear.value) {
+      params.year = selectedYear.value
+    }
+    const res = await adminApi.mediaList(params)
+    if (res) {
+      summary.value = res.summary || {}
+      trend.value = res.trend || []
+      rows.value = res.rows || []
+      total.value = res.total || 0
+    }
+  } catch (e) {
+    if (e?.code !== 'ERR_CANCELED' && e?.code !== 'ECONNABORTED' && !e?.message?.includes('timeout')) {
+      console.error('加载详情数据失败', e)
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// 年份改变 → 重置页码并重新加载
+watch(selectedYear, () => {
+  page.value = 1
+  loadData()
+})
+
+// 页码/每页条数改变 → 重新加载
+watch([page, pageSize], () => {
+  loadData()
+})
 
 onMounted(async () => {
   if (!isValidType.value) {
@@ -261,21 +260,7 @@ onMounted(async () => {
     router.replace('/')
     return
   }
-  loading.value = true
-  try {
-    // dashboard 后端查询慢，设置 20s 超时；超时后友好提示，防止无限转圈
-    const res = await adminApi.dashboard({ timeout: 20000 })
-    if (res) {
-      dashboard.value = isWx.value ? (res.wx || {}) : (res.yy || {})
-    }
-  } catch (e) {
-    // 超时/网络错误已由 request.js 拦截器统一弹出友好提示，这里仅复位加载状态
-    if (e?.code !== 'ERR_CANCELED' && e?.code !== 'ECONNABORTED' && !e?.message?.includes('timeout')) {
-      console.error('加载详情数据失败', e)
-    }
-  } finally {
-    loading.value = false
-  }
+  await loadData()
 })
 </script>
 
