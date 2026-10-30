@@ -87,6 +87,8 @@ const routes = [
         ]
     },
     { path: '/login', component: () => import('@/views/login/Login.vue'), meta: { title: '登录', public: true } },
+    // 后端维护页：独立全屏路由，不带 BasicLayout，避免维护期间布局组件再发请求
+    { path: '/maintenance', component: () => import('@/views/error/Maintenance.vue'), meta: { title: '系统维护中', public: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 

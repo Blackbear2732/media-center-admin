@@ -40,6 +40,28 @@ const redirectToLogin = () => {
     if (window.location.pathname !== '/login') window.location.replace('/login')
 }
 
+/* ===================== 后端维护拦截 =====================
+ * 后端在宝塔停用/宕机时，Nginx 网关层会返回错误页：
+ * - 502/503/504：后端服务不可达，直接判定为维护
+ * - 403：需甄别——业务权限 403 返回的是 JSON（{code,msg}），
+ *   而宝塔「停用站点」/Nginx 维护页返回的是 HTML 字符串，只有后者才跳维护页
+ * 注意：本模块被 router 引用（abortPendingRequests），不能反向 import router，
+ * 因此与 redirectToLogin 一样用 location.replace 跳转
+ */
+const isMaintenanceResponse = (response) => {
+    if (!response) return false
+    const { status, data } = response
+    if ([502, 503, 504].includes(status)) return true
+    // Nginx 错误页是 HTML 字符串；后端业务 403 是 JSON 对象，不会误伤
+    if (status === 403 && typeof data === 'string' &&
+        (data.includes('系统正在升级维护') || data.includes('<html'))) return true
+    return false
+}
+
+const redirectToMaintenance = () => {
+    if (window.location.pathname !== '/maintenance') window.location.replace('/maintenance')
+}
+
 // 请求是否携带了登录令牌：带令牌的请求 401 = 登录过期（跳登录）；
 // 未携带令牌的匿名请求 401 = 该接口需登录（如首页公开数据），静默失败即可，不强制跳转
 const hasAuthHeader = (cfg) => !!(cfg && cfg.headers && cfg.headers.Authorization)
@@ -90,6 +112,12 @@ service.interceptors.response.use(
         // 不会抛异常（避免 try/catch 满天飞），组件内部判断 null 即可跳过处理
         if (axios.isCancel(err) || err.code === 'ERR_CANCELED' || err.name === 'CanceledError') {
             return Promise.resolve(null)
+        }
+
+        // 后端维护/宕机：整页跳维护页，不再弹错误消息（维护页本身就是提示）
+        if (isMaintenanceResponse(err.response)) {
+            redirectToMaintenance()
+            return Promise.reject(new Error('系统维护中'))
         }
 
         // 网络抖动/超时自动重试：仅对 GET 且没有拿到任何响应的请求重试 1 次，
