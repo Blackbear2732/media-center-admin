@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 import { userStore } from '@/store/user'
 
 // 统一 /api 前缀：本地开发由 vite.config.js 代理到真实后端(8080)；
-// 自带 Functions 目录上传到 Cloudflare Pages 时，/api 由 functions/api/[[path]].js 代理到真实后端。
+// 生产部署到 Cloudflare Workers 时，/api 由 worker/index.js 代理到真实后端。
 const service = axios.create({ baseURL: '/api', timeout: 30000 })
 
 /* ===================== 请求取消机制 =====================
