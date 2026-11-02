@@ -9,6 +9,9 @@
  *              not_found_handling: "single-page-application" 自动回落 index.html（SPA 前端路由）
  *
  * 运行时变量：wrangler.jsonc 的 vars.API_UPSTREAM（后端地址，非敏感，可明文提交）。
+ * 正确取值 = 协议+域名（如 https://api.example.com），不带 /api、不带结尾斜杠；
+ * 误填带路径的接口地址（如 .../api/center）会产生 /api/api/... 双前缀、后端全部 401，
+ * 脚本内 normalizeUpstream 已做兜底剥离。
  * 将来若需密钥类变量，用 `wrangler secret put <NAME>` 注入（加密存储，不进仓库），
  * 脚本里同样通过 env.<NAME> 读取，两者取值方式一致。
  */
@@ -34,12 +37,12 @@ export default {
  * 只有代理自身失败（上游未配置 / 连接失败 / 超时）时才返回结构化错误。
  */
 async function proxyApi(request, env, url) {
-    const upstream = (env.API_UPSTREAM || '').replace(/\/+$/, '')
+    const upstream = normalizeUpstream(env.API_UPSTREAM)
     if (!upstream) {
-        return jsonError(500, '后端上游未配置（缺少 API_UPSTREAM）')
+        return jsonError(500, 'API_UPSTREAM 配置无效：应只填协议+域名（如 https://api.example.com），不带 /api、不带结尾斜杠')
     }
 
-    // 拼接目标地址：upstream 不带 /api 后缀，路径原样保留 /api 前缀
+    // 拼接目标地址：upstream 只含协议+域名，路径原样保留 /api 前缀
     const target = upstream + url.pathname + url.search
 
     try {
@@ -61,4 +64,24 @@ function jsonError(status, msg) {
         status,
         headers: { 'Content-Type': 'application/json; charset=utf-8' }
     })
+}
+
+/**
+ * 规范化 API_UPSTREAM，返回「协议+域名（+非 /api 前缀路径）」形式；无效返回 null。
+ * 正确取值只应是 origin（如 https://api.example.com）。
+ * 误填兜底：若把带 /api 前缀的接口地址整段贴进来（如 .../api 或 .../api/center），
+ * 请求路径本身已以 /api 开头，直接拼接会产生 /api/api/... 双前缀、后端全部 401，
+ * 此时丢弃误带的路径段只保留 origin。不回显原始值，避免泄露内部配置。
+ */
+function normalizeUpstream(raw) {
+    let parsed
+    try {
+        parsed = new URL((raw || '').trim())
+    } catch {
+        return null
+    }
+    if (parsed.pathname === '/api' || parsed.pathname.startsWith('/api/')) {
+        return parsed.origin
+    }
+    return parsed.origin + parsed.pathname.replace(/\/+$/, '')
 }

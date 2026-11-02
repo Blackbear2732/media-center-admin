@@ -115,7 +115,7 @@ npx wrangler deploy  # 按 wrangler.jsonc 发布 Worker + 静态资产
 
 | 变量 | 是否必填 | 说明 |
 |---|---|---|
-| `API_UPSTREAM` | **必填** | 真实后端地址，如 `https://api.xxx.com`（**不带 /api 后缀**）。代理拼接 `${API_UPSTREAM}/api/...`，与后端 SecurityConfig 放行的 `/api` 前缀一致。缺失时所有 `/api` 请求返回 500 `{ code, msg }` |
+| `API_UPSTREAM` | **必填** | 真实后端地址，**只填协议+域名**，如 `https://api.xxx.com`。不带 `/api`、不带结尾斜杠。代理拼接 `${API_UPSTREAM}/api/...`，与后端 SecurityConfig 放行的 `/api` 前缀一致。缺失时所有 `/api` 请求返回 500 `{ code, msg }`；误填成带路径的接口地址（如 `.../api/center`）会产生 `/api/api/...` 双前缀、**全部接口 401**（worker/index.js 已做兜底剥离，但仍应以正确值为准） |
 
 - `vars` 只放**非敏感**值（明文随配置可见）；将来若有密钥类变量，用 `npx wrangler secret put <NAME>` 注入（加密存储、不进仓库），脚本里同样通过 `env.<NAME>` 读取。
 - 也可以在 Cloudflare 控制台 → Workers → Settings → Variables 里改（有 `main` 的 Worker 支持运行时变量，改后无需重新构建）。

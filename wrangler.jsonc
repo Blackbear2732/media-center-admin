@@ -14,7 +14,8 @@
     "run_worker_first": ["/api/*"]
   },
   // 运行时变量（非敏感值才放这里，会随配置明文可见）：
-  // API_UPSTREAM = 真实后端地址，不带 /api 后缀，例如 https://api.example.com
+  // API_UPSTREAM = 真实后端地址，只填协议+域名（如 https://api.example.com），
+  // 不带 /api、不带结尾斜杠；误填成带路径的接口地址会导致 /api/api/... 双前缀、全部 401
   // 密钥类变量不要写在这里，用 `wrangler secret put <NAME>` 注入
   "vars": {
     "API_UPSTREAM": "https://api.example.com"
