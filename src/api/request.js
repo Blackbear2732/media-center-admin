@@ -2,9 +2,18 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { userStore } from '@/store/user'
 
-// 统一 /api 前缀：本地开发由 vite.config.js 代理到真实后端(8080)；
-// 生产部署到 Cloudflare Workers 时，/api 由 worker/index.js 代理到真实后端。
-const service = axios.create({ baseURL: '/api', timeout: 30000 })
+// 后端地址：由 VITE_API_BASE_URL 注入（生产/预发见 .env.production / .env.api），
+// 缺变量时回落到默认的直连域名，避免构建环境漏配导致请求打空。
+// 后端接口本身带 /api 前缀，这里统一规范化：
+// - 变量填 origin（https://api.example.com）→ 拼接为 https://api.example.com/api
+// - 变量误填 .../api 或带结尾斜杠 → 先剥掉再补，绝不会出现 /api/api
+// - 本地开发填 '/api'，仍走 vite.config.js 的 8080 代理
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL || 'https://api.blackbearcode.dpdns.org')
+    .trim()
+    .replace(/\/+$/, '')
+const API_BASE_URL = rawApiBase.replace(/\/api$/, '') + '/api'
+
+const service = axios.create({ baseURL: API_BASE_URL, timeout: 30000 })
 
 /* ===================== 请求取消机制 =====================
  * 快速切换页面时，上一页未完成的请求会被取消：

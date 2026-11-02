@@ -11,6 +11,7 @@
     // SPA 前端路由回落：未命中的路径返回 index.html（替代 Pages 时代的 _redirects）
     "not_found_handling": "single-page-application",
     // /api/* 直接进入 Worker 脚本代理，跳过静态资源查找
+    // 前端已改为直连后端域名，这里仅作为旧客户端的过渡兜底；确认无旧客户端后可整项删除
     "run_worker_first": ["/api/*"]
   },
   // 运行时变量（非敏感值才放这里，会随配置明文可见）：

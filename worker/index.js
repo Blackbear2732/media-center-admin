@@ -1,5 +1,10 @@
 /**
- * Cloudflare Worker 入口：静态资源（Vite 构建产物 dist/）+ /api 反向代理
+ * Cloudflare Worker 入口：静态资源（Vite 构建产物 dist/）+ /api 反向代理（过渡兜底）
+ *
+ * 【现状】前端已改为由 VITE_API_BASE_URL 直连后端域名（见 src/api/request.js），
+ * 不再把 /api 请求发到本 Worker；下面的 /api 代理只保留给仍在用旧路径的客户端兜底。
+ * 若确认没有旧客户端，可删除 proxyApi 与 wrangler.jsonc 的 run_worker_first，
+ * Worker 即退回纯静态资源托管（静态资源与 SPA 回落不受影响）。
  *
  * 职责划分：
  * - /api/*   → 转发到 env.API_UPSTREAM（**保留 /api 前缀**：后端接口本身带 /api，
