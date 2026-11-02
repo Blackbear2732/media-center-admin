@@ -1,9 +1,22 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "media-center-admin", // 可自定义为你的 Worker 名称
-  "compatibility_date": "2026-11-02", // 建议填写当天日期
+  "compatibility_date": "2026-11-02",
+  // 脚本入口：有了 main 才不是「仅静态资产」Worker，控制台才开放变量/绑定等能力
+  "main": "worker/index.js",
   "assets": {
     "directory": "./dist/",
-    "not_found_handling": "single-page-application"
+    // Worker 脚本里通过 env.ASSETS.fetch(request) 访问静态资源
+    "binding": "ASSETS",
+    // SPA 前端路由回落：未命中的路径返回 index.html（替代 Pages 时代的 _redirects）
+    "not_found_handling": "single-page-application",
+    // /api/* 直接进入 Worker 脚本代理，跳过静态资源查找
+    "run_worker_first": ["/api/*"]
+  },
+  // 运行时变量（非敏感值才放这里，会随配置明文可见）：
+  // API_UPSTREAM = 真实后端地址，不带 /api 后缀，例如 https://api.example.com
+  // 密钥类变量不要写在这里，用 `wrangler secret put <NAME>` 注入
+  "vars": {
+    "API_UPSTREAM": "https://api.example.com"
   }
 }
