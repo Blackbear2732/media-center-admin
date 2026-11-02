@@ -2,7 +2,7 @@
 
 > 一次采集 · 多元生成 · 多端发布
 
-山西农业大学青年融媒体中心内部使用的综合业务管理系统前端。基于 Vue 3 + Vite + Element Plus 构建，支持**三种运行模式**：本地 Mock 演示、本地直连真实后端联调、生产部署真实后端（Cloudflare Pages）。
+山西农业大学青年融媒体中心内部使用的综合业务管理系统前端。基于 Vue 3 + Vite + Element Plus 构建，支持**本地直连真实后端联调**与**生产部署真实后端（Cloudflare Workers）**两种模式；构建期可通过 `VITE_USE_MOCK` 切换 Mock 演示数据。
 
 > 📄 部署环境变量一览：见工作区根目录 [docs/环境变量配置说明.md](../docs/环境变量配置说明.md)
 
@@ -25,15 +25,14 @@
 
 ```text
 media-center-admin/
-├── functions/                # Cloudflare Pages Functions（部署所需）
-│   ├── api/[[path]].js       # /api/* 反向代理到真实后端（保留 /api 前缀）
-│   └── config.js             # 运行时配置：返回 useMock / apiBase（读 CF 环境变量）
-├── public/                   # 静态资源（Logo 等）
+├── worker/
+│   └── index.js              # Cloudflare Worker 入口：/api/* 反向代理（保留 /api 前缀）
+│                             #   + 静态资源服务（env.ASSETS）+ SPA 回落
+├── public/                   # 静态资源（Logo、_headers 缓存策略等）
 ├── src/
 │   ├── api/
 │   │   ├── index.js          # 所有接口方法封装（真实 / Mock 二选一）
 │   │   ├── request.js        # Axios 封装（鉴权、响应拦截、401 处理）
-│   │   ├── runtime.js        # 运行时配置加载（/config 覆盖构建默认值）
 │   │   ├── mock.js           # 本地模拟数据（演示模式）
 │   │   ├── mock.stub.js      # 生产构建桩文件（配合 Tree-shaking 剔除假数据）
 │   │   └── indexhouduan.js   # 废弃文件（勿改，勿用）
@@ -59,10 +58,11 @@ media-center-admin/
 │   │   └── admin/            # 部门管理区（概览/成员/任务/会议/考评/模板/素材/公告/
 │   │                         #   部门介绍/打卡管理/数据看板/设备/模块配置/邮件/换届等）
 │   ├── App.vue               # 根组件
-│   └── main.js               # 入口（启动时加载运行时配置）
+│   └── main.js               # 入口
 ├── .env.development          # 开发环境：VITE_USE_MOCK=false（联调真实后端）
-├── .env.production           # 生产演示构建：VITE_USE_MOCK=true（Mock 数据）
-├── .env.api                  # 真实 API 构建：VITE_USE_MOCK=false（Mock 被剔除）
+├── .env.production           # 生产构建：VITE_USE_MOCK=false（真实后端，Mock 被剔除）
+├── .env.api                  # 真实 API 构建：VITE_USE_MOCK=false（与 production 等价，保留兼容）
+├── wrangler.jsonc            # Cloudflare Workers 部署配置（main / assets / vars.API_UPSTREAM）
 ├── vite.config.js            # Vite 配置（mock 别名劫持、/api 代理到 localhost:8080）
 └── package.json
 ```
@@ -82,41 +82,50 @@ npm run dev
 
 ---
 
-## 📦 三种运行模式
+## 📦 运行模式
 
 | 命令 | 读取环境文件 | 数据来源 | 适用场景 |
 |---|---|---|---|
 | `npm run dev` | `.env.development` | **真实后端**（本地 8080） | 本地开发联调 |
-| `npm run build` | `.env.production` | 本地 Mock | 演示部署（无后端时展示） |
-| `npm run build:api` | `.env.api` | **真实后端** | 生产部署（上线） |
+| `npm run build` | `.env.production` | **真实后端** | 生产部署（上线） |
+| `npm run build:api` | `.env.api` | **真实后端** | 与 `build` 等价，保留兼容 |
+
+> 如需纯 Mock 演示构建，临时把对应 `.env.*` 的 `VITE_USE_MOCK` 改为 `true` 再构建即可。
 
 ### Mock 剔除原理
 
 `vite.config.js` 中配置了别名劫持：当 `VITE_USE_MOCK=false` 时，`@/api/mock` 指向 `mock.stub.js`（空壳），Rollup 打包时自动 Tree-shaking 掉假数据代码，防止测试数据泄漏到线上。
 
-### 运行时配置覆盖（仅 Cloudflare Pages 部署生效）
-
-应用启动时 `main.js` 会请求 `/config`，由 `functions/config.js` 返回 CF 环境变量对应的配置。**仅当 `/config` 返回合法 JSON 时**才会覆盖构建时的默认值；本地开发无 `/config`（vite 返回 index.html），保持 `.env.development` 的配置不变。
+**注意：`VITE_USE_MOCK` 是构建期变量**，Vite 打包时把值直接写进产物。修改 `.env.*` 后必须重新构建；在 Cloudflare 控制台/ `wrangler.jsonc` 的 `vars` 里改运行时变量对它**无效**。
 
 ---
 
-## 🌐 生产部署（Cloudflare Pages）
+## 🌐 生产部署（Cloudflare Workers）
 
-### 构建
+部署形态：一个真正的 Worker（`main` = `worker/index.js`），同时承担静态资源服务（`dist/`，经 `env.ASSETS` 绑定）与 `/api/*` 反向代理（转发到 `API_UPSTREAM`，**保留 /api 前缀**）。SPA 路由回落由 `wrangler.jsonc` 的 `not_found_handling: "single-page-application"` 完成。
+
+### 构建 + 部署
 
 ```bash
-npm run build:api   # 产物 dist/
+npm run build        # 产出 dist/（VITE_USE_MOCK=false，直连真实后端）
+npx wrangler deploy  # 按 wrangler.jsonc 发布 Worker + 静态资产
 ```
 
-上传时**必须包含 `functions/` 目录**（CF Pages 会自动识别为 Functions）。
-
-### CF 后台环境变量（Settings → Environment variables）
+### 运行时变量（`wrangler.jsonc` 的 `vars`）
 
 | 变量 | 是否必填 | 说明 |
 |---|---|---|
-| `API_UPSTREAM` | **必填** | 真实后端地址，如 `https://api.xxx.com`。前端 `/api/*` 请求由 `functions/api/[[path]].js` 代理到 `API_UPSTREAM/api/*`（**保留 /api 前缀**，与后端一致） |
-| `PAGES_USE_MOCK` | 可选 | `true` / `false`，运行时切换 Mock / 真实后端，无需重新构建 |
-| `API_BASE_URL` | 可选 | 直连方案：必须含 `/api` 后缀（如 `https://api.xxx.com/api`），且后端需允许跨域。**推荐不配此项，走上方代理免跨域** |
+| `API_UPSTREAM` | **必填** | 真实后端地址，如 `https://api.xxx.com`（**不带 /api 后缀**）。代理拼接 `${API_UPSTREAM}/api/...`，与后端 SecurityConfig 放行的 `/api` 前缀一致。缺失时所有 `/api` 请求返回 500 `{ code, msg }` |
+
+- `vars` 只放**非敏感**值（明文随配置可见）；将来若有密钥类变量，用 `npx wrangler secret put <NAME>` 注入（加密存储、不进仓库），脚本里同样通过 `env.<NAME>` 读取。
+- 也可以在 Cloudflare 控制台 → Workers → Settings → Variables 里改（有 `main` 的 Worker 支持运行时变量，改后无需重新构建）。
+
+### 本地调试 Worker
+
+```bash
+npm run build        # 先产出 dist/
+npx wrangler dev     # 本地启动 Worker，静态资源 + /api 代理与线上一致
+```
 
 > 首页为公开页：中心简介 / 部门 / 最新任务 / 数据看板 / 公告 5 组接口后端已放行匿名访问，未登录可正常浏览；部门风采等受保护页面点击后再引导登录。
 
