@@ -130,7 +130,10 @@ service.interceptors.response.use(
         const cfg = err.config || {}
         const method = (cfg.method || 'get').toLowerCase()
         const retried = cfg._retryCount || 0
-        if (method === 'get' && !err.response && retried < 1) {
+        // 超时不重试：30s 超时后再重放一次，等于让后端慢接口被连续压 30s×2，
+        // 而且素材轮询/全量成员查询这类慢 GET 会被放大成连续请求
+        const timedOut = err.code === 'ECONNABORTED' || /timeout/i.test(err.message || '')
+        if (method === 'get' && !err.response && !timedOut && cfg.retry !== false && retried < 1) {
             cfg._retryCount = retried + 1
             return new Promise(resolve => setTimeout(resolve, 600)).then(() => service(cfg))
         }

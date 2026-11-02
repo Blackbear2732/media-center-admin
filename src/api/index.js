@@ -180,7 +180,7 @@ export const taskApi = {
             return delay({ success: true, id: newTask.id })
         }
     ),
-    materials:   pick(id => request.get(`/tasks/${id}/materials`), id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
+    materials:   pick((id, config) => request.get(`/tasks/${id}/materials`, config), id => delay(mock.materials.filter(m => String(m.taskId) === String(id)))),
     departments: pick(() => request.get('/departments'), () => delay(mock.departments)),
 
     // 部员报名
@@ -390,11 +390,11 @@ export const adminApi = {
 
     // D-02 成员管理（后端分页）
     // 入参：{ deptId, role?, politicalStatus?, pageNum, pageSize }，返回 { total, rows }
-    members: (params = {}) => USE_MOCK
+    members: (params = {}, config = {}) => USE_MOCK
         ? delay(isAllDept(params.deptId)
             ? (mock.members || [])
             : (mock.members || []).filter(m => Number(m.deptId) === Number(params.deptId)))
-        : request.get('/admin/members', { params }),
+        : request.get('/admin/members', { params, ...config }),
 
     // 保存成员（加入内存）
     saveMember: (data) => USE_MOCK

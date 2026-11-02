@@ -50,7 +50,7 @@
           <template #header>
             <div class="flex-between">
               <b>素材区域（上传即展示）</b>
-              <el-button size="small" :loading="matLoading" @click="loadMaterials">
+              <el-button size="small" :loading="matLoading" @click="refreshMaterials">
                 <el-icon><Refresh /></el-icon> 刷新
               </el-button>
             </div>
@@ -272,8 +272,14 @@ import { useDelayedLoading } from '@/utils/loading'
 const loading = useDelayedLoading(), matLoading = ref(false)
 const task = ref({})
 const materials = ref([]), opened = ref([])
+
+// 素材轮询：15s 一次；连续失败达到上限就停止，避免慢接口被无限重放
+const POLL_INTERVAL = 15000
+const MAX_POLL_FAILURES = 3
 let timer = null
 let polling = false
+let pollFailures = 0
+let pollEnabled = true
 
 // --- 设备清单管理 ---
 const globalDevices = ref([])
@@ -439,7 +445,8 @@ async function loadMembers() {
   if (!userStore.canManage) return
   try {
     const targetDeptId = userStore.isDirector ? ALL_DEPT_ID : userStore.deptId
-    const res = await adminApi.members({ deptId: targetDeptId, pageNum: 1, pageSize: 9999 })
+    // retry:false —— 全量成员查询本身就慢，失败后再 600ms 重放一次等于把超时翻倍
+    const res = await adminApi.members({ deptId: targetDeptId, pageNum: 1, pageSize: 9999 }, { retry: false })
     deptMembers.value = res?.rows || []
   } catch (e) {
     deptMembers.value = []
@@ -580,16 +587,47 @@ async function loadTask() {
 async function loadMaterials() {
   matLoading.value = true
   try {
-    const res = await taskApi.materials(route.params.id)
+    // retry:false —— 轮询/刷新失败后不要走 axios 的 600ms 自动重放，否则慢接口会被成倍压
+    // cache:false —— 轮询要的是实时数据，命中 4s 缓存会让轮询失去意义
+    const res = await taskApi.materials(route.params.id, { retry: false, cache: false })
     materials.value = Array.isArray(res) ? res : []
+    pollFailures = 0
+  } catch (e) {
+    pollFailures += 1
+    if (pollFailures >= MAX_POLL_FAILURES) stopPolling()
   } finally {
     matLoading.value = false
   }
 }
 
-// 轮询刷新素材：上一次请求未结束就跳过本轮，避免慢请求叠加造成并发
+// 连续失败后彻底停表，不再每 15s 继续压接口；用户点「刷新」可恢复
+function stopPolling() {
+  if (!pollEnabled) return
+  pollEnabled = false
+  pollFailures = 0
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+  ElMessage.warning('素材自动刷新已暂停，请点击「刷新」重试')
+}
+
+function startPolling() {
+  if (timer) clearInterval(timer)
+  pollEnabled = true
+  pollFailures = 0
+  timer = setInterval(pollMaterials, POLL_INTERVAL)
+}
+
+// 手动刷新：允许在自动轮询被暂停后恢复
+function refreshMaterials() {
+  if (!pollEnabled) startPolling()
+  loadMaterials()
+}
+
+// 轮询刷新素材：请求未结束/页面不可见/已暂停时跳过本轮，避免慢请求叠加
 async function pollMaterials() {
-  if (polling) return
+  if (polling || document.hidden || !pollEnabled) return
   polling = true
   try {
     await loadMaterials()
@@ -598,12 +636,18 @@ async function pollMaterials() {
   }
 }
 
+// 标签页重新可见时补拉一次，避免后台期间一直显示旧数据
+function onVisibilityChange() {
+  if (!document.hidden) pollMaterials()
+}
+
 onMounted(() => {
   loadTask()
   loadMaterials()
   loadMembers()
   loadGlobalDevices()
-  timer = setInterval(pollMaterials, 15000)
+  startPolling()
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onUnmounted(() => {
@@ -611,6 +655,7 @@ onUnmounted(() => {
     clearInterval(timer)
     timer = null
   }
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 
