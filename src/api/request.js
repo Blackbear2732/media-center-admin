@@ -74,14 +74,17 @@ service.interceptors.request.use(config => {
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
 
-    // 请求取消：所有默认请求都挂到同一个 AbortController
-    if (config.abort !== false) {
+    const method = (config.method || 'get').toLowerCase()
+
+    // 请求取消：只有 GET 挂到共享 AbortController。
+    // 写请求（POST/PUT/DELETE）不挂 signal —— 用户保存/上传后立刻切页时，
+    // 请求必须继续执行，否则会被路由切换静默中断、组件却仍提示成功
+    if (method === 'get' && config.abort !== false) {
         if (!currentAbortCtrl) currentAbortCtrl = new AbortController()
         config.signal = currentAbortCtrl.signal
     }
 
     // 写操作会改变数据，立即失效所有读缓存避免拿到旧数据
-    const method = (config.method || 'get').toLowerCase()
     if (method !== 'get') clearGetCache()
 
     return config
@@ -108,10 +111,12 @@ service.interceptors.response.use(
         return Promise.reject(new Error(msg || '请求失败'))
     },
     err => {
-        // 被取消的请求：resolve(null) 而不是 reject，这样组件的 await api.xxx()
-        // 不会抛异常（避免 try/catch 满天飞），组件内部判断 null 即可跳过处理
+        // 被取消的请求：GET 返回 null，组件的 await api.xxx() 不会抛异常，
+        // 判断 null 即可跳过处理；写请求被取消时必须 reject，
+        // 否则组件会把中断当成成功，造成「提示成功但数据没落库」
         if (axios.isCancel(err) || err.code === 'ERR_CANCELED' || err.name === 'CanceledError') {
-            return Promise.resolve(null)
+            const cancelledMethod = ((err.config && err.config.method) || 'get').toLowerCase()
+            return cancelledMethod === 'get' ? Promise.resolve(null) : Promise.reject(err)
         }
 
         // 后端维护/宕机：整页跳维护页，不再弹错误消息（维护页本身就是提示）
@@ -175,7 +180,11 @@ service.get = (url, config = {}) => {
         return Promise.resolve(hit.data)
     }
     return rawGet(url, config).then(data => {
-        getCache.set(key, { ts: Date.now(), data })
+        // 被取消的 GET 会 resolve(null)，不能当成有效数据写入缓存，
+        // 否则切页后快速返回同一页面会命中空缓存，列表空白数秒
+        if (data !== null && data !== undefined) {
+            getCache.set(key, { ts: Date.now(), data })
+        }
         return data
     })
 }
