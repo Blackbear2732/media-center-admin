@@ -90,7 +90,7 @@ npm run dev
 | `npm run dev` | `development` / `.env.development` | 相对 `/api`（vite 代理 → `http://127.0.0.1:8080`） | 无 | 本地开发联调 |
 | `npm run build` | `workers` / `.env.workers` | `https://api.blackbearcode.dpdns.org/api` | `dist-workers/` | **Cloudflare Workers 自动构建（保持此命令不变）** |
 | `npm run build:workers` | `workers` / `.env.workers` | 同上 | `dist-workers/` | 显式执行 Workers 构建（与 `build` 完全等价） |
-| `npm run build:server` | `server` / `.env.server` | `http://127.0.0.1:8080/api` | `dist-server/` | 自建服务器部署（手工上传产物） |
+| `npm run build:server` | `server` / `.env.server` | `/api`（相对页面源，Nginx 同源反代到本机 8080） | `dist-server/` | 自建服务器部署（页面与后端同机、用户跨机访问） |
 
 - `build` 是 `build:workers` 的别名，二者都读取 `.env.workers`，Cloudflare 的构建命令继续用 `npm run build` 即可；产物目录已同步到 `wrangler.jsonc` 的 `assets.directory`。
 - `build:api` 与 `.env.api` 已删除（与 `build:server` 语义重叠且同样是「直连真实后端」，保留只会造成口径混淆）。
@@ -140,32 +140,47 @@ npx wrangler dev     # 本地启动 Worker，静态资源 + /api 代理与线上
 
 ## 🖥️ 自建服务器部署（`build:server`）
 
+场景：**页面与后端部署在同一台服务器，用户从各自电脑访问**。
+
 ```bash
-npm run build:server   # 产出 dist-server/（baseURL = http://127.0.0.1:8080/api）
+npm run build:server   # 产出 dist-server/，产物内 baseURL = /api（相对页面源）
 # 把 dist-server/ 的内容整体上传到站点根目录（如 /var/www/media-center-admin/）
 ```
 
-### ⚠️ 风险一：浏览器里的 `127.0.0.1` 是「访问者自己的电脑」
+请求链路：浏览器请求 `同源/api/...` → Nginx 反代 → `http://127.0.0.1:8080/api/...`（保留 `/api` 前缀）。
 
-`http://127.0.0.1:8080` 只有在**浏览器与后端运行在同一台机器**时（同一台服务器上的本机浏览器、同机桌面端）才成立。若用户从其他电脑访问服务器上的前端页面，请求会打到**访问者本机**的 8080 端口，全部接口直接失败。
+### Nginx 关键片段（`deploy/nginx.conf`）
 
-多机访问的正确做法是「相对 `/api` + Nginx 反代」：
+```nginx
+root /var/www/media-center-admin/dist-server;
+index index.html;
 
-1. 把 `.env.server` 的 `VITE_API_BASE_URL` 改为 `/api`（`request.js` 规范化后 baseURL 就是 `/api`，不会产生 `/api/api`）；
-2. 重新执行 `npm run build:server`；
-3. Nginx 用同源 `/api/` 反代到 `http://127.0.0.1:8080`，并**保留 `/api` 前缀**（`proxy_pass http://127.0.0.1:8080;`，不要写成带结尾斜杠的 `.../8080/;`，否则前缀被剥掉，后端 SecurityConfig 不匹配返回 401）。参考 `deploy/nginx.conf`。
+location /api/ {
+    proxy_pass         http://127.0.0.1:8080;   # 不带结尾斜杠，保留 /api 前缀
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+}
+```
 
-### ⚠️ 风险二：跨域（CORS）与混合内容（HTTPS 页面调 HTTP 接口）
+`proxy_pass` 的结尾斜杠决定是否剥前缀：
 
-`http://127.0.0.1:8080` 与页面源（服务器域名/IP:端口）不同源，浏览器会先发 `OPTIONS` 预检，后端必须显式放行：
+- `proxy_pass http://127.0.0.1:8080;`（无斜杠）：原样转发，`/api/center` → `/api/center`，后端按 `/api` 鉴权正常；
+- `proxy_pass http://127.0.0.1:8080/;`（有斜杠）：把匹配到的 `/api/` 替换成 `/`，`/api/center` → `/center`，前缀丢失，后端 SecurityConfig 不匹配，接口 401/404。
 
-- 响应头 `Access-Control-Allow-Origin`：填前端页面的确切来源（如 `http://your-server:端口`），不能用 `*` 与 `Access-Control-Allow-Credentials: true` 同时出现；
-- `Access-Control-Allow-Methods`：至少 `GET, POST, PUT, DELETE, OPTIONS`；
-- `Access-Control-Allow-Headers`：至少 `Authorization, Content-Type`（本项目请求带 `Authorization: Bearer <token>`）；
-- `Access-Control-Max-Age`：可选中，减少预检次数；
-- 后端 SecurityConfig 需放行 `OPTIONS` 预检请求，否则预检会被 401 拦掉。
+### `127.0.0.1` 只用于同机调试
 
-如果前端页面是 **HTTPS**，浏览器会以**混合内容（Mixed Content）**拦截所有 `http://127.0.0.1:8080` 请求（这是浏览器策略，CORS 配置再对也无法通过）。处理建议：页面与接口保持同协议（都用 HTTP，或后端也上 HTTPS），或直接采用上面的「相对 `/api` + Nginx 反代」方案——同源同协议，既没有 CORS 也没有混合内容问题。
+默认产物不含 `127.0.0.1`。只有在**浏览器与后端真的跑在同一台机器**（同机调试）时，才把 `.env.server` 临时改为 `VITE_API_BASE_URL=http://127.0.0.1:8080` 重新构建；面向其他电脑访问的产物必须保持相对 `/api`。
+
+### 跨域 / 混合内容：同源反代下不存在
+
+默认的「相对 `/api` + Nginx 同源反代」中，页面与接口同源同协议，**不存在 CORS 预检，也不存在 HTTPS 混合内容拦截**，后端无需额外放行跨域。
+
+只有把 `VITE_API_BASE_URL` 改成绝对地址（如 `http://127.0.0.1:8080` 或另一域名的接口地址）时才会出现：
+
+- 跨域：浏览器先发 `OPTIONS` 预检，后端需返回 `Access-Control-Allow-Origin`（页面确切来源，不能与 `Access-Control-Allow-Credentials: true` 同时用 `*`）、`Access-Control-Allow-Methods`（含 `OPTIONS`）、`Access-Control-Allow-Headers`（至少 `Authorization, Content-Type`），并让 SecurityConfig 放行预检；
+- 混合内容：HTTPS 页面调用 `http://` 接口会被浏览器直接拦截，CORS 配置再对也无法通过，此时应改回相对 `/api` 同源反代。
 
 ---
 
