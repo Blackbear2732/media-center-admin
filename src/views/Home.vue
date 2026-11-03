@@ -236,10 +236,50 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* 栅格子项默认 min-width:auto，长标题会把整栏撑出视口 */
+.split { min-width: 0; }
+.split-main,
+.task-list,
+.notice-list,
+.task-row-main { min-width: 0; }
+
+@media (max-width: 900px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 768px) {
-  .hero { padding: 24px; grid-template-columns: 1fr; }
+  .hero { padding: 24px; grid-template-columns: minmax(0, 1fr); }
   .hero-art { display: none; } /* 隐藏右侧装饰 */
   .hero-content h1 { font-size: 24px; }
+  .hero-eyebrow { letter-spacing: 1px; overflow-wrap: anywhere; }
   .hero-stats { flex-wrap: wrap; gap: 20px; }
+
+  /* 最新公告 / 最新任务：标题不再强制单行省略，长文本在卡片内换行 */
+  .section-head { flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+  .task-row { align-items: flex-start; }
+  .task-row-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+  .task-row-meta { overflow-wrap: anywhere; }
+  .task-row .tag-soft { margin: 0 4px; flex-shrink: 0; }
+
+  /* 数据面板：数字与辅助信息允许换行 */
+  .summary-stats { justify-content: flex-start; flex-wrap: wrap; gap: 10px 18px; }
+  .summary-stats div { min-width: 0; }
+  .summary-stats b { font-size: 20px; overflow-wrap: anywhere; }
+  .panel-head { flex-wrap: wrap; gap: 4px 8px; }
+  .top-title { white-space: normal; overflow-wrap: anywhere; }
+  .top-meta { flex-wrap: wrap; gap: 2px 8px; }
+}
+
+@media (max-width: 480px) {
+  .hero { padding: 20px 16px !important; }
+  .hero-stats { gap: 10px 18px; }
+  .task-row { padding: 12px; gap: 8px; }
+  .task-row .tag-soft { margin: 0; }
+  .data-panel .panel-body { padding: 14px; }
 }
 </style>
