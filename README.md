@@ -2,7 +2,7 @@
 
 > 一次采集 · 多元生成 · 多端发布
 
-山西农业大学青年融媒体中心内部使用的综合业务管理系统前端。基于 Vue 3 + Vite + Element Plus 构建，支持**本地直连真实后端联调**与**生产部署真实后端（Cloudflare Workers）**两种模式；构建期可通过 `VITE_USE_MOCK` 切换 Mock 演示数据。
+山西农业大学青年融媒体中心内部使用的综合业务管理系统前端。基于 Vue 3 + Vite + Element Plus 构建，支持**本地直连真实后端联调**、**Cloudflare Workers 部署**与**自建服务器部署**三种口径；构建期可通过 `VITE_USE_MOCK` 切换 Mock 演示数据。
 
 > 📄 部署环境变量一览：见工作区根目录 [docs/环境变量配置说明.md](../docs/环境变量配置说明.md)
 
@@ -59,11 +59,12 @@ media-center-admin/
 │   │                         #   部门介绍/打卡管理/数据看板/设备/模块配置/邮件/换届等）
 │   ├── App.vue               # 根组件
 │   └── main.js               # 入口
-├── .env.development          # 开发环境：VITE_USE_MOCK=false（联调真实后端）
-├── .env.production           # 生产构建：VITE_USE_MOCK=false（真实后端，Mock 被剔除）
-├── .env.api                  # 真实 API 构建：VITE_USE_MOCK=false（与 production 等价，保留兼容）
-├── wrangler.jsonc            # Cloudflare Workers 部署配置（main / assets / vars.API_UPSTREAM）
-├── vite.config.js            # Vite 配置（mock 别名劫持、/api 代理到 localhost:8080）
+├── .env.development          # 开发环境：/api 相对路径（走 vite 代理到 127.0.0.1:8080）
+├── .env.workers              # Workers 构建：直连 https://api.blackbearcode.dpdns.org
+├── .env.server               # 自建服务器构建：直连 http://127.0.0.1:8080
+├── .env.production           # 兜底：仅直接执行 `vite build`（默认 production mode）时读取，值与 .env.workers 一致
+├── wrangler.jsonc            # Cloudflare Workers 部署配置（assets.directory = dist-workers/）
+├── vite.config.js            # Vite 配置（按 mode 分产物目录、mock 别名劫持、/api 代理到 8080）
 └── package.json
 ```
 
@@ -82,15 +83,19 @@ npm run dev
 
 ---
 
-## 📦 运行模式
+## 📦 构建模式（两套独立口径，产物互不覆盖）
 
-| 命令 | 读取环境文件 | 数据来源 | 适用场景 |
-|---|---|---|---|
-| `npm run dev` | `.env.development` | **真实后端**（本地 8080） | 本地开发联调 |
-| `npm run build` | `.env.production` | **真实后端** | 生产部署（上线） |
-| `npm run build:api` | `.env.api` | **真实后端** | 与 `build` 等价，保留兼容 |
+| 命令 | Vite mode / 环境文件 | 产物内请求基址（baseURL） | 产物目录 | 适用场景 |
+|---|---|---|---|---|
+| `npm run dev` | `development` / `.env.development` | 相对 `/api`（vite 代理 → `http://127.0.0.1:8080`） | 无 | 本地开发联调 |
+| `npm run build` | `workers` / `.env.workers` | `https://api.blackbearcode.dpdns.org/api` | `dist-workers/` | **Cloudflare Workers 自动构建（保持此命令不变）** |
+| `npm run build:workers` | `workers` / `.env.workers` | 同上 | `dist-workers/` | 显式执行 Workers 构建（与 `build` 完全等价） |
+| `npm run build:server` | `server` / `.env.server` | `http://127.0.0.1:8080/api` | `dist-server/` | 自建服务器部署（手工上传产物） |
 
-> 如需纯 Mock 演示构建，临时把对应 `.env.*` 的 `VITE_USE_MOCK` 改为 `true` 再构建即可。
+- `build` 是 `build:workers` 的别名，二者都读取 `.env.workers`，Cloudflare 的构建命令继续用 `npm run build` 即可；产物目录已同步到 `wrangler.jsonc` 的 `assets.directory`。
+- `build:api` 与 `.env.api` 已删除（与 `build:server` 语义重叠且同样是「直连真实后端」，保留只会造成口径混淆）。
+- `.env.production` 不再被任何 npm 脚本使用，仅作为有人直接执行 `vite build` 时的兜底（值必须与 `.env.workers` 保持一致），产物仍为 `dist/`。
+- 如需纯 Mock 演示构建，临时把对应 `.env.*` 的 `VITE_USE_MOCK` 改为 `true` 再构建即可。
 
 ### Mock 剔除原理
 
@@ -102,14 +107,16 @@ npm run dev
 
 ## 🌐 生产部署（Cloudflare Workers）
 
-部署形态：一个真正的 Worker（`main` = `worker/index.js`），同时承担静态资源服务（`dist/`，经 `env.ASSETS` 绑定）与 `/api/*` 反向代理（转发到 `API_UPSTREAM`，**保留 /api 前缀**）。SPA 路由回落由 `wrangler.jsonc` 的 `not_found_handling: "single-page-application"` 完成。
+部署形态：一个真正的 Worker（`main` = `worker/index.js`），同时承担静态资源服务（`dist-workers/`，经 `env.ASSETS` 绑定）与 `/api/*` 反向代理（转发到 `API_UPSTREAM`，**保留 /api 前缀**）。SPA 路由回落由 `wrangler.jsonc` 的 `not_found_handling: "single-page-application"` 完成。
 
 ### 构建 + 部署
 
 ```bash
-npm run build        # 产出 dist/（VITE_USE_MOCK=false，直连真实后端）
+npm run build        # 产出 dist-workers/（= build:workers，VITE_USE_MOCK=false，直连真实后端）
 npx wrangler deploy  # 按 wrangler.jsonc 发布 Worker + 静态资产
 ```
+
+Cloudflare 控制台的构建命令**保持 `npm run build` 不变**；产物目录已改为 `dist-workers/`，并同步写入 `wrangler.jsonc` 的 `assets.directory`，Worker 仍能正确找到静态资源。自建服务器的 `dist-server/` 不参与 Worker 部署。
 
 ### 运行时变量（`wrangler.jsonc` 的 `vars`）
 
@@ -123,11 +130,42 @@ npx wrangler deploy  # 按 wrangler.jsonc 发布 Worker + 静态资产
 ### 本地调试 Worker
 
 ```bash
-npm run build        # 先产出 dist/
+npm run build        # 先产出 dist-workers/
 npx wrangler dev     # 本地启动 Worker，静态资源 + /api 代理与线上一致
 ```
 
 > 首页为公开页：中心简介 / 部门 / 最新任务 / 数据看板 / 公告 5 组接口后端已放行匿名访问，未登录可正常浏览；部门风采等受保护页面点击后再引导登录。
+
+---
+
+## 🖥️ 自建服务器部署（`build:server`）
+
+```bash
+npm run build:server   # 产出 dist-server/（baseURL = http://127.0.0.1:8080/api）
+# 把 dist-server/ 的内容整体上传到站点根目录（如 /var/www/media-center-admin/）
+```
+
+### ⚠️ 风险一：浏览器里的 `127.0.0.1` 是「访问者自己的电脑」
+
+`http://127.0.0.1:8080` 只有在**浏览器与后端运行在同一台机器**时（同一台服务器上的本机浏览器、同机桌面端）才成立。若用户从其他电脑访问服务器上的前端页面，请求会打到**访问者本机**的 8080 端口，全部接口直接失败。
+
+多机访问的正确做法是「相对 `/api` + Nginx 反代」：
+
+1. 把 `.env.server` 的 `VITE_API_BASE_URL` 改为 `/api`（`request.js` 规范化后 baseURL 就是 `/api`，不会产生 `/api/api`）；
+2. 重新执行 `npm run build:server`；
+3. Nginx 用同源 `/api/` 反代到 `http://127.0.0.1:8080`，并**保留 `/api` 前缀**（`proxy_pass http://127.0.0.1:8080;`，不要写成带结尾斜杠的 `.../8080/;`，否则前缀被剥掉，后端 SecurityConfig 不匹配返回 401）。参考 `deploy/nginx.conf`。
+
+### ⚠️ 风险二：跨域（CORS）与混合内容（HTTPS 页面调 HTTP 接口）
+
+`http://127.0.0.1:8080` 与页面源（服务器域名/IP:端口）不同源，浏览器会先发 `OPTIONS` 预检，后端必须显式放行：
+
+- 响应头 `Access-Control-Allow-Origin`：填前端页面的确切来源（如 `http://your-server:端口`），不能用 `*` 与 `Access-Control-Allow-Credentials: true` 同时出现；
+- `Access-Control-Allow-Methods`：至少 `GET, POST, PUT, DELETE, OPTIONS`；
+- `Access-Control-Allow-Headers`：至少 `Authorization, Content-Type`（本项目请求带 `Authorization: Bearer <token>`）；
+- `Access-Control-Max-Age`：可选中，减少预检次数；
+- 后端 SecurityConfig 需放行 `OPTIONS` 预检请求，否则预检会被 401 拦掉。
+
+如果前端页面是 **HTTPS**，浏览器会以**混合内容（Mixed Content）**拦截所有 `http://127.0.0.1:8080` 请求（这是浏览器策略，CORS 配置再对也无法通过）。处理建议：页面与接口保持同协议（都用 HTTP，或后端也上 HTTPS），或直接采用上面的「相对 `/api` + Nginx 反代」方案——同源同协议，既没有 CORS 也没有混合内容问题。
 
 ---
 
