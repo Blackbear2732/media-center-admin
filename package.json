@@ -8,7 +8,7 @@
     "build": "npm run build:workers",
     "build:workers": "vite build --mode workers",
     "build:server": "vite build --mode server",
-    "preview": "vite preview"
+    "preview": "vite preview --mode workers"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
