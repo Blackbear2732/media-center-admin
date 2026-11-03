@@ -132,7 +132,7 @@
 
     <!-- 编辑/新增弹窗 -->
     <el-dialog v-model="editVisible" :title="form.id ? '编辑设备' : '新增设备'" width="500px">
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="96px">
         <el-form-item label="设备编号" required><el-input v-model="form.code" /></el-form-item>
         <el-form-item label="设备名称" required><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="型号"><el-input v-model="form.model" /></el-form-item>

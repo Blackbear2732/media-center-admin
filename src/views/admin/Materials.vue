@@ -73,7 +73,7 @@
     </div>
 
     <el-dialog v-model="editVisible" title="编辑素材" width="560px">
-      <el-form :model="editForm" label-width="90px">
+      <el-form :model="editForm" label-width="96px">
         <el-form-item label="标题" required>
           <el-input v-model="editForm.title" />
         </el-form-item>

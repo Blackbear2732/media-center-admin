@@ -100,7 +100,7 @@
 
     <!-- 编辑任务弹窗 -->
     <el-dialog v-model="editVisible" title="编辑任务信息" width="700px" :close-on-click-modal="false">
-      <el-form :model="editForm" label-width="90px">
+      <el-form :model="editForm" label-width="96px">
         <el-form-item label="任务名称" required>
           <el-input v-model="editForm.title" />
         </el-form-item>

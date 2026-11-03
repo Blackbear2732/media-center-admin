@@ -45,7 +45,7 @@
 
     <!-- 发起会议弹窗 -->
     <el-dialog v-model="createVisible" title="发起会议" width="500px">
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="96px">
         <el-form-item label="会议主题" required>
           <el-input v-model="form.title" placeholder="请输入会议主题" />
         </el-form-item>

@@ -37,7 +37,7 @@
     </el-card>
 
     <el-dialog v-model="appealVisible" title="打卡申诉" width="480px">
-      <el-form :model="appealForm" label-width="90px">
+      <el-form :model="appealForm" label-width="96px">
         <el-form-item label="申诉日期">
           <el-date-picker v-model="appealForm.date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>

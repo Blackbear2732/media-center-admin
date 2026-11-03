@@ -90,7 +90,7 @@
 
     <!-- 发起考评弹窗 -->
     <el-dialog v-model="createVisible" title="发起月度考评" width="950px" :close-on-click-modal="false">
-      <el-form label-width="100px" style="margin-bottom: 20px;">
+      <el-form label-width="96px" style="margin-bottom: 20px;">
         <el-form-item label="考评月份">
           <el-date-picker v-model="form.month" type="month" value-format="YYYY-MM" placeholder="选择月份" @change="loadPreview" />
         </el-form-item>

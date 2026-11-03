@@ -10,7 +10,7 @@
       <el-col :span="14">
         <el-card shadow="never">
           <template #header><b>基本信息</b></template>
-          <el-form :model="form" label-width="90px">
+          <el-form :model="form" label-width="96px">
             <el-form-item label="学号"><el-input v-model="form.studentNo" disabled /></el-form-item>
             <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
             <el-form-item label="昵称">
@@ -47,7 +47,7 @@
       <el-col :span="10">
         <el-card shadow="never">
           <template #header><b>账号安全</b></template>
-          <el-form :model="pwd" label-width="90px">
+          <el-form :model="pwd" label-width="96px">
             <el-form-item label="原密码"><el-input v-model="pwd.oldPassword" type="password" show-password /></el-form-item>
             <el-form-item label="新密码"><el-input v-model="pwd.newPassword" type="password" show-password /></el-form-item>
             <el-form-item label="确认密码"><el-input v-model="pwd.confirmPassword" type="password" show-password /></el-form-item>

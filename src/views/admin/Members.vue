@@ -109,7 +109,7 @@
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="editVisible" :title="form.id ? '编辑成员' : '新增成员'" width="520px">
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="96px">
         <el-form-item label="所属部门" v-if="userStore.isDirector">
           <el-select v-model="form.deptId" style="width:100%">
             <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" />

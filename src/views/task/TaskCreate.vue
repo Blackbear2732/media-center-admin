@@ -8,7 +8,7 @@
         </div>
       </template>
 
-      <el-form :model="form" label-width="110px" style="padding: 20px 10px;">
+      <el-form :model="form" label-width="96px" style="padding: 20px 10px;">
         <el-form-item label="任务名称" required>
           <el-input v-model="form.title" placeholder="请输入任务名称" size="large" />
         </el-form-item>

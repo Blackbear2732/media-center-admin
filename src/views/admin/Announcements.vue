@@ -28,7 +28,7 @@
     </div>
 
     <el-dialog v-model="editVisible" :title="form.id ? '编辑公告' : '发布公告'" width="560px">
-      <el-form :model="form" label-width="80px">
+      <el-form :model="form" label-width="96px">
         <el-form-item label="标题" required><el-input v-model="form.title" /></el-form-item>
         <el-form-item label="范围">
           <el-select v-model="form.scope" style="width:100%">

@@ -91,7 +91,7 @@
     >
       <!-- 第一步：届次信息 -->
       <template v-if="step === 1">
-        <el-form :model="form" label-width="90px">
+        <el-form :model="form" label-width="96px">
           <el-form-item label="届次名称" required>
             <el-input v-model="form.termName" placeholder="如：2027届" style="width:280px;" />
           </el-form-item>
