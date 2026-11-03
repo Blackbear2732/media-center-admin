@@ -9,6 +9,8 @@ import { userStore } from '@/store/user'
 // - 变量填 origin（https://api.example.com）→ 拼接为 https://api.example.com/api
 // - 变量误填 .../api 或带结尾斜杠 → 先剥掉再补，绝不会出现 /api/api
 // - 本地开发填 '/api'，仍走 vite.config.js 的 8080 代理
+// - 自建服务器同源反代也填 '/api'：规范化后仍是 '/api'（浏览器按页面源解析，
+//   不会变成 '//api'；同源 Nginx 再转发到本机 8080，保留 /api 前缀）
 const rawApiBase = (import.meta.env.VITE_API_BASE_URL || 'https://api.blackbearcode.dpdns.org')
     .trim()
     .replace(/\/+$/, '')
