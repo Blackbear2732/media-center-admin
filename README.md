@@ -76,9 +76,11 @@ media-center-admin/
 # 1. 安装依赖（Node >= 18）
 npm install
 
-# 2. 本地开发（联调真实后端，需先启动后端 8080）
+# 2. 本地开发（默认使用 Mock 数据，无需启动后端）
 npm run dev
-# 打开 http://localhost:5173，/api 请求经 vite 代理转发到 http://localhost:8080
+# 打开 http://localhost:5173；样式/交互验收直接看 Mock 数据
+# 如需联调真实后端：把 .env.development 的 VITE_USE_MOCK 改为 false，重启 dev，
+# 再启动 ruoyi-admin（8080），/api 请求经 vite 代理转发到 http://127.0.0.1:8080
 ```
 
 ---
@@ -87,7 +89,7 @@ npm run dev
 
 | 命令 | Vite mode / 环境文件 | 产物内请求基址（baseURL） | 产物目录 | 适用场景 |
 |---|---|---|---|---|
-| `npm run dev` | `development` / `.env.development` | 相对 `/api`（vite 代理 → `http://127.0.0.1:8080`） | 无 | 本地开发联调 |
+| `npm run dev` | `development` / `.env.development` | Mock 数据（默认）；改 `VITE_USE_MOCK=false` 后为相对 `/api`（vite 代理 → `http://127.0.0.1:8080`） | 无 | 本地 Mock 验收 / 联调 |
 | `npm run build` | `workers` / `.env.workers` | `https://api.blackbearcode.dpdns.org/api` | `dist-workers/` | **Cloudflare Workers 自动构建（保持此命令不变）** |
 | `npm run build:workers` | `workers` / `.env.workers` | 同上 | `dist-workers/` | 显式执行 Workers 构建（与 `build` 完全等价） |
 | `npm run build:server` | `server` / `.env.server` | `/api`（相对页面源，Nginx 同源反代到本机 8080） | `dist-server/` | 自建服务器部署（页面与后端同机、用户跨机访问） |
@@ -95,6 +97,7 @@ npm run dev
 - `build` 是 `build:workers` 的别名，二者都读取 `.env.workers`，Cloudflare 的构建命令继续用 `npm run build` 即可；产物目录已同步到 `wrangler.jsonc` 的 `assets.directory`。
 - `build:api` 与 `.env.api` 已删除（与 `build:server` 语义重叠且同样是「直连真实后端」，保留只会造成口径混淆）。
 - `.env.production` 不再被任何 npm 脚本使用，仅作为有人直接执行 `vite build` 时的兜底（值必须与 `.env.workers` 保持一致），产物仍为 `dist/`。
+- 本地 Mock 验收使用 `npm run dev`（读取 `.env.development`，默认 `VITE_USE_MOCK=true`，无需后端）；三套构建口径均为真实后端（`VITE_USE_MOCK=false`）。
 - 如需纯 Mock 演示构建，临时把对应 `.env.*` 的 `VITE_USE_MOCK` 改为 `true` 再构建即可。
 
 ### Mock 剔除原理
