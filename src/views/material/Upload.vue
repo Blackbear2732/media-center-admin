@@ -1,19 +1,18 @@
 <template>
   <div class="page" v-loading="loading">
-    <div class="upload-shell">
-      <div class="page-head" v-if="!loading">
-        <div>
-          <h2>上传素材</h2>
-          <p class="sub muted">素材统一上传 · 字段按所属部门动态生成</p>
+    <div class="surface-card" style="padding: var(--card-pad); max-width: 860px; margin: 0 auto;">
+      <template v-if="!loading">
+        <div class="page-head">
+          <div>
+            <h2>上传素材</h2>
+            <p class="sub muted">素材统一上传 · 字段按所属部门动态生成</p>
+          </div>
+          <span class="tag-soft">当前部门：{{ deptId ? getDeptLabel(deptId) : '未分配' }}</span>
         </div>
-        <span class="tag-soft">当前部门：{{ deptId ? getDeptLabel(deptId) : '未分配' }}</span>
-      </div>
-      <div class="surface-card" style="padding: var(--card-pad);">
-        <template v-if="!loading">
-          <el-alert type="info" :closable="false" class="mb"
-                    title="表单字段根据当前登录人的所属部门动态生成，不同部门上传内容不同。" />
+        <el-alert type="info" :closable="false" class="mb"
+                  title="表单字段根据当前登录人的所属部门动态生成，不同部门上传内容不同。" />
 
-        <el-form :model="form" label-width="120px">
+        <el-form :model="form" label-width="180px">
           <el-form-item label="关联任务" required>
             <el-select v-model="form.taskId" placeholder="请选择关联任务" clearable style="width:100%">
               <el-option v-for="t in tasks" :key="t.id" :label="t.title" :value="t.id" />
@@ -71,8 +70,7 @@
             <button class="pill" type="button" style="margin-left: 12px;" @click="reset">重置</button>
           </el-form-item>
         </el-form>
-        </template>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -195,8 +193,3 @@ async function init() {
 }
 onMounted(init)
 </script>
-
-<style scoped>
-/* 标题与卡片共用同一内容列，桌面居中宽度下标题仍贴齐卡片左边缘 */
-.upload-shell { width: 100%; max-width: 860px; margin: 0 auto; }
-</style>
