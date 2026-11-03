@@ -1,9 +1,9 @@
 <template>
   <div class="page" v-loading="loading">
-    <div class="section-head" style="margin-bottom: 14px;">
+    <div class="page-head">
       <div>
-        <h3>公告栏</h3>
-        <div class="sub">中心通知与部门公告</div>
+        <h2>公告栏</h2>
+        <p class="sub muted">中心通知与部门公告</p>
       </div>
     </div>
 
@@ -73,7 +73,7 @@ onMounted(async () => {
 
 <style scoped>
 .notice-list { display: flex; flex-direction: column; gap: 12px; }
-.notice-card { padding: 14px 16px; cursor: pointer; transition: border-color .18s; }
+.notice-card { padding: 14px var(--card-pad); cursor: pointer; transition: border-color .18s; }
 .notice-card:hover { border-color: var(--brand); }
 .notice-head { display: flex; align-items: center; justify-content: space-between; }
 .notice-title { display: flex; align-items: center; font-size: 14px; }

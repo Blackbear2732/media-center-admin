@@ -1,10 +1,15 @@
 <template>
   <div v-loading="loading">
-    <div class="flex-between" style="margin-bottom:16px;">
-      <div class="muted">共 {{ list.length }} 次会议记录</div>
-      <button class="pill active" @click="openCreate" style="padding: 10px 20px;">
-        <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发起会议
-      </button>
+    <div class="page-head">
+      <div>
+        <h2>会议管理</h2>
+        <p class="sub muted">共 {{ list.length }} 次会议记录</p>
+      </div>
+      <div class="page-head-actions">
+        <button class="pill active" @click="openCreate" style="padding: 10px 20px;">
+          <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发起会议
+        </button>
+      </div>
     </div>
 
     <div class="surface-card" style="padding:8px 0">
@@ -40,7 +45,7 @@
 
     <!-- 发起会议弹窗 -->
     <el-dialog v-model="createVisible" title="发起会议" width="500px">
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="96px">
         <el-form-item label="会议主题" required>
           <el-input v-model="form.title" placeholder="请输入会议主题" />
         </el-form-item>

@@ -32,7 +32,7 @@
             </div>
           </template>
 
-          <div class="table-wrapper">
+          <div class="table-wrapper table-card">
             <el-table :data="monthRows(month)" stripe style="width: 100%" :header-cell-style="{ background: '#f8fafc', color: '#606266', fontWeight: '600' }">
               <el-table-column type="index" label="排名" width="70" align="center">
                 <template #default="{ $index }">
@@ -90,7 +90,7 @@
 
     <!-- 发起考评弹窗 -->
     <el-dialog v-model="createVisible" title="发起月度考评" width="950px" :close-on-click-modal="false">
-      <el-form label-width="100px" style="margin-bottom: 20px;">
+      <el-form label-width="96px" style="margin-bottom: 20px;">
         <el-form-item label="考评月份">
           <el-date-picker v-model="form.month" type="month" value-format="YYYY-MM" placeholder="选择月份" @change="loadPreview" />
         </el-form-item>
@@ -562,4 +562,19 @@ onMounted(load)
 .stat-card .num { font-size: 28px; font-weight: 700; margin-top: 8px; }
 .stat-card.total-card { background: linear-gradient(135deg, var(--brand), #4a86b8); border: none; }
 .stat-card.total-card .muted { color: rgba(255,255,255,0.8); }
+
+/* 窄屏：标题与正文统一左内边距，月份条与工具栏允许换行 */
+@media (max-width: 768px) {
+  .page-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 2px var(--title-gutter) 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-header h2 { font-size: 20px; margin-bottom: 4px; }
+  .month-title-bar { flex-wrap: wrap; gap: 8px; }
+  .month-title { flex-wrap: wrap; gap: 8px; }
+}
 </style>

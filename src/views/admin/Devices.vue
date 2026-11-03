@@ -1,5 +1,12 @@
 <template>
   <div v-loading="loading">
+    <div class="page-head">
+      <div>
+        <h2>设备管理</h2>
+        <p class="sub muted">设备档案、申请审核与使用记录</p>
+      </div>
+    </div>
+
     <!-- 顶部标签页 -->
     <div class="admin-tabs" style="margin-bottom:16px">
       <span v-for="t in tabs" :key="t.key" class="pill" :class="{ active: active === t.key }" @click="active = t.key">{{ t.label }}</span>
@@ -125,7 +132,7 @@
 
     <!-- 编辑/新增弹窗 -->
     <el-dialog v-model="editVisible" :title="form.id ? '编辑设备' : '新增设备'" width="500px">
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="96px">
         <el-form-item label="设备编号" required><el-input v-model="form.code" /></el-form-item>
         <el-form-item label="设备名称" required><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="型号"><el-input v-model="form.model" /></el-form-item>

@@ -1,8 +1,13 @@
 <template>
   <div v-loading="loading">
-    <div class="flex-between" style="margin-bottom:14px">
-      <div class="muted">共 {{ list.length }} 条公告</div>
-      <button class="pill active" @click="openEdit()">+ 发布公告</button>
+    <div class="page-head">
+      <div>
+        <h2>公告管理</h2>
+        <p class="sub muted">共 {{ list.length }} 条公告</p>
+      </div>
+      <div class="page-head-actions">
+        <button class="pill active" @click="openEdit()">+ 发布公告</button>
+      </div>
     </div>
 
     <div class="surface-card" style="padding:8px 0">
@@ -23,7 +28,7 @@
     </div>
 
     <el-dialog v-model="editVisible" :title="form.id ? '编辑公告' : '发布公告'" width="560px">
-      <el-form :model="form" label-width="80px">
+      <el-form :model="form" label-width="96px">
         <el-form-item label="标题" required><el-input v-model="form.title" /></el-form-item>
         <el-form-item label="范围">
           <el-select v-model="form.scope" style="width:100%">

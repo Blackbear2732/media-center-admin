@@ -13,6 +13,9 @@
     --radius: 14px;
     --shadow-sm: 0 2px 8px rgba(24, 52, 77, 0.05);
     --shadow-md: 0 8px 28px rgba(24, 52, 77, 0.08);
+    /* 区块标题左内边距：0 表示与页面内容/卡片外框左边缘对齐，不再额外缩进 */
+    --title-gutter: 0px;
+    --card-pad: 20px;
     --el-color-primary: #2b5f8e;
     --el-border-radius-base: 10px;
 }
@@ -33,7 +36,32 @@ body {
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 32px 0 16px; }
 .section-head h3 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .5px; }
 .section-head .sub { color: var(--text-sub); font-size: 13px; margin-top: 4px; }
+
+/* 二级页面统一标题：桌面端左对齐标题 + 右侧操作区 */
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 0 0 18px; }
+.page-head h2 { margin: 0; font-size: 24px; letter-spacing: .5px; color: var(--text); }
+.page-head .sub { margin-top: 6px; color: var(--text-sub); font-size: 13px; }
+.page-head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .article-content { white-space: pre-wrap; line-height: 1.9; color: var(--text); font-size: 14px; }
+
+/* 区块标题统一左对齐：与页面内容/卡片外框左边缘同一条竖线，不再额外缩进 */
+.page-head,
+.list-head,
+.section-head,
+.admin-head,
+.page-header { padding-left: var(--title-gutter); }
+
+/* 卡片内边距与标题缩进共用 --card-pad；桌面端保持原观感
+   Element Plus 卡片样式由组件按需注入、可能晚于本文件，故用直接子元素提高优先级 */
+.el-card > .el-card__body { padding: var(--card-pad); }
+
+/* 表单标签统一左对齐。Element Plus 默认 label-position: right，
+   会把标签文字推到输入框一侧；这里提高选择器优先级覆盖它，
+   标签列宽仍由各表单 label-width 决定，输入框左边缘保持整齐 */
+.el-form .el-form-item--label-right .el-form-item__label {
+    justify-content: flex-start;
+    text-align: left;
+}
 
 .surface-card {
     background: #fff; border-radius: var(--radius);
@@ -55,7 +83,7 @@ body {
 /* 任务卡片 (通用) */
 .task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
 .task-card {
-    padding: 24px;
+    padding: var(--card-pad);
     cursor: pointer; transition: all .2s;
     display: flex; flex-direction: column; gap: 16px;
 }
@@ -170,6 +198,8 @@ body {
 .dept-photos { display: flex; gap: 6px; margin-top: 12px; }
 .photo-thumb { width: 44px; height: 30px; border-radius: 6px; background: linear-gradient(135deg, #e8f0f7, #d4e3ef); }
 .split { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; margin-top: 8px; }
+/* 网格子项默认 min-width:auto，长标题会把整栏撑出视口，这里显式收缩 */
+.split > * { min-width: 0; }
 .task-list { display: flex; flex-direction: column; gap: 12px; }
 .task-row { display: flex; align-items: center; gap: 12px; padding: 16px 18px; cursor: pointer; transition: all .2s; }
 .task-row:hover { transform: translateX(3px); border-color: #cfe0ee; box-shadow: var(--shadow-md); }
@@ -265,7 +295,7 @@ body {
 /* ========================================================
    8. 全局 Element Plus 覆盖
    ======================================================== */
-.el-card__header { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.el-card > .el-card__header { padding: 14px var(--card-pad); border-bottom: 1px solid var(--border); }
 
 /* 列表底部分页条（成员 / 素材 / 打卡 / 考评） */
 .table-pagination { display: flex; justify-content: flex-end; padding: 14px 18px 6px; }
@@ -287,10 +317,10 @@ body {
 /* 首页数据面板 */
 .data-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
 .data-panel { overflow: hidden; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px var(--card-pad); border-bottom: 1px solid var(--border); background: #fafbfc; }
 .panel-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .panel-title .dot { width: 8px; height: 8px; border-radius: 50%; }
-.panel-body { padding: 20px; }
+.panel-body { padding: var(--card-pad); }
 .summary-stats { display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px dashed var(--border); }
 .summary-stats div { text-align: center; }
 .summary-stats b { display: block; font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 4px; }
@@ -309,7 +339,7 @@ body {
 /* 综合部数据上传 */
 .data-upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .upload-card { display: flex; flex-direction: column; }
-.upload-head { padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+.upload-head { padding: 16px var(--card-pad); border-bottom: 1px solid var(--border); background: #fafbfc; }
 .upload-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .upload-title .dot { width: 8px; height: 8px; border-radius: 50%; }
 .upload-body { padding: 20px; flex: 1; }
@@ -343,7 +373,7 @@ body {
 }
 
 .material-card {
-    padding: 20px;
+    padding: var(--card-pad);
     cursor: pointer;
     transition: all .2s;
     display: flex;
@@ -499,23 +529,7 @@ body {
         border-radius: 12px;
     }
 
-    /* 6. 表单适配：标签和输入框上下排列 */
-    .el-form-item {
-        display: flex;
-        flex-direction: column;
-    }
-    .el-form-item__label {
-        justify-content: flex-start;
-        padding: 0 0 6px 0 !important;
-        width: 100% !important;
-        text-align: left;
-    }
-    .el-form-item__content {
-        margin-left: 0 !important;
-        width: 100%;
-    }
-
-    /* 7. 网格布局(任务/素材卡片)变为单列 */
+    /* 6. 网格布局(任务/素材卡片)变为单列 */
     .task-grid,
     .dept-grid,
     .material-grid,
@@ -694,7 +708,7 @@ body {
     .surface-card,
     .material-card,
     .task-card {
-        padding: 14px;
+        padding: var(--card-pad);
     }
     .section-head {
         margin: 20px 0 12px;
@@ -730,3 +744,143 @@ body {
     }
 }
 
+/* ========================================================
+   移动端统一标题与防溢出（768px / 480px 两档）
+   ======================================================== */
+@media screen and (max-width: 768px) {
+    /* 0. 窄屏只收缩卡片内边距；标题缩进保持 0，继续与卡片外框左边缘对齐 */
+    :root {
+        --card-pad: 14px;
+    }
+
+    /* 1. 二级页面标题：统一左内边距 + 细分隔线，与正文对齐 */
+    .page-head,
+    .list-head,
+    .admin-head {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 2px var(--title-gutter) 12px;
+        margin: 0 0 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .page-head h2,
+    .list-head h2,
+    .admin-head h2 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: .3px;
+    }
+    .page-head .sub,
+    .list-head p,
+    .admin-head p {
+        margin-top: 4px;
+        font-size: 12px;
+    }
+    .page-head-actions {
+        width: 100%;
+    }
+    .section-head {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 0 var(--title-gutter);
+    }
+
+    /* 2. 长标题/长数字换行，避免横向撑开页面 */
+    .task-row { flex-wrap: wrap; }
+    .task-row-title {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        overflow-wrap: anywhere;
+    }
+    .task-row-meta { overflow-wrap: anywhere; }
+    .msg-top { flex-wrap: wrap; gap: 4px 12px; }
+    .msg-text,
+    .article-content,
+    .notice-content { overflow-wrap: anywhere; }
+    .summary-stats { flex-wrap: wrap; gap: 8px 16px; }
+    .summary-stats b { font-size: 20px; }
+    .panel-head { flex-wrap: wrap; gap: 4px 8px; }
+    .el-card > .el-card__header { padding: 12px var(--card-pad); }
+    .el-card__header .flex-between { flex-wrap: wrap; gap: 8px; }
+    .el-link { overflow-wrap: anywhere; }
+    .el-radio-group { flex-wrap: wrap; }
+    .filter-bar .flex-between {
+        width: 100%;
+        margin-left: 0 !important;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    /* 3. 描述列表：长链接/长文本不再撑破卡片 */
+    .el-descriptions__table { table-layout: fixed; }
+    .el-descriptions__label,
+    .el-descriptions__content { word-break: break-word; overflow-wrap: anywhere; }
+
+    /* 4. 详情页返回标题：返回箭头与正文左边缘对齐，标题文字保留箭头偏移 */
+    .el-page-header {
+        padding: 2px 0 12px;
+        margin-bottom: 12px !important;
+        border-bottom: 1px solid var(--border);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    :root {
+        --card-pad: 12px;
+    }
+    .main-inner { padding: 8px 10px !important; }
+    .hero {
+        padding: 20px 16px !important;
+        border-radius: 14px !important;
+    }
+    .hero-content h1 { font-size: 22px !important; }
+    .hero-stats { gap: 10px 18px !important; }
+    .surface-card,
+    .material-card,
+    .task-card { padding: var(--card-pad); }
+    .page-head h2,
+    .list-head h2,
+    .admin-head h2,
+    .section-head h3 { font-size: 18px; }
+    .stat-grid { gap: 8px; }
+    .stat-card { padding: 14px; }
+    .stat-num { font-size: 20px; }
+    .table-pagination .el-pagination { font-size: 12px; }
+    .el-dialog { width: 94% !important; }
+
+    /* 表单：480 以下标签在上、输入框在下，避免两列互相挤压；
+       标签宽度是行内样式，必须用 !important 才能解除 label-width */
+    .el-form-item {
+        display: flex;
+        flex-direction: column;
+    }
+    .el-form .el-form-item .el-form-item__label {
+        justify-content: flex-start;
+        width: 100% !important;
+        padding: 0 0 6px;
+        text-align: left;
+    }
+    .el-form .el-form-item .el-form-item__content {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    /* 标题与操作按钮同处一行时，按钮换行靠右，标题仍保持左对齐 */
+    .page-head-actions,
+    .admin-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .page-head,
+    .list-head,
+    .admin-head { row-gap: 10px; }
+}
+
+/* 补全邮箱弹窗：各档宽度统一 min(92vw, 480px)，覆盖通用 .el-dialog 的 92%/94% 规则 */
+.el-dialog.email-bind-dialog {
+    width: min(92vw, 480px) !important;
+}

@@ -156,4 +156,20 @@ onMounted(() => {
 }
 /* 隐藏滚动条 */
 .admin-tabs::-webkit-scrollbar { display: none; }
+
+/* 窄屏：管理区标题与正文统一左内边距，操作区换行 */
+@media (max-width: 768px) {
+  .admin-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 2px var(--title-gutter) 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin-head h2 { font-size: 20px; }
+  .admin-head p { margin-top: 4px; font-size: 12px; }
+  .admin-actions { width: 100%; flex-wrap: wrap; }
+  .admin-actions .el-select { flex: 1 1 150px; width: 100% !important; }
+}
 </style>

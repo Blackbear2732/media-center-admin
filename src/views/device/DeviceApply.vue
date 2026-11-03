@@ -34,7 +34,7 @@
 
         <el-card shadow="never" class="surface-card">
           <template #header><b>提交设备申请</b></template>
-          <el-form :model="form" label-width="90px">
+          <el-form :model="form" label-width="96px">
             <el-form-item label="申请设备" required>
               <el-select v-model="form.deviceId" placeholder="请选择设备" style="width:100%" @change="handleDeviceChange">
                 <el-option

@@ -119,15 +119,48 @@
       </div>
       <div class="footer-text">山西农业大学青年融媒体中心 · 一次采集 · 多元生成 · 多端发布</div>
     </footer>
+
+    <!-- 首次登录补全邮箱：不阻断路由跳转，登录后由 store 标记触发 -->
+    <el-dialog
+        v-model="emailBindVisible"
+        title="补全邮箱"
+        width="480px"
+        class="email-bind-dialog"
+        :close-on-click-modal="false"
+        @closed="onEmailBindClosed"
+    >
+      <p class="email-bind-tip">邮箱用于接收任务、会议与公告通知，也是找回密码的唯一凭证，请填写常用真实邮箱。</p>
+      <el-form label-position="top" @submit.prevent>
+        <el-form-item label="邮箱" required>
+          <el-input
+              ref="emailInputRef"
+              v-model="emailForm.email"
+              type="email"
+              autocomplete="email"
+              placeholder="name@example.com"
+              clearable
+              @input="emailError = ''"
+              @keyup.enter="saveEmailBind"
+          />
+        </el-form-item>
+      </el-form>
+      <p v-if="emailError" class="email-bind-error">{{ emailError }}</p>
+      <template #footer>
+        <div class="email-bind-footer">
+          <el-button @click="laterEmailBind">稍后再说</el-button>
+          <el-button type="primary" :loading="emailSaving" @click="saveEmailBind">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 // 逻辑与之前完全一致，只是为了引入 Menu 图标和 drawer 状态增加了少许代码
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { messageApi } from '@/api'
+import { messageApi, userApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
 import { routeLoading } from '@/router'
@@ -166,6 +199,77 @@ onUnmounted(() => {
 })
 watch(() => route.path, () => { debouncedUpdateMsg(); mobileMenuVisible.value = false; })
 
+// ============ 首次登录补全邮箱 ============
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const EMAIL_DISMISS_PREFIX = 'media:emailBindDismissedAt:'
+// 当前页面实例的挂载时间：用于区分“本次浏览”和刷新后的新页面
+const emailBindMountedAt = Date.now()
+const emailBindVisible = ref(false)
+const emailSaving = ref(false)
+const emailError = ref('')
+const emailInputRef = ref()
+const emailForm = reactive({ email: '' })
+
+function emailDismissKey() {
+  const uid = userStore.userInfo?.userId || userStore.userInfo?.id || 'anonymous'
+  return EMAIL_DISMISS_PREFIX + uid
+}
+
+function openEmailBind() {
+  const dismissedAt = Number(sessionStorage.getItem(emailDismissKey()) || 0)
+  // 同一页面浏览内点过“稍后再说”就不再弹；刷新后挂载时间更新，会重新提示
+  if (dismissedAt >= emailBindMountedAt) return
+  emailForm.email = ''
+  emailError.value = ''
+  emailBindVisible.value = true
+  nextTick(() => emailInputRef.value?.focus())
+}
+
+function laterEmailBind() {
+  sessionStorage.setItem(emailDismissKey(), String(Date.now()))
+  emailBindVisible.value = false
+}
+
+function onEmailBindClosed() {
+  emailError.value = ''
+}
+
+async function saveEmailBind() {
+  const email = emailForm.email.trim()
+  if (!email) {
+    emailError.value = '请输入邮箱'
+    nextTick(() => emailInputRef.value?.focus())
+    return
+  }
+  if (!EMAIL_RE.test(email)) {
+    emailError.value = '邮箱格式不正确，请填写类似 name@example.com 的地址'
+    return
+  }
+  emailSaving.value = true
+  try {
+    // 个人信息接口按整条记录更新，先取当前资料再合并邮箱，避免覆盖其它字段
+    const profile = await userApi.profile()
+    await userApi.updateProfile({ ...profile, email })
+    userStore.setNeedEmailBind(false)
+    if (userStore.userInfo) userStore.userInfo.email = email
+    sessionStorage.removeItem(emailDismissKey())
+    ElMessage.success('邮箱已保存，后续通知将发送至该邮箱')
+    emailBindVisible.value = false
+  } catch (e) {
+    console.error('保存邮箱失败:', e)
+  } finally {
+    emailSaving.value = false
+  }
+}
+
+watch(() => userStore.needEmailBind, value => {
+  if (!value) {
+    emailBindVisible.value = false
+    return
+  }
+  openEmailBind()
+}, { immediate: true })
+
 async function onCommand(cmd) {
   if (cmd === 'logout') {
     mobileMenuVisible.value = false
@@ -198,6 +302,15 @@ async function onCommand(cmd) {
 .nav-item:hover, .nav-item.active { color: var(--brand); background: var(--brand-soft); font-weight: 600; }
 .admin-link { color: var(--accent) !important; }
 .admin-link.active { background: #fdf1e6 !important; }
+
+/* 补全邮箱弹窗 */
+.email-bind-tip { margin: 0 0 16px; color: var(--text-sub); font-size: 13px; line-height: 1.7; }
+.email-bind-error { margin: 6px 0 0; color: #f56c6c; font-size: 12px; }
+.email-bind-footer { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 480px) {
+  .email-bind-footer { flex-direction: column-reverse; }
+  .email-bind-footer .el-button.el-button { width: 100%; margin-left: 0; }
+}
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 .icon-btn { border: none; background: transparent; cursor: pointer; color: var(--text-sub); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
 .user-chip { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 10px 4px 4px; border-radius: 999px; transition: background .18s; }

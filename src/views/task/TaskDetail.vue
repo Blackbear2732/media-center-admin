@@ -228,7 +228,7 @@
 
     <!-- 任务附加分打分弹窗 -->
     <el-dialog v-model="scoreVisible" title="任务表现附加分" width="400px">
-      <el-form label-width="80px">
+      <el-form label-width="96px">
         <el-form-item label="参与人">
           <span style="font-weight: 600; color: var(--brand);">{{ scoreForm.memberName }}</span>
         </el-form-item>

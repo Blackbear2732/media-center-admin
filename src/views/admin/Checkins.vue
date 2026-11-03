@@ -1,7 +1,13 @@
 <template>
   <div>
-    <div class="flex-between" style="margin-bottom:16px;">
-      <div style="display:flex; gap:16px; align-items:center;">
+    <div class="page-head">
+      <div>
+        <h2>打卡管理</h2>
+        <p class="sub muted">按日期与部门维护成员打卡状态</p>
+      </div>
+    </div>
+    <div class="flex-between checkin-toolbar" style="margin-bottom:16px;">
+      <div class="checkin-filters" style="display:flex; gap:16px; align-items:center;">
         <div>
           <label class="muted" style="margin-right:8px;">日期</label>
           <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" @change="loadData" />
@@ -275,5 +281,13 @@ onMounted(() => {
   padding: 6px 4px;
   border-bottom: 1px solid var(--border, #eee);
   font-size: 13px;
+}
+
+/* 窄屏：筛选条件纵向堆叠，避免工具栏横向溢出 */
+@media (max-width: 768px) {
+  .checkin-toolbar { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+  .checkin-filters { flex-wrap: wrap; width: 100%; gap: 10px 16px !important; }
+  .checkin-filters > div { flex: 1 1 100%; }
+  .manager-row { flex-wrap: wrap; gap: 6px; }
 }
 </style>

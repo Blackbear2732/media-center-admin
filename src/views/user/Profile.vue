@@ -1,10 +1,16 @@
 <template>
   <div class="page" v-loading="loading">
+    <div class="page-head">
+      <div>
+        <h2>个人信息</h2>
+        <p class="sub muted">维护基本资料与账号安全设置</p>
+      </div>
+    </div>
     <el-row :gutter="16">
       <el-col :span="14">
         <el-card shadow="never">
           <template #header><b>基本信息</b></template>
-          <el-form :model="form" label-width="90px">
+          <el-form :model="form" label-width="96px">
             <el-form-item label="学号"><el-input v-model="form.studentNo" disabled /></el-form-item>
             <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
             <el-form-item label="昵称">
@@ -14,8 +20,12 @@
             <el-form-item label="班级"><el-input v-model="form.className" /></el-form-item>
             <el-form-item label="电话"><el-input v-model="form.phone" placeholder="用于接收通知" /></el-form-item>
             <el-form-item label="邮箱" required>
-              <el-input v-model="form.email" placeholder="必填，用于接收系统通知" />
-              <div class="muted" style="margin-top:4px">邮箱为必填项，任务与会议通知将发送至此邮箱</div>
+              <el-input ref="emailInputRef" v-model="form.email" placeholder="必填，用于接收系统通知" />
+              <div v-if="!form.email" class="email-unbound">
+                未绑定，将无法接收通知与找回密码
+                <el-link type="primary" :underline="false" @click="focusEmail">立即填写</el-link>
+              </div>
+              <div v-else class="muted" style="margin-top:4px">邮箱为必填项，任务与会议通知将发送至此邮箱</div>
             </el-form-item>
 
 
@@ -41,7 +51,7 @@
       <el-col :span="10">
         <el-card shadow="never">
           <template #header><b>账号安全</b></template>
-          <el-form :model="pwd" label-width="90px">
+          <el-form :model="pwd" label-width="96px">
             <el-form-item label="原密码"><el-input v-model="pwd.oldPassword" type="password" show-password /></el-form-item>
             <el-form-item label="新密码"><el-input v-model="pwd.newPassword" type="password" show-password /></el-form-item>
             <el-form-item label="确认密码"><el-input v-model="pwd.confirmPassword" type="password" show-password /></el-form-item>
@@ -69,7 +79,12 @@ const form = reactive({ studentNo: '', name: '', nickname: '', college: '', clas
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 import { useDelayedLoading } from '@/utils/loading'
 const loading = useDelayedLoading(), saving = ref(false), pwdSaving = ref(false)
+const emailInputRef = ref()
 let origin = {}
+
+function focusEmail() {
+  emailInputRef.value?.focus()
+}
 
 onMounted(async () => {
   loading.value = true
@@ -86,6 +101,9 @@ async function save() {
   try {
     await userApi.updateProfile({ ...form })  // PUT /api/user/profile
     origin = { ...form }
+    // 邮箱已补全，同步登录态，避免再次弹补填提示
+    userStore.setNeedEmailBind(false)
+    if (userStore.userInfo) userStore.userInfo.email = form.email
     ElMessage.success('保存成功')
   } finally { saving.value = false }
 }
@@ -109,4 +127,6 @@ async function changePwd() {
   margin-left: 4px;
 }
 .guide-link:hover { text-decoration: underline; }
+.email-unbound { margin-top: 4px; color: #e6a23c; font-size: 12px; }
+.email-unbound .el-link { margin-left: 4px; font-size: 12px; vertical-align: baseline; }
 </style>
