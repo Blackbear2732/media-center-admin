@@ -11,7 +11,7 @@ import { userStore } from '@/store/user'
 // - 本地开发填 '/api'，仍走 vite.config.js 的 8080 代理
 // - 自建服务器同源反代也填 '/api'：规范化后仍是 '/api'（浏览器按页面源解析，
 //   不会变成 '//api'；同源 Nginx 再转发到本机 8080，保留 /api 前缀）
-const rawApiBase = (import.meta.env.VITE_API_BASE_URL || 'https://api.blackbearcode.dpdns.org')
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL || 'https://api.zhangjunyi.top')
     .trim()
     .replace(/\/+$/, '')
 const API_BASE_URL = rawApiBase.replace(/\/api$/, '') + '/api'
@@ -151,7 +151,6 @@ service.interceptors.response.use(
         }
 
         // 将常见网络错误的原始英文信息映射为友好中文提示，
-        // 避免直接把 "timeout of 30000ms exceeded" 这类技术文案弹给用户
         let errMsg = err.response?.data?.msg
         if (!errMsg) {
             const raw = err.message || ''
