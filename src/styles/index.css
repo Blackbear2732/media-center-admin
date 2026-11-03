@@ -13,6 +13,9 @@
     --radius: 14px;
     --shadow-sm: 0 2px 8px rgba(24, 52, 77, 0.05);
     --shadow-md: 0 8px 28px rgba(24, 52, 77, 0.08);
+    /* 区块标题左内边距 / 卡片内边距：两者保持同一取值，标题与正文左边缘对齐 */
+    --title-gutter: 20px;
+    --card-pad: 20px;
     --el-color-primary: #2b5f8e;
     --el-border-radius-base: 10px;
 }
@@ -41,6 +44,29 @@ body {
 .page-head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .article-content { white-space: pre-wrap; line-height: 1.9; color: var(--text); font-size: 14px; }
 
+/* 区块标题统一左对齐：左内边距与卡片/正文内边距同源，不再各页各写数值 */
+.page-head,
+.list-head,
+.section-head,
+.admin-head,
+.page-header { padding-left: var(--title-gutter); }
+
+/* 卡片内边距与标题缩进共用 --card-pad；桌面端保持原观感
+   Element Plus 卡片样式由组件按需注入、可能晚于本文件，故用直接子元素提高优先级 */
+.el-card > .el-card__body { padding: var(--card-pad); }
+
+/* 表格卡片横向内边距为 0 时，首列文字补足到与标题同一左边缘 */
+.main-inner :is(.surface-card, .table-card) > .el-table th.el-table__cell:first-child .cell,
+.main-inner :is(.surface-card, .table-card) > .el-table td.el-table__cell:first-child .cell {
+    padding-left: var(--title-gutter);
+}
+
+/* 卡片自带左内边距（如模块配置）：表格首列从卡片内容边缘开始，与卡内标题对齐 */
+.main-inner .module-config-card > .el-table th.el-table__cell:first-child .cell,
+.main-inner .module-config-card > .el-table td.el-table__cell:first-child .cell {
+    padding-left: 0;
+}
+
 .surface-card {
     background: #fff; border-radius: var(--radius);
     box-shadow: var(--shadow-sm); border: 1px solid rgba(230, 235, 241, 0.8);
@@ -61,7 +87,7 @@ body {
 /* 任务卡片 (通用) */
 .task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
 .task-card {
-    padding: 24px;
+    padding: var(--card-pad);
     cursor: pointer; transition: all .2s;
     display: flex; flex-direction: column; gap: 16px;
 }
@@ -273,7 +299,7 @@ body {
 /* ========================================================
    8. 全局 Element Plus 覆盖
    ======================================================== */
-.el-card__header { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.el-card > .el-card__header { padding: 14px var(--card-pad); border-bottom: 1px solid var(--border); }
 
 /* 列表底部分页条（成员 / 素材 / 打卡 / 考评） */
 .table-pagination { display: flex; justify-content: flex-end; padding: 14px 18px 6px; }
@@ -295,10 +321,10 @@ body {
 /* 首页数据面板 */
 .data-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
 .data-panel { overflow: hidden; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px var(--card-pad); border-bottom: 1px solid var(--border); background: #fafbfc; }
 .panel-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .panel-title .dot { width: 8px; height: 8px; border-radius: 50%; }
-.panel-body { padding: 20px; }
+.panel-body { padding: var(--card-pad); }
 .summary-stats { display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px dashed var(--border); }
 .summary-stats div { text-align: center; }
 .summary-stats b { display: block; font-size: 22px; font-weight: 700; color: var(--brand); margin-bottom: 4px; }
@@ -317,7 +343,7 @@ body {
 /* 综合部数据上传 */
 .data-upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .upload-card { display: flex; flex-direction: column; }
-.upload-head { padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+.upload-head { padding: 16px var(--card-pad); border-bottom: 1px solid var(--border); background: #fafbfc; }
 .upload-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .upload-title .dot { width: 8px; height: 8px; border-radius: 50%; }
 .upload-body { padding: 20px; flex: 1; }
@@ -351,7 +377,7 @@ body {
 }
 
 .material-card {
-    padding: 20px;
+    padding: var(--card-pad);
     cursor: pointer;
     transition: all .2s;
     display: flex;
@@ -644,6 +670,11 @@ body {
     .el-table .cell {
         font-size: 12px;
     }
+    /* 移动端表格单元格有 6px 横向内边距，首列清零后由 .cell 的 title-gutter 统一控制 */
+    .main-inner :is(.surface-card, .table-card) > .el-table th.el-table__cell:first-child,
+    .main-inner :is(.surface-card, .table-card) > .el-table td.el-table__cell:first-child {
+        padding-left: 0;
+    }
 
     /* 4. 弹窗：贴合屏宽但限制高度，内容可滚动兜底 */
     .el-dialog {
@@ -702,7 +733,7 @@ body {
     .surface-card,
     .material-card,
     .task-card {
-        padding: 14px;
+        padding: var(--card-pad);
     }
     .section-head {
         margin: 20px 0 12px;
@@ -742,6 +773,11 @@ body {
    移动端统一标题与防溢出（768px / 480px 两档）
    ======================================================== */
 @media screen and (max-width: 768px) {
+    /* 0. 窄屏统一收缩标题缩进与卡片内边距，数值只在这里改一次 */
+    :root {
+        --title-gutter: 14px;
+        --card-pad: 14px;
+    }
 
     /* 1. 二级页面标题：统一左内边距 + 细分隔线，与正文对齐 */
     .page-head,
@@ -750,7 +786,7 @@ body {
         flex-wrap: wrap;
         align-items: flex-start;
         gap: 8px;
-        padding: 2px 2px 12px;
+        padding: 2px var(--title-gutter) 12px;
         margin: 0 0 14px;
         border-bottom: 1px solid var(--border);
     }
@@ -775,7 +811,7 @@ body {
         flex-wrap: wrap;
         align-items: flex-start;
         gap: 8px;
-        padding: 0 2px;
+        padding: 0 var(--title-gutter);
     }
 
     /* 2. 长标题/长数字换行，避免横向撑开页面 */
@@ -794,7 +830,7 @@ body {
     .summary-stats { flex-wrap: wrap; gap: 8px 16px; }
     .summary-stats b { font-size: 20px; }
     .panel-head { flex-wrap: wrap; gap: 4px 8px; }
-    .el-card__header { padding: 12px 14px; }
+    .el-card > .el-card__header { padding: 12px var(--card-pad); }
     .el-card__header .flex-between { flex-wrap: wrap; gap: 8px; }
     .el-link { overflow-wrap: anywhere; }
     .el-radio-group { flex-wrap: wrap; }
@@ -810,15 +846,19 @@ body {
     .el-descriptions__label,
     .el-descriptions__content { word-break: break-word; overflow-wrap: anywhere; }
 
-    /* 4. 详情页返回标题与正文对齐 */
+    /* 4. 详情页返回标题：返回箭头与正文左边缘对齐，标题文字保留箭头偏移 */
     .el-page-header {
-        padding: 2px 2px 12px;
+        padding: 2px 0 12px;
         margin-bottom: 12px !important;
         border-bottom: 1px solid var(--border);
     }
 }
 
 @media screen and (max-width: 480px) {
+    :root {
+        --title-gutter: 12px;
+        --card-pad: 12px;
+    }
     .main-inner { padding: 8px 10px !important; }
     .hero {
         padding: 20px 16px !important;
@@ -828,7 +868,7 @@ body {
     .hero-stats { gap: 10px 18px !important; }
     .surface-card,
     .material-card,
-    .task-card { padding: 12px; }
+    .task-card { padding: var(--card-pad); }
     .page-head h2,
     .list-head h2,
     .admin-head h2,
@@ -838,5 +878,23 @@ body {
     .stat-num { font-size: 20px; }
     .table-pagination .el-pagination { font-size: 12px; }
     .el-dialog { width: 94% !important; }
+
+    /* 标题与操作按钮同处一行时，按钮换行靠右，标题仍保持左对齐 */
+    .page-head-actions,
+    .admin-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .page-head,
+    .list-head,
+    .admin-head { row-gap: 10px; }
+}
+
+/* ========================================================
+   标题对齐收口：标题已在卡片内时，卡片内边距完成对齐，不再叠加缩进
+   （放在最后，避免被上面的窄屏 padding 简写覆盖）
+   ======================================================== */
+:where(.el-card, .surface-card, .material-card, .task-card, .panel-body, .data-panel, .search-card) :is(.page-head, .list-head, .section-head, .admin-head, .page-header) {
+    padding-left: 0;
 }
 
