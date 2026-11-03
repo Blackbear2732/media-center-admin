@@ -232,7 +232,7 @@ onUnmounted(() => {
 .visual-inner h1 { font-size: 30px; margin: 22px 0 10px; letter-spacing: 1px; }
 .visual-inner p { color: rgba(255, 255, 255, .78); margin: 0; line-height: 1.8; }
 .login-panel { display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 32px; }
-.login-box { width: 380px; }
+.login-box { width: min(100%, 380px); min-width: 0; }
 .login-box h2 { margin: 0 0 6px; font-size: 24px; }
 .forgot-row { display: flex; justify-content: flex-end; margin: -8px 0 10px; font-size: 13px; }
 .code-row { display: flex; gap: 8px; width: 100%; }
@@ -241,7 +241,25 @@ onUnmounted(() => {
 .login-submit { width: 100%; height: 44px; border: none; border-radius: 12px; cursor: pointer; background: var(--brand); color: #fff; font-size: 15px; font-weight: 600; transition: all .2s; margin-top: 10px; }
 .login-submit:hover { background: var(--brand-deep); }
 @media (max-width: 900px) {
-  .login-page { grid-template-columns: 1fr; }
+  .login-page { grid-template-columns: minmax(0, 1fr); }
   .login-visual { display: none; }
+}
+
+/* 窄屏：单列、卡片随视口收缩、表单控件不溢出 */
+@media (max-width: 768px) {
+  .login-page { min-height: 100dvh; }
+  .login-panel { padding: 40px 20px 28px; align-items: flex-start; }
+  .login-box { width: 100%; max-width: 380px; }
+  .login-box h2 { font-size: 22px; }
+  .login-box :deep(.el-form-item) { margin-bottom: 16px; }
+}
+
+@media (max-width: 480px) {
+  .login-panel { padding: 32px 16px 24px; }
+  .login-box { max-width: none; }
+  .forgot-row { margin-top: -4px; }
+  .code-row { flex-direction: column; }
+  .code-row .el-input,
+  .code-btn { width: 100%; min-width: 0; }
 }
 </style>
