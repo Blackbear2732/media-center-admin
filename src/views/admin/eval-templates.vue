@@ -184,4 +184,16 @@ onMounted(async () => {
 .panel { background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); padding: 20px; }
 .panel-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
 .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 2px 2px 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-header h2 { font-size: 20px; margin-bottom: 4px; }
+  .toolbar { flex-wrap: wrap; gap: 8px; }
+}
 </style>

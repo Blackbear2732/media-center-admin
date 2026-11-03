@@ -1,5 +1,11 @@
 <template>
   <div class="page" v-loading="loading">
+    <div class="page-head">
+      <div>
+        <h2>个人信息</h2>
+        <p class="sub muted">维护基本资料与账号安全设置</p>
+      </div>
+    </div>
     <el-row :gutter="16">
       <el-col :span="14">
         <el-card shadow="never">

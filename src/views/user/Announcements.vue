@@ -1,9 +1,9 @@
 <template>
   <div class="page" v-loading="loading">
-    <div class="section-head" style="margin-bottom: 14px;">
+    <div class="page-head">
       <div>
-        <h3>公告栏</h3>
-        <div class="sub">中心通知与部门公告</div>
+        <h2>公告栏</h2>
+        <p class="sub muted">中心通知与部门公告</p>
       </div>
     </div>
 

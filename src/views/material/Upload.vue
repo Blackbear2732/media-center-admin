@@ -2,8 +2,11 @@
   <div class="page" v-loading="loading">
     <div class="surface-card" style="padding: 24px; max-width: 860px; margin: 0 auto;">
       <template v-if="!loading">
-        <div class="flex-between" style="margin-bottom: 20px;">
-          <h2 style="margin: 0; font-size: 22px;">素材统一上传</h2>
+        <div class="page-head">
+          <div>
+            <h2>上传素材</h2>
+            <p class="sub muted">素材统一上传 · 字段按所属部门动态生成</p>
+          </div>
           <span class="tag-soft">当前部门：{{ deptId ? getDeptLabel(deptId) : '未分配' }}</span>
         </div>
         <el-alert type="info" :closable="false" class="mb"

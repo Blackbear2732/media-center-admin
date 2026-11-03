@@ -562,4 +562,19 @@ onMounted(load)
 .stat-card .num { font-size: 28px; font-weight: 700; margin-top: 8px; }
 .stat-card.total-card { background: linear-gradient(135deg, var(--brand), #4a86b8); border: none; }
 .stat-card.total-card .muted { color: rgba(255,255,255,0.8); }
+
+/* 窄屏：标题与正文统一左内边距，月份条与工具栏允许换行 */
+@media (max-width: 768px) {
+  .page-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 2px 2px 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-header h2 { font-size: 20px; margin-bottom: 4px; }
+  .month-title-bar { flex-wrap: wrap; gap: 8px; }
+  .month-title { flex-wrap: wrap; gap: 8px; }
+}
 </style>

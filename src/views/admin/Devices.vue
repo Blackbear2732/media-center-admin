@@ -1,5 +1,12 @@
 <template>
   <div v-loading="loading">
+    <div class="page-head">
+      <div>
+        <h2>设备管理</h2>
+        <p class="sub muted">设备档案、申请审核与使用记录</p>
+      </div>
+    </div>
+
     <!-- 顶部标签页 -->
     <div class="admin-tabs" style="margin-bottom:16px">
       <span v-for="t in tabs" :key="t.key" class="pill" :class="{ active: active === t.key }" @click="active = t.key">{{ t.label }}</span>
