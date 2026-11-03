@@ -55,6 +55,14 @@ body {
    Element Plus 卡片样式由组件按需注入、可能晚于本文件，故用直接子元素提高优先级 */
 .el-card > .el-card__body { padding: var(--card-pad); }
 
+/* 表单标签统一左对齐。Element Plus 默认 label-position: right，
+   会把标签文字推到输入框一侧；这里提高选择器优先级覆盖它，
+   标签列宽仍由各表单 label-width 决定，输入框左边缘保持整齐 */
+.el-form .el-form-item--label-right .el-form-item__label {
+    justify-content: flex-start;
+    text-align: left;
+}
+
 .surface-card {
     background: #fff; border-radius: var(--radius);
     box-shadow: var(--shadow-sm); border: 1px solid rgba(230, 235, 241, 0.8);
@@ -521,23 +529,7 @@ body {
         border-radius: 12px;
     }
 
-    /* 6. 表单适配：标签和输入框上下排列 */
-    .el-form-item {
-        display: flex;
-        flex-direction: column;
-    }
-    .el-form-item__label {
-        justify-content: flex-start;
-        padding: 0 0 6px 0 !important;
-        width: 100% !important;
-        text-align: left;
-    }
-    .el-form-item__content {
-        margin-left: 0 !important;
-        width: 100%;
-    }
-
-    /* 7. 网格布局(任务/素材卡片)变为单列 */
+    /* 6. 网格布局(任务/素材卡片)变为单列 */
     .task-grid,
     .dept-grid,
     .material-grid,
@@ -859,6 +851,23 @@ body {
     .stat-num { font-size: 20px; }
     .table-pagination .el-pagination { font-size: 12px; }
     .el-dialog { width: 94% !important; }
+
+    /* 表单：480 以下标签在上、输入框在下，避免两列互相挤压；
+       标签宽度是行内样式，必须用 !important 才能解除 label-width */
+    .el-form-item {
+        display: flex;
+        flex-direction: column;
+    }
+    .el-form .el-form-item .el-form-item__label {
+        justify-content: flex-start;
+        width: 100% !important;
+        padding: 0 0 6px;
+        text-align: left;
+    }
+    .el-form .el-form-item .el-form-item__content {
+        margin-left: 0 !important;
+        width: 100%;
+    }
 
     /* 标题与操作按钮同处一行时，按钮换行靠右，标题仍保持左对齐 */
     .page-head-actions,
