@@ -19,6 +19,6 @@
   // 不带 /api、不带结尾斜杠；误填成带路径的接口地址会导致 /api/api/... 双前缀、全部 401
   // 密钥类变量不要写在这里，用 `wrangler secret put <NAME>` 注入
   "vars": {
-    "API_UPSTREAM": "https://api.example.com"
+    "API_UPSTREAM": "https://api.blackbearcode.dpdns.org"
   }
 }
