@@ -6,7 +6,8 @@ const KEYS = {
     TOKEN: 'token',
     ROLE: 'role',
     USER: 'user',
-    ADMIN_DEPT: 'adminDept'
+    ADMIN_DEPT: 'adminDept',
+    NEED_EMAIL_BIND: 'needEmailBind'
 }
 
 // 兼容早期以字符串保存的角色（member / minister / director）
@@ -40,7 +41,9 @@ const initState = () => ({
     token: localStorage.getItem(KEYS.TOKEN) || '',
     role: normalizeRole(localStorage.getItem(KEYS.ROLE)),
     userInfo: readUser(),
-    adminDept: normalizeDeptId(localStorage.getItem(KEYS.ADMIN_DEPT))
+    adminDept: normalizeDeptId(localStorage.getItem(KEYS.ADMIN_DEPT)),
+    // 后端登录接口返回：邮箱未绑定或仍是假邮箱时为 true
+    needEmailBind: localStorage.getItem(KEYS.NEED_EMAIL_BIND) === '1'
 })
 
 // 创建响应式全局对象
@@ -93,11 +96,13 @@ export const userStore = reactive({
     // ================= 提供动作方法 =================
 
     // 1. 登录：统一处理数据写入（role 为 0/1/2）
-    login(token, role, user, customDeptId) {
+    login(token, role, user, customDeptId, needEmailBind) {
         const roleNum = normalizeRole(role) ?? 0
         this.token = token
         this.role = roleNum
         this.userInfo = user || {}
+        // 字段缺失按 false 处理，兼容未升级的后端
+        this.needEmailBind = needEmailBind === true
         // 主任默认全中心视角，部长/部员默认本部门
         this.adminDept = customDeptId !== undefined && customDeptId !== null
             ? normalizeDeptId(customDeptId)
@@ -107,6 +112,7 @@ export const userStore = reactive({
         localStorage.setItem(KEYS.ROLE, String(this.role))
         localStorage.setItem(KEYS.USER, JSON.stringify(this.userInfo))
         localStorage.setItem(KEYS.ADMIN_DEPT, this.adminDept === null ? '' : String(this.adminDept))
+        localStorage.setItem(KEYS.NEED_EMAIL_BIND, this.needEmailBind ? '1' : '0')
     },
 
     // 2. 退出登录：统一清理数据
@@ -115,10 +121,18 @@ export const userStore = reactive({
         this.role = null
         this.userInfo = {}
         this.adminDept = null
+        this.needEmailBind = false
         localStorage.removeItem(KEYS.TOKEN)
         localStorage.removeItem(KEYS.ROLE)
         localStorage.removeItem(KEYS.USER)
         localStorage.removeItem(KEYS.ADMIN_DEPT)
+        localStorage.removeItem(KEYS.NEED_EMAIL_BIND)
+    },
+
+    // 补填成功后同步内存与本地缓存，避免同一次登录内反复弹窗
+    setNeedEmailBind(value) {
+        this.needEmailBind = value === true
+        localStorage.setItem(KEYS.NEED_EMAIL_BIND, this.needEmailBind ? '1' : '0')
     },
 
     // 3. 主任切换部门视角

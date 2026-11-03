@@ -115,8 +115,8 @@ async function handleLogin() {
       return
     }
 
-    // 存入 Store
-    userStore.login(res.token, res.role, res.user)
+    // 存入 Store；needEmailBind 由后端登录接口返回，缺失时 store 内按 false 处理
+    userStore.login(res.token, res.role, res.user, undefined, res.needEmailBind)
     ElMessage.success(`欢迎回来，${res.user?.name || form.username}`)
 
     // 根据角色跳转：主任/部长去管理后台；被授权打卡管理的部员直接进打卡管理；普通部员去前台首页

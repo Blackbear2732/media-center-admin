@@ -879,3 +879,8 @@ body {
     .list-head,
     .admin-head { row-gap: 10px; }
 }
+
+/* 补全邮箱弹窗：各档宽度统一 min(92vw, 480px)，覆盖通用 .el-dialog 的 92%/94% 规则 */
+.el-dialog.email-bind-dialog {
+    width: min(92vw, 480px) !important;
+}
