@@ -12,6 +12,8 @@ yarn-error.log*
 # 构建产物 / 缓存
 # =========================
 dist/
+dist-workers/
+dist-server/
 dist-ssr/
 .vite/
 *.local

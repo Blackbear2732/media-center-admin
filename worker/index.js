@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker 入口：静态资源（Vite 构建产物 dist/）+ /api 反向代理（过渡兜底）
+ * Cloudflare Worker 入口：静态资源（Vite Workers 构建产物 dist-workers/）+ /api 反向代理（过渡兜底）
  *
  * 【现状】前端已改为由 VITE_API_BASE_URL 直连后端域名（见 src/api/request.js），
  * 不再把 /api 请求发到本 Worker；下面的 /api 代理只保留给仍在用旧路径的客户端兜底。
@@ -9,7 +9,7 @@
  * 职责划分：
  * - /api/*   → 转发到 env.API_UPSTREAM（**保留 /api 前缀**：后端接口本身带 /api，
  *              SecurityConfig 按此前缀放行/鉴权，前缀丢失会导致 401）
- * - 其余路径 → env.ASSETS.fetch(request) 服务 dist/ 静态资源；
+ * - 其余路径 → env.ASSETS.fetch(request) 服务 dist-workers/ 静态资源；
  *              未命中的路径由 wrangler.jsonc 的
  *              not_found_handling: "single-page-application" 自动回落 index.html（SPA 前端路由）
  *

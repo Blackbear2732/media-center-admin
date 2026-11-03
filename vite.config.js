@@ -19,7 +19,12 @@ const mockStubPath = fileURLToPath(new URL('./src/api/mock.stub.js', import.meta
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
     const useMock = env.VITE_USE_MOCK !== 'false'
-    const isProd = mode === 'production' || mode === 'api'
+    // 三种构建口径（mode 决定读取哪个 .env 文件）：
+    // - workers → .env.workers，产物 dist-workers/（Cloudflare Workers 部署）
+    // - server  → .env.server，产物 dist-server/（自建服务器手工部署）
+    // - production → .env.production，仅为直接执行 `vite build` 的兜底，产物 dist/
+    const isProd = ['production', 'workers', 'server'].includes(mode)
+    const outDir = mode === 'server' ? 'dist-server' : mode === 'workers' ? 'dist-workers' : 'dist'
 
     return {
         plugins: [
@@ -50,6 +55,9 @@ export default defineConfig(({ mode }) => {
             ]
         },
         build: {
+            // 按 mode 分目录，避免 Workers 产物与自建服务器产物互相覆盖、误传
+            outDir,
+            emptyOutDir: true,
             target: 'es2019',
             cssCodeSplit: true, // CSS 代码分割
             sourcemap: false,
@@ -78,6 +86,7 @@ export default defineConfig(({ mode }) => {
                     // 本地后端是明文 HTTP（Tomcat 8080），必须用 http://。
                     // 之前指向 https://localhost:8080 时，TLS 握手字节被发到 HTTP 端口，
                     // Tomcat 会报 "Invalid character found in method name [0x160x030x01...]" 且请求全部失败
+                    // 仅 dev（npm run dev）使用；build:server 不经过这里，直接在产物里写死后端地址
                     target: 'http://127.0.0.1:8080',
                     changeOrigin: true,
                     followRedirects: true,

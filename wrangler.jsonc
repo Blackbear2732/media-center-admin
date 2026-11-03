@@ -5,7 +5,8 @@
   // 脚本入口：有了 main 才不是「仅静态资产」Worker，控制台才开放变量/绑定等能力
   "main": "worker/index.js",
   "assets": {
-    "directory": "./dist/",
+    // 与 npm run build（= build:workers）的产物目录一致；自建服务器产物在 dist-server/，不参与 Worker 部署
+    "directory": "./dist-workers/",
     // Worker 脚本里通过 env.ASSETS.fetch(request) 访问静态资源
     "binding": "ASSETS",
     // SPA 前端路由回落：未命中的路径返回 index.html（替代 Pages 时代的 _redirects）

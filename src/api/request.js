@@ -2,7 +2,8 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { userStore } from '@/store/user'
 
-// 后端地址：由 VITE_API_BASE_URL 注入（生产/预发见 .env.production / .env.api），
+// 后端地址：由 VITE_API_BASE_URL 注入（构建口径见 .env.workers / .env.server / .env.production，
+// 分别对应 npm run build、build:server 与直接 vite build 的兜底），
 // 缺变量时回落到默认的直连域名，避免构建环境漏配导致请求打空。
 // 后端接口本身带 /api 前缀，这里统一规范化：
 // - 变量填 origin（https://api.example.com）→ 拼接为 https://api.example.com/api
