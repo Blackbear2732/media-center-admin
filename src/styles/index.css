@@ -13,8 +13,8 @@
     --radius: 14px;
     --shadow-sm: 0 2px 8px rgba(24, 52, 77, 0.05);
     --shadow-md: 0 8px 28px rgba(24, 52, 77, 0.08);
-    /* 区块标题左内边距 / 卡片内边距：两者保持同一取值，标题与正文左边缘对齐 */
-    --title-gutter: 20px;
+    /* 区块标题左内边距：0 表示与页面内容/卡片外框左边缘对齐，不再额外缩进 */
+    --title-gutter: 0px;
     --card-pad: 20px;
     --el-color-primary: #2b5f8e;
     --el-border-radius-base: 10px;
@@ -44,7 +44,7 @@ body {
 .page-head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .article-content { white-space: pre-wrap; line-height: 1.9; color: var(--text); font-size: 14px; }
 
-/* 区块标题统一左对齐：左内边距与卡片/正文内边距同源，不再各页各写数值 */
+/* 区块标题统一左对齐：与页面内容/卡片外框左边缘同一条竖线，不再额外缩进 */
 .page-head,
 .list-head,
 .section-head,
@@ -54,18 +54,6 @@ body {
 /* 卡片内边距与标题缩进共用 --card-pad；桌面端保持原观感
    Element Plus 卡片样式由组件按需注入、可能晚于本文件，故用直接子元素提高优先级 */
 .el-card > .el-card__body { padding: var(--card-pad); }
-
-/* 表格卡片横向内边距为 0 时，首列文字补足到与标题同一左边缘 */
-.main-inner :is(.surface-card, .table-card) > .el-table th.el-table__cell:first-child .cell,
-.main-inner :is(.surface-card, .table-card) > .el-table td.el-table__cell:first-child .cell {
-    padding-left: var(--title-gutter);
-}
-
-/* 卡片自带左内边距（如模块配置）：表格首列从卡片内容边缘开始，与卡内标题对齐 */
-.main-inner .module-config-card > .el-table th.el-table__cell:first-child .cell,
-.main-inner .module-config-card > .el-table td.el-table__cell:first-child .cell {
-    padding-left: 0;
-}
 
 .surface-card {
     background: #fff; border-radius: var(--radius);
@@ -670,11 +658,6 @@ body {
     .el-table .cell {
         font-size: 12px;
     }
-    /* 移动端表格单元格有 6px 横向内边距，首列清零后由 .cell 的 title-gutter 统一控制 */
-    .main-inner :is(.surface-card, .table-card) > .el-table th.el-table__cell:first-child,
-    .main-inner :is(.surface-card, .table-card) > .el-table td.el-table__cell:first-child {
-        padding-left: 0;
-    }
 
     /* 4. 弹窗：贴合屏宽但限制高度，内容可滚动兜底 */
     .el-dialog {
@@ -773,9 +756,8 @@ body {
    移动端统一标题与防溢出（768px / 480px 两档）
    ======================================================== */
 @media screen and (max-width: 768px) {
-    /* 0. 窄屏统一收缩标题缩进与卡片内边距，数值只在这里改一次 */
+    /* 0. 窄屏只收缩卡片内边距；标题缩进保持 0，继续与卡片外框左边缘对齐 */
     :root {
-        --title-gutter: 14px;
         --card-pad: 14px;
     }
 
@@ -856,7 +838,6 @@ body {
 
 @media screen and (max-width: 480px) {
     :root {
-        --title-gutter: 12px;
         --card-pad: 12px;
     }
     .main-inner { padding: 8px 10px !important; }
@@ -889,12 +870,3 @@ body {
     .list-head,
     .admin-head { row-gap: 10px; }
 }
-
-/* ========================================================
-   标题对齐收口：标题已在卡片内时，卡片内边距完成对齐，不再叠加缩进
-   （放在最后，避免被上面的窄屏 padding 简写覆盖）
-   ======================================================== */
-:where(.el-card, .surface-card, .material-card, .task-card, .panel-body, .data-panel, .search-card) :is(.page-head, .list-head, .section-head, .admin-head, .page-header) {
-    padding-left: 0;
-}
-
