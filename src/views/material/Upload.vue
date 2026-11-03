@@ -1,6 +1,6 @@
 <template>
   <div class="page" v-loading="loading">
-    <div class="surface-card" style="padding: 24px; max-width: 860px; margin: 0 auto;">
+    <div class="surface-card" style="padding: var(--card-pad); max-width: 860px; margin: 0 auto;">
       <template v-if="!loading">
         <div class="page-head">
           <div>

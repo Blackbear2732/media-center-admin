@@ -73,7 +73,7 @@ onMounted(async () => {
 
 <style scoped>
 .notice-list { display: flex; flex-direction: column; gap: 12px; }
-.notice-card { padding: 14px 16px; cursor: pointer; transition: border-color .18s; }
+.notice-card { padding: 14px var(--card-pad); cursor: pointer; transition: border-color .18s; }
 .notice-card:hover { border-color: var(--brand); }
 .notice-head { display: flex; align-items: center; justify-content: space-between; }
 .notice-title { display: flex; align-items: center; font-size: 14px; }

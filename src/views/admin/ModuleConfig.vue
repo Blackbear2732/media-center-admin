@@ -1,6 +1,6 @@
 <template>
   <div class="page" v-loading="loading">
-    <div class="surface-card" style="padding: 24px;">
+    <div class="surface-card module-config-card" style="padding: var(--card-pad);">
       <div class="flex-between" style="margin-bottom: 24px;">
         <div>
           <h3 style="margin: 0 0 6px;">部门功能模块配置</h3>

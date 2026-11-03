@@ -189,7 +189,7 @@ onMounted(async () => {
   .page-header {
     flex-wrap: wrap;
     align-items: flex-start;
-    padding: 2px 2px 12px;
+    padding: 2px var(--title-gutter) 12px;
     margin-bottom: 14px;
     border-bottom: 1px solid var(--border);
   }

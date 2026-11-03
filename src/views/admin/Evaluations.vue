@@ -32,7 +32,7 @@
             </div>
           </template>
 
-          <div class="table-wrapper">
+          <div class="table-wrapper table-card">
             <el-table :data="monthRows(month)" stripe style="width: 100%" :header-cell-style="{ background: '#f8fafc', color: '#606266', fontWeight: '600' }">
               <el-table-column type="index" label="排名" width="70" align="center">
                 <template #default="{ $index }">
@@ -569,7 +569,7 @@ onMounted(load)
     flex-wrap: wrap;
     align-items: flex-start;
     gap: 8px;
-    padding: 2px 2px 12px;
+    padding: 2px var(--title-gutter) 12px;
     margin-bottom: 14px;
     border-bottom: 1px solid var(--border);
   }
