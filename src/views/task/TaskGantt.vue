@@ -162,6 +162,67 @@ async function loadTasks() {
 
 const STATUS_CLASS = { 0: 'prepare', 1: 'doing', 2: 'done' }
 
+/* ===== 甘特图中文表头 =====
+ * frappe-gantt 1.2.2 没有 zh 语言包，它的 view_modes 是公开可配置项：
+ * 传自定义 view_modes（upper_text / lower_text 回调）即可全部中文，且切换日/周/月都会重新调用。
+ * 不 patch node_modules，也不依赖库内部 DOM（唯一例外是「今天」按钮文案，见 localizeTodayButton）。
+ */
+const WEEKDAYS_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+const zhYearMonth = d => `${d.getFullYear()}年${d.getMonth() + 1}月`
+const addDays = (d, n) => {
+  const next = new Date(d)
+  next.setDate(next.getDate() + n)
+  return next
+}
+// 只保留 Day / Week / Month 三个模式（工具栏只提供这三种）
+const ZH_VIEW_MODES = [
+  {
+    name: 'Day',
+    padding: '7d',
+    step: '1d',
+    date_format: 'YYYY-MM-DD',
+    column_width: 84, // 需要容纳「3日 周一」
+    lower_text: d => `${d.getDate()}日 ${WEEKDAYS_ZH[d.getDay()]}`,
+    upper_text: (d, ld) => (!ld || d.getMonth() !== ld.getMonth() || d.getFullYear() !== ld.getFullYear())
+        ? zhYearMonth(d)
+        : '',
+    thick_line: d => d.getDay() === 1
+  },
+  {
+    name: 'Week',
+    padding: '1m',
+    step: '7d',
+    date_format: 'YYYY-MM-DD',
+    column_width: 150,
+    lower_text: d => {
+      const end = addDays(d, 6)
+      return `${d.getMonth() + 1}月${d.getDate()}日-${end.getMonth() + 1}月${end.getDate()}日`
+    },
+    upper_text: (d, ld) => (!ld || d.getMonth() !== ld.getMonth() || d.getFullYear() !== ld.getFullYear())
+        ? zhYearMonth(d)
+        : '',
+    thick_line: d => d.getDate() >= 1 && d.getDate() <= 7,
+    upper_text_frequency: 4
+  },
+  {
+    name: 'Month',
+    padding: '2m',
+    step: '1m',
+    date_format: 'YYYY-MM',
+    column_width: 110,
+    lower_text: d => `${d.getMonth() + 1}月`,
+    upper_text: (d, ld) => (!ld || d.getFullYear() !== ld.getFullYear()) ? `${d.getFullYear()}年` : '',
+    thick_line: d => d.getMonth() % 3 === 0,
+    snap_at: '7d'
+  }
+]
+
+// 图表库把「Today」写死在按钮里（无公开文案选项），渲染后改一次文本；依赖 .today-button 类名
+function localizeTodayButton() {
+  const btn = chartRef.value?.querySelector('.today-button')
+  if (btn) btn.textContent = '今天'
+}
+
 // 后端 progress 已算好（0-100），这里只做范围保护，不重复计算
 function normalizeProgress(value) {
   const num = Number(value)
@@ -193,7 +254,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[c]))
 
-const fmtTime = v => String(v || '').slice(0, 16)
+// tooltip 日期统一中文：2026年11月2日 09:00（甘特接口时间带秒，独立于任务列表的格式化）
+const fmtTime = v => {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/)
+  if (!m) return String(v || '').slice(0, 16) || '—'
+  return `${m[1]}年${Number(m[2])}月${Number(m[3])}日 ${m[4]}`
+}
 
 // tooltip 内容：标题 / 部门 / 发布人 / 起止时间 / 进度
 // 后端可能返回 deptId=null、deptName / publishByName 空串，统一兜底，避免空行或 undefined
@@ -223,6 +289,8 @@ function renderChart() {
       .sort()[0]
   gantt = new Gantt(chartRef.value, toGanttTasks(tasks.value), {
     view_mode: viewMode.value,
+    view_modes: ZH_VIEW_MODES,      // 中文表头，见文件上方说明
+    language: 'zh-CN',
     readonly: true,          // 本轮不做拖拽改时间
     readonly_dates: true,
     readonly_progress: true,
@@ -235,11 +303,18 @@ function renderChart() {
     popup: ({ task }) => tooltipHtml(rawById.get(String(task.id)) || {}),
     on_click: task => router.push('/tasks/' + task.id)
   })
+  // 库的 setup_options 在传入自定义 view_modes 时会强制取 view_modes[0]（Day），
+  // 这里再显式切回当前应展示的视图，保证「默认周/跨度大自动月」不被覆盖
+  if (gantt.options.view_mode?.name !== viewMode.value) gantt.change_view_mode(viewMode.value)
+  localizeTodayButton()
 }
 
 function onViewModeChange(mode) {
   userPickedView = true
-  if (gantt) gantt.change_view_mode(mode)
+  if (gantt) {
+    gantt.change_view_mode(mode)
+    localizeTodayButton()
+  }
 }
 
 // 图表库按鼠标位置绝对定位 tooltip，窄屏/靠右的任务条会把浮层顶出可视区，这里做一次位置回收到容器内
