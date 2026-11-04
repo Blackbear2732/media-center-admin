@@ -93,6 +93,20 @@ export const authApi = {
 export const userApi = {
     profile:        pick(() => request.get('/user/profile'),          () => delay(me())),
     updateProfile:  pick(d => request.put('/user/profile', d),        () => delay({ success: true })),
+    // 邮箱验证码发送与绑定：首次登录补全邮箱、个人信息页改绑邮箱共用
+    sendEmailCode:  pick(e => request.post('/user/email/code', { email: e }), () => delay({ success: true })),
+    bindEmail:      pick(({ email, code }) => request.post('/user/email/bind', { email, code }), (payload = {}) => delay((() => {
+        // Mock：视为绑定成功，并写回本地登录态，刷新后个人信息页仍显示新邮箱
+        try {
+            const raw = localStorage.getItem('user')
+            if (raw) {
+                const u = JSON.parse(raw)
+                u.email = payload.email
+                localStorage.setItem('user', JSON.stringify(u))
+            }
+        } catch (e) {}
+        return { success: true, email: payload.email }
+    })())),
     updatePassword: pick(d => request.put('/user/password', d),       () => delay({ success: true })),
     myTasks:        pick(() => request.get('/user/tasks'),            () => {
         if (!isLoggedIn()) return delay([])
