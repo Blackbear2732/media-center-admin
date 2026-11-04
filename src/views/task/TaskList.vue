@@ -7,9 +7,13 @@
           {{ userStore.isMember ? `本部门任务 · 共 ${list.length} 个` : `全部任务 · 共 ${list.length} 个` }}
         </p>
       </div>
-      <button v-if="userStore.canManage" class="pill active" @click="router.push('/tasks/create')" style="padding: 10px 20px;">
-        <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发布任务
-      </button>
+      <div class="head-actions">
+        <span class="pill active">列表</span>
+        <router-link class="pill" :to="{ path: '/task/gantt', query: statusQuery }">甘特图</router-link>
+        <button v-if="userStore.canManage" class="pill active" @click="router.push('/tasks/create')" style="padding: 10px 20px;">
+          <el-icon style="margin-right: 4px;"><Plus /></el-icon> 发布任务
+        </button>
+      </div>
     </div>
 
     <div class="filter-pills" style="margin-top: 24px; margin-bottom: 32px;">
@@ -45,15 +49,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { taskApi } from '@/api'
 import { userStore } from '@/store/user'
 import { getDeptLabel, getTaskDotClass, getTaskStatusLabel, TASK_STATUS_FILTER_OPTIONS } from '@/utils/dict'
 
 const router = useRouter()
-const activeStatus = ref(-1) // -1 表示全部
+const route = useRoute()
+// 从甘特图切回列表时带上 ?status=，保持筛选一致
+const initialStatus = route.query.status
+const activeStatus = ref(initialStatus !== undefined && initialStatus !== '' ? Number(initialStatus) : -1) // -1 表示全部
+const statusQuery = computed(() => (activeStatus.value === -1 ? {} : { status: activeStatus.value }))
 const list = ref([])
 import { useDelayedLoading } from '@/utils/loading'
 const loading = useDelayedLoading()
@@ -77,3 +85,18 @@ function changeTab(status) {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .head-actions {
+    width: 100%;
+  }
+}
+</style>
