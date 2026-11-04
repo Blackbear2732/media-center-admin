@@ -809,8 +809,10 @@ export const adminApi = {
         })())
         : request.delete(`/admin/announcements/${id}`),
 
-    // D-12 部门介绍设置（键为 deptId）
-    deptProfile: (deptId) => USE_MOCK ? delay(mock.deptProfiles[Number(deptId)] || mock.deptProfiles[101]) : request.get('/admin/dept-profile', { params: { deptId } }),
+    // D-12 部门介绍设置（键为 deptId；config.cache === false 时跳过 GET 短缓存，保证切换部门后立即回源）
+    deptProfile: (deptId, config) => USE_MOCK
+        ? delay(mock.deptProfiles[Number(deptId)] || mock.deptProfiles[101])
+        : request.get('/admin/dept-profile', { ...config, params: { deptId } }),
 
     // 保存部门介绍（加入内存）
     saveDeptProfile: (deptId, data) => USE_MOCK
