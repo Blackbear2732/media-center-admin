@@ -14,7 +14,7 @@
         <p>{{ center.desc }}</p>
         <div class="hero-actions">
           <button class="hero-primary" @click="goWorkspace">{{ isLogin ? '进入工作台' : '登录系统' }}</button>
-          <button class="hero-ghost" @click="scrollToSection('depts')">了解部门</button>
+          <button class="hero-ghost" @click="router.push('/dept')">了解部门</button>
         </div>
         <div class="hero-stats">
           <div><b>6</b><span>部门</span></div>
@@ -38,14 +38,14 @@
       </div>
     </div>
     <div class="dept-grid">
-      <div v-for="(d, i) in departments" :key="d.id" class="dept-card surface-card">
+      <div v-for="(d, i) in departments" :key="d.id" class="dept-card surface-card dept-card-link" @click="goDept(d.id)">
         <div class="dept-banner" :style="{ background: deptGradients[i % deptGradients.length] }">
           <span class="dept-initial">{{ d.name.slice(0, 1) }}</span>
         </div>
         <div class="dept-body">
           <div class="dept-name">{{ d.name }}</div>
           <div class="dept-intro">{{ d.intro }}</div>
-          <div style="margin-top:10px;color:var(--brand,#2a6fb5);font-size:13px;cursor:pointer" @click="router.push(isLogin ? `/dept/${d.id}` : '/login')">
+          <div style="margin-top:10px;color:var(--brand,#2a6fb5);font-size:13px">
             {{ isLogin ? '查看部门风采 →' : '登录后查看 →' }}
           </div>
         </div>
@@ -194,7 +194,8 @@ const deptGradients = [
 function goWorkspace() { router.push(isLogin.value ? '/tasks' : '/login') }
 function goTask(t) { router.push(isLogin.value ? '/tasks/' + t.id : '/login') }
 function goNotice(n) { router.push(isLogin.value ? '/announcements' : '/login') }
-function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }) }
+// 首页部门卡片直接进对应部门的部门风采页；未登录时由路由守卫带回登录页并带回跳地址
+function goDept(deptId) { router.push(`/dept/${deptId}`) }
 
 // 数据看板：未登录也能看到概览数据，但进入详情需要登录
 function openPanel(type) {
@@ -238,6 +239,7 @@ onMounted(async () => {
 <style scoped>
 /* 栅格子项默认 min-width:auto，长标题会把整栏撑出视口 */
 .split { min-width: 0; }
+.dept-card-link { cursor: pointer; }
 .split-main,
 .task-list,
 .notice-list,
