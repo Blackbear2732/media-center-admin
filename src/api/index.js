@@ -177,6 +177,12 @@ export const taskApi = {
         }
     ),
     detail:      pick(id => request.get(`/tasks/${id}`), id => delay(mock.tasks.find(t => String(t.id) === String(id)) || mock.tasks[0])),
+    // 甘特图：GET /tasks/gantt?startDate=&endDate=&deptId=&status=
+    // cache: false —— 时间范围/筛选切换时不复用上一次的 GET 缓存
+    gantt: pick(
+        p => request.get('/tasks/gantt', { params: p, cache: false }),
+        p => delay(mock.ganttTasks(p))
+    ),
     create: pick(
         d => request.post('/tasks', d),
         (data) => {
