@@ -26,6 +26,7 @@
             <router-link to="/materials" class="nav-item" :class="{ active: route.path.startsWith('/materials') }">素材库</router-link>
             <router-link to="/upload" class="nav-item" :class="{ active: route.path === '/upload' }">上传</router-link>
             <router-link to="/device-apply" class="nav-item" :class="{ active: route.path === '/device-apply' }">设备</router-link>
+            <router-link to="/dept" class="nav-item" :class="{ active: route.path.startsWith('/dept') }">部门风采</router-link>
             <router-link v-if="userStore.canManage || userStore.isCheckinManager"
                          :to="userStore.canManage ? '/admin' : '/admin/checkins'" class="nav-item admin-link"
                          :class="{ active: route.path.startsWith('/admin') }">
@@ -85,6 +86,7 @@
           <router-link to="/materials" class="mobile-nav-item" @click="mobileMenuVisible=false">素材库</router-link>
           <router-link to="/upload" class="mobile-nav-item" @click="mobileMenuVisible=false">上传素材</router-link>
           <router-link to="/device-apply" class="mobile-nav-item" @click="mobileMenuVisible=false">设备申请</router-link>
+          <router-link to="/dept" class="mobile-nav-item" @click="mobileMenuVisible=false">部门风采</router-link>
           <router-link v-if="userStore.canManage || userStore.isCheckinManager"
                        :to="userStore.canManage ? '/admin' : '/admin/checkins'" class="mobile-nav-item" @click="mobileMenuVisible=false">
             {{ userStore.canManage ? '部门管理' : '打卡管理' }}
@@ -288,18 +290,24 @@ async function onCommand(cmd) {
 <style scoped>
 /* 保留之前的样式，并在末尾添加响应式控制 */
 .topbar { position: sticky; top: 0; z-index: 100; background: rgba(255, 255, 255, .86); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-.topbar-inner { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 32px; }
-.brand { display: flex; align-items: center; gap: 12px; cursor: pointer; }
-.brand-logos { display: flex; align-items: center; gap: 8px; }
+.topbar-inner { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 24px; }
+.brand { display: flex; align-items: center; gap: 12px; cursor: pointer; min-width: 0; flex-shrink: 1; }
+.brand-logos { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .brand-icon { height: 32px; width: auto; object-fit: contain; }
 .media-icon { height: 36px; }
 .brand-logos .divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
-.brand-text { display: flex; flex-direction: column; line-height: 1.2; }
-.brand-name { font-weight: 700; font-size: 16px; letter-spacing: .5px; color: var(--text); }
+.brand-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.brand-name { font-weight: 700; font-size: 16px; letter-spacing: .5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand-sub { font-size: 10px; color: var(--text-sub); letter-spacing: 1px; }
-.nav { display: flex; gap: 6px; flex: 1; }
-.nav-item { padding: 8px 14px; border-radius: 8px; color: var(--text-sub); text-decoration: none; font-size: 14px; transition: all .18s; }
+.nav { display: flex; gap: 4px; flex: 1; }
+.nav-item { padding: 8px 12px; border-radius: 8px; color: var(--text-sub); text-decoration: none; font-size: 14px; transition: all .18s; white-space: nowrap; }
 .nav-item:hover, .nav-item.active { color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+/* 中等宽度收紧导航间距，新增「部门风采」入口后仍保持单行且不横向溢出 */
+@media (min-width: 769px) and (max-width: 1100px) {
+  .topbar-inner { gap: 16px; }
+  .nav { gap: 2px; }
+  .nav-item { padding: 8px 9px; font-size: 13px; }
+}
 .admin-link { color: var(--accent) !important; }
 .admin-link.active { background: #fdf1e6 !important; }
 
@@ -311,7 +319,7 @@ async function onCommand(cmd) {
   .email-bind-footer { flex-direction: column-reverse; }
   .email-bind-footer .el-button.el-button { width: 100%; margin-left: 0; }
 }
-.topbar-right { display: flex; align-items: center; gap: 14px; }
+.topbar-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .icon-btn { border: none; background: transparent; cursor: pointer; color: var(--text-sub); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
 .user-chip { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 10px 4px 4px; border-radius: 999px; transition: background .18s; }
 .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--accent)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
