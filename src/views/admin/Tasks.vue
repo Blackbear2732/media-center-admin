@@ -129,9 +129,12 @@
         </el-form-item>
 
         <el-form-item label="参与部门">
-          <el-select v-model="editForm.deptIds" multiple placeholder="请选择主力部门" style="width:100%">
-            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value"
-                       :disabled="lockedDeptId !== null && d.value === lockedDeptId" />
+          <el-select v-model="editForm.deptIds" multiple placeholder="请选择主力部门" style="width:100%"
+                     @change="pruneEditDeptOverlap">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value"
+                       :label="editForm.relatedDeptIds.includes(d.value) ? `${d.label}（已作为联动部门）` : d.label"
+                       :value="d.value"
+                       :disabled="(lockedDeptId !== null && d.value === lockedDeptId) || editForm.relatedDeptIds.includes(d.value)" />
           </el-select>
           <div v-if="lockedDeptId !== null" class="muted" style="margin-top:4px">
             本部门（{{ userStore.deptLabel }}）为参与部门，不可移除
@@ -139,8 +142,12 @@
         </el-form-item>
 
         <el-form-item label="联动部门">
-          <el-select v-model="editForm.relatedDeptIds" multiple placeholder="请选择协同部门" style="width:100%">
-            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value" :disabled="editForm.deptIds.includes(d.value)" />
+          <el-select v-model="editForm.relatedDeptIds" multiple placeholder="请选择协同部门" style="width:100%"
+                     @change="pruneEditDeptOverlap">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value"
+                       :label="editForm.deptIds.includes(d.value) ? `${d.label}（已作为参与部门）` : d.label"
+                       :value="d.value"
+                       :disabled="editForm.deptIds.includes(d.value)" />
           </el-select>
         </el-form-item>
 
@@ -255,7 +262,19 @@ async function openEdit(row) {
     relatedDeptIds: row.relatedDeptIds || [],
     equipmentIds: row.equipmentIds || []
   })
+  // 历史数据可能已存在同一部门同时出现在参与/联动里，打开弹窗时先按「参与优先」剔除
+  pruneEditDeptOverlap()
   editVisible.value = true
+}
+
+// 参与/联动部门互斥：参与部门优先，联动部门中的重复项自动移除。
+// 仅在选项上禁用不够，还要从已选值里剔除，避免 UI 看似正常但提交重复 deptId。
+function pruneEditDeptOverlap() {
+  const participate = new Set(editForm.deptIds)
+  const duplicated = editForm.relatedDeptIds.filter(id => participate.has(id))
+  if (!duplicated.length) return
+  editForm.relatedDeptIds = editForm.relatedDeptIds.filter(id => !participate.has(id))
+  ElMessage.warning(`已作为参与部门，已自动从联动部门移除：${duplicated.map(getDeptLabel).join('、')}`)
 }
 
 function addTag() {
@@ -268,6 +287,8 @@ async function saveEdit() {
   if (!editForm.title || !editForm.startTime || !editForm.endTime) {
     return ElMessage.warning('请填写必填项')
   }
+  // 提交前兜底剔除参与/联动重复部门，避免把重复 deptId 写入后端
+  pruneEditDeptOverlap()
   savingEdit.value = true
   try {
     await adminApi.updateTask(editForm.id, { ...editForm })
