@@ -810,3 +810,46 @@ export const videos = [
 export const evalEvents = []
 export const checkinManagers = []
 export const checkinManagerCandidates = []
+
+/* ========== 任务甘特图（GET /tasks/gantt） ========== */
+// 日期按“今天”动态生成，保证离线演示时任务始终落在当前时间附近；格式与后端契约一致：yyyy-MM-dd HH:mm:ss
+const pad2 = n => String(n).padStart(2, '0')
+const dayStart = offset => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    d.setDate(d.getDate() + offset)
+    return d
+}
+const dt = (offset, hour = 9, minute = 0) => {
+    const d = dayStart(offset)
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(hour)}:${pad2(minute)}:00`
+}
+
+// 三种状态各 3 条：0 筹备中、1 进行中、2 已结束；含 2 条时间待定、2 条跨月、1 条跨度 >90 天
+export const ganttTaskList = [
+    { id: 9001, title: '迎新宣传视频拍摄', startTime: dt(-18, 9), endTime: dt(10, 18), status: 1, deptId: 103, deptName: '影音部', publishByName: '王主任', timePending: false, progress: 45 },
+    { id: 9002, title: '校园文化节推文策划', startTime: dt(-6, 10), endTime: dt(6, 17), status: 1, deptId: 102, deptName: '网宣部', publishByName: '张三', timePending: false, progress: 62 },
+    { id: 9003, title: '运动会现场报道排班', startTime: dt(-2, 8), endTime: dt(4, 20), status: 1, deptId: 105, deptName: '新闻部', publishByName: '李润琪', timePending: true, progress: 30 },
+    { id: 9004, title: '校庆 70 周年主视觉设计', startTime: dt(6, 9), endTime: dt(26, 18), status: 0, deptId: 106, deptName: '设计部', publishByName: '李翔', timePending: false, progress: 0 },
+    { id: 9005, title: '新学年纳新宣讲会', startTime: dt(12, 14), endTime: dt(20, 16), status: 0, deptId: 101, deptName: '综合部', publishByName: '王主任', timePending: true, progress: 0 },
+    { id: 9006, title: '设备清点与维护计划', startTime: dt(-30, 9), endTime: dt(45, 18), status: 0, deptId: 104, deptName: '摄制部', publishByName: '闫佳慧', timePending: false, progress: 10 },
+    { id: 9007, title: '国庆主题短视频', startTime: dt(-52, 9), endTime: dt(-30, 18), status: 2, deptId: 103, deptName: '影音部', publishByName: '王主任', timePending: false, progress: 100 },
+    { id: 9008, title: '上学期部门总结推文', startTime: dt(-70, 10), endTime: dt(-48, 17), status: 2, deptId: 102, deptName: '网宣部', publishByName: '张三', timePending: false, progress: 100 },
+    { id: 9009, title: '融媒体年度宣传规划', startTime: dt(-40, 9), endTime: dt(95, 18), status: 1, deptId: 101, deptName: '综合部', publishByName: '王主任', timePending: false, progress: 55 }
+]
+
+// 入参：{ startDate, endDate, deptId, status }；返回与后端契约一致的任务数组
+export const ganttTasks = (params = {}) => {
+    let list = ganttTaskList.slice()
+    const deptId = params.deptId
+    if (deptId !== undefined && deptId !== null && deptId !== '' && Number(deptId) !== 100) {
+        list = list.filter(t => Number(t.deptId) === Number(deptId))
+    }
+    const status = params.status
+    if (status !== undefined && status !== null && status !== '' && Number(status) !== -1) {
+        list = list.filter(t => Number(t.status) === Number(status))
+    }
+    if (params.startDate) list = list.filter(t => t.endTime >= `${params.startDate} 00:00:00`)
+    if (params.endDate) list = list.filter(t => t.startTime <= `${params.endDate} 23:59:59`)
+    return list
+}

@@ -50,6 +50,12 @@ export default defineConfig(({ mode }) => {
         ],
         resolve: {
             alias: [
+                // frappe-gantt 的 package.json exports 只声明了 "."，直接 import
+                // 'frappe-gantt/dist/frappe-gantt.css' 会被 exports 拦截；这里显式指向 dist 里的样式文件
+                {
+                    find: 'frappe-gantt/dist/frappe-gantt.css',
+                    replacement: fileURLToPath(new URL('./node_modules/frappe-gantt/dist/frappe-gantt.css', import.meta.url))
+                },
                 { find: '@/api/mock', replacement: useMock ? mockPath : mockStubPath },
                 { find: '@', replacement: srcPath }
             ]
