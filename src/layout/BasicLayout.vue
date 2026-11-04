@@ -140,8 +140,29 @@
               placeholder="name@example.com"
               clearable
               @input="emailError = ''"
-              @keyup.enter="saveEmailBind"
+              @keyup.enter="sendEmailCode"
           />
+        </el-form-item>
+        <el-form-item label="邮箱验证码" required>
+          <div class="code-row">
+            <el-input
+                v-model="emailForm.code"
+                class="code-input"
+                maxlength="6"
+                placeholder="6 位数字验证码"
+                clearable
+                @input="emailError = ''"
+                @keyup.enter="saveEmailBind"
+            />
+            <el-button
+                class="code-btn"
+                :disabled="codeCountdown > 0"
+                :loading="codeSending"
+                @click="sendEmailCode"
+            >
+              {{ codeCountdown > 0 ? `${codeCountdown}s 后重发` : '获取验证码' }}
+            </el-button>
+          </div>
         </el-form-item>
       </el-form>
       <p v-if="emailError" class="email-bind-error">{{ emailError }}</p>
@@ -195,6 +216,8 @@ onMounted(() => {
 })
 onUnmounted(() => {
   if (msgDebounce) clearTimeout(msgDebounce)
+  if (codeTimer) clearInterval(codeTimer)
+  codeTimer = null
   window.removeEventListener('update-unread-count', debouncedUpdateMsg)
 })
 watch(() => route.path, () => { debouncedUpdateMsg(); mobileMenuVisible.value = false; })
@@ -208,7 +231,10 @@ const emailBindVisible = ref(false)
 const emailSaving = ref(false)
 const emailError = ref('')
 const emailInputRef = ref()
-const emailForm = reactive({ email: '' })
+const emailForm = reactive({ email: '', code: '' })
+const codeSending = ref(false)
+const codeCountdown = ref(0)
+let codeTimer = null
 
 function emailDismissKey() {
   const uid = userStore.userInfo?.userId || userStore.userInfo?.id || 'anonymous'
@@ -220,6 +246,7 @@ function openEmailBind() {
   // 同一页面浏览内点过“稍后再说”就不再弹；刷新后挂载时间更新，会重新提示
   if (dismissedAt >= emailBindMountedAt) return
   emailForm.email = ''
+  emailForm.code = ''
   emailError.value = ''
   emailBindVisible.value = true
   nextTick(() => emailInputRef.value?.focus())
@@ -234,8 +261,56 @@ function onEmailBindClosed() {
   emailError.value = ''
 }
 
+function stopCodeCountdown() {
+  if (codeTimer) {
+    clearInterval(codeTimer)
+    codeTimer = null
+  }
+  codeCountdown.value = 0
+}
+
+function startCodeCountdown() {
+  stopCodeCountdown()
+  codeCountdown.value = 60
+  codeTimer = setInterval(() => {
+    codeCountdown.value -= 1
+    if (codeCountdown.value <= 0) stopCodeCountdown()
+  }, 1000)
+}
+
+// 真实接口的中文提示在响应体 msg 里（拦截器另外会弹一次），这里取出来展示在弹窗内
+function apiErrMsg(e, fallback) {
+  return e?.response?.data?.msg || e?.message || fallback
+}
+
+async function sendEmailCode() {
+  const email = emailForm.email.trim()
+  if (!email) {
+    emailError.value = '请先填写邮箱，再获取验证码'
+    nextTick(() => emailInputRef.value?.focus())
+    return
+  }
+  if (!EMAIL_RE.test(email)) {
+    emailError.value = '邮箱格式不正确，请填写类似 name@example.com 的地址'
+    return
+  }
+  codeSending.value = true
+  emailError.value = ''
+  try {
+    await userApi.sendEmailCode(email)
+    ElMessage.success('验证码已发送，请到该邮箱查收（10 分钟内有效）')
+    startCodeCountdown()
+  } catch (e) {
+    console.error('发送邮箱验证码失败:', e)
+    emailError.value = apiErrMsg(e, '验证码发送失败，请稍后重试')
+  } finally {
+    codeSending.value = false
+  }
+}
+
 async function saveEmailBind() {
   const email = emailForm.email.trim()
+  const code = emailForm.code.trim()
   if (!email) {
     emailError.value = '请输入邮箱'
     nextTick(() => emailInputRef.value?.focus())
@@ -245,18 +320,24 @@ async function saveEmailBind() {
     emailError.value = '邮箱格式不正确，请填写类似 name@example.com 的地址'
     return
   }
+  if (!/^\d{6}$/.test(code)) {
+    emailError.value = '请输入 6 位邮箱验证码'
+    return
+  }
   emailSaving.value = true
+  emailError.value = ''
   try {
-    // 个人信息接口按整条记录更新，先取当前资料再合并邮箱，避免覆盖其它字段
-    const profile = await userApi.profile()
-    await userApi.updateProfile({ ...profile, email })
+    await userApi.bindEmail({ email, code })
     userStore.setNeedEmailBind(false)
     if (userStore.userInfo) userStore.userInfo.email = email
     sessionStorage.removeItem(emailDismissKey())
-    ElMessage.success('邮箱已保存，后续通知将发送至该邮箱')
+    stopCodeCountdown()
+    ElMessage.success('邮箱已绑定，后续通知将发送至该邮箱')
     emailBindVisible.value = false
   } catch (e) {
-    console.error('保存邮箱失败:', e)
+    // 验证码错误/过期/已使用/邮箱被占用等：留在弹窗内提示，方便用户修改
+    console.error('绑定邮箱失败:', e)
+    emailError.value = apiErrMsg(e, '邮箱绑定失败，请检查验证码后重试')
   } finally {
     emailSaving.value = false
   }
@@ -307,6 +388,10 @@ async function onCommand(cmd) {
 .email-bind-tip { margin: 0 0 16px; color: var(--text-sub); font-size: 13px; line-height: 1.7; }
 .email-bind-error { margin: 6px 0 0; color: #f56c6c; font-size: 12px; }
 .email-bind-footer { display: flex; justify-content: flex-end; gap: 8px; }
+/* 验证码：输入框占满剩余宽度，按钮固定，窄屏放不下时整行换行 */
+.code-row { display: flex; align-items: center; gap: 8px; width: 100%; flex-wrap: wrap; }
+.code-row .code-input { flex: 1 1 140px; min-width: 0; }
+.code-row .code-btn { flex: 0 0 auto; margin-left: 0; }
 @media (max-width: 480px) {
   .email-bind-footer { flex-direction: column-reverse; }
   .email-bind-footer .el-button.el-button { width: 100%; margin-left: 0; }

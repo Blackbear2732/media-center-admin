@@ -40,9 +40,12 @@
         <el-divider content-position="left">人员与部门分配</el-divider>
 
         <el-form-item label="参与部门" required>
-          <el-select v-model="form.deptIds" multiple placeholder="请选择负责本任务的主力部门" style="width:100%">
-            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value"
-                       :disabled="lockedDeptId !== null && d.value === lockedDeptId" />
+          <el-select v-model="form.deptIds" multiple placeholder="请选择负责本任务的主力部门" style="width:100%"
+                     @change="onParticipateChange">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value"
+                       :label="form.relatedDeptIds.includes(d.value) ? `${d.label}（已作为联动部门）` : d.label"
+                       :value="d.value"
+                       :disabled="(lockedDeptId !== null && d.value === lockedDeptId) || form.relatedDeptIds.includes(d.value)" />
           </el-select>
           <div class="muted" style="margin-top:4px">
             <template v-if="lockedDeptId !== null">
@@ -53,8 +56,11 @@
         </el-form-item>
 
         <el-form-item label="联动部门">
-          <el-select v-model="form.relatedDeptIds" multiple placeholder="请选择需要协同配合的部门" style="width:100%">
-            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value" :label="d.label" :value="d.value"
+          <el-select v-model="form.relatedDeptIds" multiple placeholder="请选择需要协同配合的部门" style="width:100%"
+                     @change="onRelatedChange">
+            <el-option v-for="d in DEPARTMENTS_OPTIONS" :key="d.value"
+                       :label="form.deptIds.includes(d.value) ? `${d.label}（已作为参与部门）` : d.label"
+                       :value="d.value"
                        :disabled="form.deptIds.includes(d.value)" />
           </el-select>
           <div class="muted" style="margin-top:4px">联动部门会同步收到任务，但不做强制人员要求</div>
@@ -88,7 +94,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { taskApi } from '@/api'
 import { userStore } from '@/store/user'
-import { DEPARTMENTS_OPTIONS, DEVICE_STATUS } from '@/utils/dict'
+import { DEPARTMENTS_OPTIONS, DEVICE_STATUS, getDeptLabel } from '@/utils/dict'
 
 const router = useRouter()
 const submitting = ref(false)
@@ -129,7 +135,25 @@ function addTag() {
   tagInput.value = ''
 }
 
+// 参与部门与联动部门互斥：同一部门在任务里只能占一种角色（后端唯一键也按 task_id+dept_id 去重）。
+// 除了在选项上禁用，还要在值变化后把残留的重复项从数组里剔除，
+// 否则 UI 看似不重复、提交时仍会把同一 deptId 同时塞进 deptIds 和 relatedDeptIds。
+// 归属优先级：参与部门优先，联动部门重复项自动移除。
+function pruneDeptOverlap() {
+  const participate = new Set(form.deptIds)
+  const duplicated = form.relatedDeptIds.filter(id => participate.has(id))
+  if (!duplicated.length) return
+  form.relatedDeptIds = form.relatedDeptIds.filter(id => !participate.has(id))
+  ElMessage.warning(`已作为参与部门，已自动从联动部门移除：${duplicated.map(getDeptLabel).join('、')}`)
+}
+
+const onParticipateChange = pruneDeptOverlap
+const onRelatedChange = pruneDeptOverlap
+
 async function submit() {
+  // 提交前再兜底剔除一次，防止历史残留值把重复部门一起提交
+  pruneDeptOverlap()
+
   if (!form.title) return ElMessage.warning('请填写任务名称')
   if (!form.startTime || !form.endTime) return ElMessage.warning('请选择任务时间')
   if (!form.location) return ElMessage.warning('请填写任务地点')
@@ -149,7 +173,9 @@ async function submit() {
     ElMessage.success('任务发布成功，已通知相关部门')
     router.push(userStore.canManage ? '/admin/tasks' : '/tasks')
   } catch (e) {
-    ElMessage.error('发布失败')
+    // 具体失败原因（如「参与部门与联动部门存在重复」）已由 request 拦截器统一提示，
+    // 这里不再用固定的「发布失败」掩盖后端返回的中文信息
+    console.error('发布任务失败', e)
   } finally {
     submitting.value = false
   }
