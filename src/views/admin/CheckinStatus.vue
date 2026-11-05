@@ -3,12 +3,12 @@
     <div class="page-head">
       <div>
         <h2>{{ deptTitle }} · 打卡情况</h2>
-        <p class="sub muted">本部门成员每日打卡记录，仅查看</p>
+        <p class="sub muted">{{ date }}</p>
       </div>
     </div>
 
-    <div class="flex-between status-toolbar" style="margin-bottom:16px;">
-      <div class="status-filters" style="display:flex; gap:16px; align-items:center;">
+    <div class="flex-between status-toolbar">
+      <div class="status-filters">
         <div>
           <label class="muted" style="margin-right:8px;">日期</label>
           <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" />
@@ -20,14 +20,14 @@
             clearable
             placeholder="姓名 / 学号"
             style="width:180px"
-            @keyup.enter="reloadFromFirstPage"
-            @clear="reloadFromFirstPage"
+            @keyup.enter="loadData"
+            @clear="loadData"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button type="primary" plain style="margin-left:8px;" @click="reloadFromFirstPage">查询</el-button>
+          <el-button type="primary" plain style="margin-left:8px;" @click="loadData">查询</el-button>
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">部门</label>
@@ -37,50 +37,29 @@
           </el-select>
           <el-tag v-else size="small" type="info" effect="plain">{{ deptTitle }}</el-tag>
         </div>
-        <div>
-          <label class="muted" style="margin-right:8px;">状态</label>
-          <el-select v-model="statusFilter" style="width:120px">
-            <el-option label="全部状态" :value="-1" />
-            <el-option v-for="s in CHECKIN_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
-          </el-select>
-        </div>
       </div>
       <div class="muted">
-        共 <span style="color: var(--brand); font-weight: 600;">{{ total }}</span> 人
+        共 <span class="total-count">{{ list.length }}</span> 人
       </div>
     </div>
 
-    <div class="surface-card" style="padding: 0;">
-      <el-table :data="list" v-loading="loading" stripe style="width: 100%">
-        <el-table-column prop="date" label="日期" width="120" />
-        <el-table-column prop="deptId" label="部门" width="120">
-          <template #default="{ row }">
-            <el-tag size="small" type="info" effect="plain">{{ getDeptLabel(row.deptId) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="member" label="姓名" width="120" />
-        <el-table-column prop="studentNo" label="学号" width="140" />
-        <el-table-column prop="status" label="打卡状态" width="120">
-          <template #default="{ row }">
-            <el-tag v-if="row.status !== null && row.status !== undefined && row.status !== ''"
-                    :type="getCheckinStatusType(row.status)" size="small" effect="dark" round>
-              {{ getCheckinStatusLabel(row.status) }}
-            </el-tag>
-            <span v-else class="muted"></span>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- 一次取全量后按打卡状态分成两块：未打卡在前（老师重点找没打卡的人），已打卡在后 -->
+    <div class="status-blocks" v-loading="loading">
+      <section class="status-block undone">
+        <div class="block-head">
+          <span class="block-title">未打卡（{{ undoneList.length }} 人）</span>
+        </div>
+        <div v-if="undoneList.length" class="name-line">{{ undoneNames }}</div>
+        <div v-else class="block-empty muted">暂无未打卡人员</div>
+      </section>
 
-      <div class="table-pagination">
-        <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="size"
-          :page-sizes="pageSizes"
-          :total="total"
-          layout="total, sizes, prev, pager, next"
-          background
-        />
-      </div>
+      <section class="status-block done">
+        <div class="block-head">
+          <span class="block-title">已打卡（{{ doneList.length }} 人）</span>
+        </div>
+        <div v-if="doneList.length" class="name-line">{{ doneNames }}</div>
+        <div v-else class="block-empty muted">暂无已打卡人员</div>
+      </section>
     </div>
   </div>
 </template>
@@ -91,15 +70,7 @@ import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import { useDelayedLoading } from '@/utils/loading'
-import {
-  ALL_DEPT_ID,
-  CHECKIN_STATUS_OPTIONS,
-  DEPT_OPTIONS,
-  getCheckinStatusLabel,
-  getCheckinStatusType,
-  getDeptLabel,
-  isAllDept
-} from '@/utils/dict'
+import { ALL_DEPT_ID, CHECKIN_STATUS, DEPT_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
 
 // 部门维度：主任用管理区头部切换部门；综合部部长可在本页内切换；普通部长固定本部门
 const canSwitchDept = computed(() => !userStore.isDirector && Number(userStore.deptId) === 101)
@@ -112,29 +83,23 @@ const deptTitle = computed(() => isAllDept(deptId.value) ? '全中心' : getDept
 const date = ref(new Date().toISOString().split('T')[0])
 // 姓名/学号模糊搜索关键字：回车、点「查询」或清空时生效
 const keyword = ref('')
-const statusFilter = ref(-1) // -1 表示全部
 const list = ref([])
 const loading = useDelayedLoading()
 
-// 后端分页：页码/每页条数/总数
-const page = ref(1)
-const size = ref(10)
-const pageSizes = [10, 20, 50, 100]
-const total = ref(0)
+// 本页不翻页：后端为内存分页、pageSize 无上限也无截断，
+// 一次取当天的全部成员（pageSize=1000 远大于单部门/全中心人数），保证两块人数为全量口径
+const PAGE_SIZE = 1000
 
-// 筛选条件（日期/姓名/状态）变化：回到第一页。
-// 页码变化由下方 watch 统一触发加载，这里仅在页码已是第一页时直接查询，
-// 避免同一次筛选既改页码又手动查询、发出两次请求
-function reloadFromFirstPage() {
-  if (page.value !== 1) page.value = 1
-  else loadData()
-}
+// 字典口径：CHECKIN_STATUS.DONE = 1（已打卡）；0 或未设置（NULL）归入未打卡
+const doneList = computed(() =>
+  list.value.filter(row => Number(row.status) === CHECKIN_STATUS.DONE))
+const undoneList = computed(() =>
+  list.value.filter(row => Number(row.status) !== CHECKIN_STATUS.DONE))
+const doneNames = computed(() => doneList.value.map(row => row.member).filter(Boolean).join('　'))
+const undoneNames = computed(() => undoneList.value.map(row => row.member).filter(Boolean).join('　'))
 
-watch(statusFilter, reloadFromFirstPage)
-// 日期/部门变化同样回到第一页后重新查询
-watch([date, deptId], reloadFromFirstPage)
-// 翻页/改每页条数重新查询
-watch([page, size], () => loadData())
+// 日期/部门变化重新查询
+watch([date, deptId], loadData)
 
 async function loadData() {
   loading.value = true
@@ -143,14 +108,12 @@ async function loadData() {
     const res = await adminApi.checkins({
       date: date.value,
       deptId: deptId.value,
-      status: Number(statusFilter.value) === -1 ? null : statusFilter.value,
       // 空关键字不作为筛选条件传给后端
       ...(kw ? { keyword: kw } : {}),
-      pageNum: page.value,
-      pageSize: size.value
+      pageNum: 1,
+      pageSize: PAGE_SIZE
     })
     list.value = res?.rows || []
-    total.value = res?.total || 0
   } catch (e) {
     // 提示文案由 request.js 拦截器统一走 getFriendlyErrorMessage，这里只留原文排查
     console.error(e)
@@ -163,10 +126,77 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-/* 窄屏：筛选条件纵向堆叠，避免工具栏横向溢出 */
-@media (max-width: 768px) {
+.status-toolbar {
+  margin-bottom: 16px;
+  gap: 12px;
+}
+.status-filters {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.total-count {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.status-blocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.status-block {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.status-block.undone {
+  border-color: #f0d3a8;
+  background: #fffaf3;
+}
+.status-block.done {
+  border-color: #dbe7e0;
+  background: #fafcfb;
+}
+
+.block-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.block-title { font-size: 15px; font-weight: 600; }
+.status-block.undone .block-title { color: #a4600f; }
+.status-block.done .block-title { color: #6b7d73; font-weight: 500; }
+
+/* 纯文字名单：姓名之间用全角空格分隔，整块一行排开、自动折行，不用胶囊/表格 */
+.name-line {
+  font-size: 14px;
+  line-height: 2;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.status-block.undone .name-line { color: #8a5209; font-weight: 500; }
+.status-block.done .name-line { color: #58705f; }
+
+.block-empty {
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* 窄屏：筛选纵向堆叠，两块上下堆叠（未打卡在上） */
+@media (max-width: 767px) {
   .status-toolbar { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
-  .status-filters { flex-wrap: wrap; width: 100%; gap: 10px 16px !important; }
+  .status-filters { flex-wrap: wrap; width: 100%; gap: 10px 16px; }
   .status-filters > div { flex: 1 1 100%; }
+  .status-blocks { grid-template-columns: 1fr; }
+  .name-line { max-height: 320px; }
 }
 </style>
