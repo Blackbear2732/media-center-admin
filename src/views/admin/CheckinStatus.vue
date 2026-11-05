@@ -52,7 +52,12 @@
           <div class="block-head">
             <span class="block-title">未打卡（{{ undoneList.length }} 人）</span>
           </div>
-          <div v-if="undoneList.length" class="name-line">{{ undoneNames }}</div>
+          <div v-if="undoneGroups.length" class="dept-groups">
+            <div v-for="g in undoneGroups" :key="g.deptId" class="dept-group">
+              <div class="dept-group-title">{{ g.label }}（{{ g.count }} 人）</div>
+              <div class="name-line">{{ g.namesText }}</div>
+            </div>
+          </div>
           <div v-else class="block-empty muted">暂无未打卡人员</div>
         </section>
 
@@ -60,7 +65,12 @@
           <div class="block-head">
             <span class="block-title">{{ doneTitle }}（{{ doneList.length }} 人）</span>
           </div>
-          <div v-if="doneList.length" class="name-line">{{ doneNames }}</div>
+          <div v-if="doneGroups.length" class="dept-groups">
+            <div v-for="g in doneGroups" :key="g.deptId" class="dept-group">
+              <div class="dept-group-title">{{ g.label }}（{{ g.count }} 人）</div>
+              <div class="name-line">{{ g.namesText }}</div>
+            </div>
+          </div>
           <div v-else class="block-empty muted">暂无已打卡人员</div>
         </section>
       </div>
@@ -99,8 +109,27 @@ const doneList = computed(() =>
   list.value.filter(row => Number(row.status) === CHECKIN_STATUS.DONE))
 const undoneList = computed(() =>
   list.value.filter(row => Number(row.status) !== CHECKIN_STATUS.DONE))
-const doneNames = computed(() => doneList.value.map(row => row.member).filter(Boolean).join('　'))
-const undoneNames = computed(() => undoneList.value.map(row => row.member).filter(Boolean).join('　'))
+
+// 按部门分组：接口 rows 已带 deptId，前端直接分组，不额外请求也不编造部门。
+// 组内姓名仍用全角空格分隔、整段可复制；排序按 dept_id 升序（综合部 101 自然在前）。
+// 组内人数按行数统计，与块标题总人数保持口径一致。
+function groupByDept(rows) {
+  const groups = new Map()
+  rows.forEach(row => {
+    const id = Number(row.deptId)
+    if (!groups.has(id)) {
+      groups.set(id, { deptId: id, label: getDeptLabel(row.deptId), count: 0, names: [] })
+    }
+    const group = groups.get(id)
+    group.count += 1
+    if (row.member) group.names.push(row.member)
+  })
+  return [...groups.values()]
+    .sort((a, b) => a.deptId - b.deptId)
+    .map(g => ({ ...g, namesText: g.names.join('　') }))
+}
+const undoneGroups = computed(() => groupByDept(undoneList.value))
+const doneGroups = computed(() => groupByDept(doneList.value))
 
 // 零打卡记录与全满只影响呈现，不改变分组口径：
 // 已打卡 0（且成员非空）→ 只显示一行说明、不渲染名单块；已打卡 >0 且未打卡 0 → 「全部已打卡」；
@@ -201,6 +230,21 @@ onMounted(() => loadData())
 .block-title { font-size: 15px; font-weight: 600; }
 .status-block.undone .block-title { color: #a4600f; }
 .status-block.done .block-title { color: #6b7d73; font-weight: 500; }
+
+/* 块内按部门分组：组标题 + 组内纯文字名单，整段可直接复制 */
+.dept-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dept-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  margin-bottom: 2px;
+}
+.status-block.undone .dept-group-title { color: #a4600f; }
+.status-block.done .dept-group-title { color: #6b7d73; }
 
 /* 纯文字名单：姓名之间用全角空格分隔，整块一行排开、自动折行，不用胶囊/表格 */
 .name-line {

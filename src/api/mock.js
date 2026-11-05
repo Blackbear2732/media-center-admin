@@ -652,9 +652,20 @@ export const evaluationTemplate = [
 ]
 
 // 打卡记录（1已打卡 0未打卡）
+// 当天的多部门样例：每个部门都有人已打卡、也有人未打卡（无记录即按未打卡展示），
+// 便于在「打卡情况」页验证按部门分组；不影响真实接口。
+const MOCK_TODAY = new Date().toISOString().split('T')[0]
 export const checkinRecords = [
     { id: 1, date: '2026-05-20', deptId: 105, member: '徐钰婷', status: 1 },
-    { id: 2, date: '2026-05-20', deptId: 105, member: '李润琪', status: 1 }
+    { id: 2, date: '2026-05-20', deptId: 105, member: '李润琪', status: 1 },
+    { id: 11, date: MOCK_TODAY, deptId: 101, member: '贺颂莹', status: 1 },
+    { id: 12, date: MOCK_TODAY, deptId: 101, member: '刘楷俊', status: 1 },
+    { id: 21, date: MOCK_TODAY, deptId: 102, member: '刘钰珂', status: 1 },
+    { id: 22, date: MOCK_TODAY, deptId: 102, member: '徐子芯', status: 1 },
+    { id: 31, date: MOCK_TODAY, deptId: 103, member: '侯艾彤', status: 1 },
+    { id: 32, date: MOCK_TODAY, deptId: 103, member: '宋雨宣', status: 1 },
+    { id: 41, date: MOCK_TODAY, deptId: 105, member: '徐钰婷', status: 1 },
+    { id: 42, date: MOCK_TODAY, deptId: 106, member: '王亚楠', status: 1 }
 ]
 
 // 申诉状态：0待审批 1已通过 2已拒绝
