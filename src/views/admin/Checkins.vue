@@ -10,7 +10,7 @@
       <div class="checkin-filters" style="display:flex; gap:16px; align-items:center;">
         <div>
           <label class="muted" style="margin-right:8px;">日期</label>
-          <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" @change="reloadFromFirstPage" />
+          <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" />
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">姓名</label>
@@ -199,6 +199,8 @@ function reloadFromFirstPage() {
 
 // 打卡状态筛选（-1 全部）变化时回到第一页重新查询
 watch(statusFilter, reloadFromFirstPage)
+// 日期变化同样回到第一页：列表与标记使用的日期必须一致
+watch(date, reloadFromFirstPage)
 // 翻页/改每页条数重新查询
 watch([page, size], () => loadData())
 
@@ -226,7 +228,12 @@ async function loadData() {
 
 async function mark(row, status) {
   try {
-    await adminApi.markCheckin(row.id, status, row)
+    // 有记录 id 走旧的记录级接口；id 为 null（当天没有记录）走成员级接口，用 userId + 当前查询日期定位
+    if (row.id !== null && row.id !== undefined) {
+      await adminApi.markCheckin(row.id, status, row)
+    } else {
+      await adminApi.markCheckinByMember(row.userId, date.value, { status })
+    }
     row.status = status
     ElMessage.success(status == null ? '已清除打卡状态' : `已标记为${getCheckinStatusLabel(status)}`)
   } catch (e) {

@@ -929,12 +929,14 @@ export const adminApi = {
             const rows = targetMembers.map((m) => {
                 const record = (mock.checkinRecords || []).find(r => r.date === date && Number(r.deptId) === Number(m.deptId) && r.member === m.name)
                 return {
-                    id: record ? record.id : `temp-${m.id}-${date}`,
+                    // 与后端一致：无记录的成员 id/status 均为 null，按未打卡展示，并带 userId 供成员级标记使用
+                    id: record ? record.id : null,
+                    userId: m.id,
                     date,
                     deptId: m.deptId,
                     member: m.name,
                     studentNo: m.studentNo,
-                    status: record ? Number(record.status) : 0 // 0-未打卡
+                    status: record ? Number(record.status) : null
                 }
             })
             // 与真实接口一致：返回 { rows, total }，按 pageNum/pageSize 分页
@@ -960,6 +962,32 @@ export const adminApi = {
             return { success: true }
         })())
         : request.put(`/admin/checkins/${id}`, { status }),
+
+    // 成员级标记：用于当天没有记录 id 的未打卡成员（有记录则更新、无记录则插入）
+    // body 沿用 { status }，date 走查询参数（yyyy-MM-dd）
+    markCheckinByMember: (userId, date, data) => USE_MOCK
+        ? delay((() => {
+            const member = (mock.members || []).find(m => Number(m.id) === Number(userId))
+            const target = (mock.checkinRecords || []).find(r => {
+                if (r.date !== date) return false
+                if (r.userId !== undefined && r.userId !== null) return Number(r.userId) === Number(userId)
+                return !!member && Number(r.deptId) === Number(member.deptId) && r.member === member.name
+            })
+            if (target) {
+                target.status = data.status == null ? null : Number(data.status)
+            } else if (member) {
+                mock.checkinRecords.push({
+                    id: Date.now(),
+                    date,
+                    deptId: Number(member.deptId),
+                    member: member.name,
+                    userId: Number(userId),
+                    status: data.status == null ? null : Number(data.status)
+                })
+            }
+            return { success: true }
+        })())
+        : request.put(`/admin/checkins/member/${userId}`, data, { params: { date } }),
 
     // D-15 综合部：打卡申诉审批
     checkinAppeals: () => USE_MOCK ? delay(mock.checkinAppeals) : request.get('/admin/checkins/appeals'),
