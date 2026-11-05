@@ -132,7 +132,7 @@ const submitting = ref(false)
 const form = reactive({ deviceId: null, applyNum: 1, purpose: '', startTime: '', endTime: '' })
 const formRef = ref()
 
-// 设备使用时间同样是时间区间：必填且开始早于结束，提示落在「使用时间」字段下方
+// 设备使用时间同样是时间区间：必填且开始不能晚于结束，提示落在「使用时间」字段下方
 const formRules = {
   startTime: [{
     validator: (rule, value, callback) => {

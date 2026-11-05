@@ -24,7 +24,8 @@ export function parseDateTime(value) {
 }
 
 /**
- * 校验时间区间：两个时间必填，且开始时间必须早于结束时间。
+ * 校验时间区间：两个时间必填，且开始时间不能晚于结束时间。
+ * 与后端口径一致：允许开始时间等于结束时间（同一时刻的短任务），只拦开始晚于结束。
  * 返回结构对齐 validateUploadFile，便于表单 validator 和普通函数复用。
  */
 export function validateTimeRange(start, end, { startLabel = '开始时间', endLabel = '结束时间' } = {}) {
@@ -34,8 +35,8 @@ export function validateTimeRange(start, end, { startLabel = '开始时间', end
     if (!startDate) return { ok: false, message: `${startLabel}格式不正确` }
     const endDate = parseDateTime(end)
     if (!endDate) return { ok: false, message: `${endLabel}格式不正确` }
-    // 相等同样不合法：区间必须存在实际跨度
-    if (startDate.getTime() >= endDate.getTime()) {
+    // 只拦「开始晚于结束」；相等是合法区间，与后端校验一致
+    if (startDate.getTime() > endDate.getTime()) {
         return { ok: false, message: '开始时间不能晚于结束时间' }
     }
     return { ok: true, message: '' }

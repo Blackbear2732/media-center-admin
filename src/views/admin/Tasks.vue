@@ -214,7 +214,7 @@ const editForm = reactive({
   location: '', description: '', tags: [], deptIds: [], relatedDeptIds: [], equipmentIds: []
 })
 
-// 编辑弹窗的时间区间校验：必填 + 开始早于结束，提示落在「任务时间」字段下方
+// 编辑弹窗的时间区间校验：必填 + 开始不能晚于结束（允许相等），提示落在「任务时间」字段下方
 const editFormRules = {
   startTime: [{
     validator: (rule, value, callback) => {

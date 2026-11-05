@@ -126,7 +126,7 @@ const form = reactive({
   tags: [], deptIds: [], relatedDeptIds: [], equipmentIds: []
 })
 
-// 时间区间校验挂在 startTime 上：两个时间必填，且开始必须早于结束。
+// 时间区间校验挂在 startTime 上：两个时间必填，且开始不能晚于结束（允许相等）。
 // 提示会显示在「任务时间」字段下方；用 Date 比较，避免 "16:10" 与 "9:00" 的字符串误判。
 const formRules = {
   startTime: [{
