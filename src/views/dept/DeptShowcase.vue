@@ -5,7 +5,7 @@
         <div>
           <b class="showcase-head-title">{{ pageTitle }}</b>
           <div v-if="isCenter && loaded" class="showcase-head-sub">
-            共 {{ deptEntries.length }} 个部门 · {{ form.members.length }} 位在册成员
+            共 {{ deptEntries.length }} 个部门<template v-if="form.members.length"> · {{ form.members.length }} 位在册成员</template>
           </div>
         </div>
         <div class="showcase-actions">
@@ -93,6 +93,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
 import { adminApi, homeApi } from '@/api'
+import { userStore } from '@/store/user'
 import { DEPT_OPTIONS, DEPT_MAP, getDeptLabel, ALL_DEPT_ID, isAllDept } from '@/utils/dict'
 import { useDelayedLoading } from '@/utils/loading'
 import { getFriendlyErrorMessage } from '@/api/request'
@@ -151,6 +152,31 @@ function errorText(e) {
   return getFriendlyErrorMessage(e, '请稍后重试')
 }
 
+/**
+ * 游客兜底：/admin/dept-profile 尚未对匿名放行时（401/403），改用公开接口渲染
+ * 部门简介与相册照片（/api/departments、/api/center 均为后端已放行的只读接口）。
+ * 只使用真实公开数据，不伪造简介；拿不到就返回 null，由调用方展示加载失败。
+ */
+async function loadPublicProfile(target) {
+  try {
+    if (isAllDept(target)) {
+      const center = await homeApi.centerInfo()
+      if (!center) return null
+      return { intro: center.desc || '', photos: [], members: [] }
+    }
+    const list = await homeApi.departments()
+    const hit = (Array.isArray(list) ? list : []).find(item => Number(item.id) === Number(target))
+    if (!hit) return null
+    return {
+      intro: hit.intro || '',
+      photos: Array.isArray(hit.photos) ? hit.photos : [],
+      members: []
+    }
+  } catch (e) {
+    return null
+  }
+}
+
 async function load() {
   const seq = ++requestSeq
   const targetDeptId = deptId.value
@@ -180,9 +206,20 @@ async function load() {
     document.title = `${pageTitle.value} - 山西农业大学青年融媒体中心`
   } catch (e) {
     if (seq !== requestSeq) return
-    resetForm()
-    loaded.value = false
-    loadError.value = errorText(e)
+    // 游客（未登录）访问时：受保护的 dept-profile 可能返回 401/403，
+    // 此情况改用公开接口兜底渲染简介/照片，不弹「无权限」、不整页空白；
+    // 已登录用户保持原有的加载失败提示行为不变
+    const fallback = userStore.isLogin ? null : await loadPublicProfile(targetDeptId)
+    if (seq !== requestSeq) return
+    if (fallback) {
+      Object.assign(form, fallback)
+      loaded.value = true
+      document.title = `${pageTitle.value} - 山西农业大学青年融媒体中心`
+    } else {
+      resetForm()
+      loaded.value = false
+      loadError.value = errorText(e)
+    }
   } finally {
     if (seq === requestSeq && !cancelled) loading.value = false
   }
