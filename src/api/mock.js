@@ -563,10 +563,33 @@ export const deptOverview = {
     ]
 }
 
+// 默认应到名单（与服务端规则一致）：全中心=全体在岗部长；部门=本部门在岗成员
+export function meetingDefaultMembers(deptId) {
+    const list = members.filter(m => Number(m.status) === 1)
+    return Number(deptId) === 100
+        ? list.filter(m => Number(m.role) === 1)
+        : list.filter(m => Number(m.deptId) === Number(deptId))
+}
+
+// 应到名单 + 已点名统计；statuses 按名单顺序给出已点名状态，未给出的保持 0 待参加
+function meetingRoster(deptId, statuses = []) {
+    const records = meetingDefaultMembers(deptId).map((m, i) => ({
+        memberId: m.id,
+        name: m.name,
+        deptId: m.deptId,
+        status: Number(statuses[i] ?? 0)
+    }))
+    return {
+        records,
+        markedCount: records.filter(r => Number(r.status) !== 0).length,
+        totalCount: records.length
+    }
+}
+
 export const adminMeetings = [
-    { id: 1, title: '融媒体中心全体部长例会', time: '2024-11-04 14:00', location: '中心会议室', host: '王主任', deptId: 100, records: [] },
-    { id: 2, title: '新闻部 11 月第一次例会', time: '2024-11-04 14:00', location: '中心会议室', host: '张洋', deptId: 105, records: [] },
-    { id: 3, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议', host: '张洋', deptId: 105, records: [] }
+    { id: 1, title: '融媒体中心全体部长例会', time: '2024-11-04 14:00', location: '中心会议室', host: '王主任', deptId: 100, ...meetingRoster(100, [1, 1, 2, 4]) },
+    { id: 2, title: '新闻部 11 月第一次例会', time: '2024-11-04 14:00', location: '中心会议室', host: '张洋', deptId: 105, ...meetingRoster(105, [1, 1, 2, 3]) },
+    { id: 3, title: '运动会报道筹备会', time: '2024-11-03 10:00', location: '线上腾讯会议', host: '张洋', deptId: 105, ...meetingRoster(105) }
 ]
 
 export const evaluationTemplates = {

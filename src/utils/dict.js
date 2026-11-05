@@ -268,25 +268,29 @@ export const getAppealStatusType = (status) => dictTagType({
 }, status)
 
 /* ==========================================
- * 11. 会议签到状态（biz_meeting_member.status：1到场 2迟到 3请假 4缺席）
+ * 11. 会议应到成员状态（biz_meeting_member.status：0待参加 1到场 2迟到 3请假 4缺席）
+ * 0 由服务端生成默认应到名单时写入，点名提交只允许 1~4
  * ========================================== */
-export const MEETING_STATUS = { PRESENT: 1, LATE: 2, LEAVE: 3, ABSENT: 4 }
+export const MEETING_STATUS = { PENDING: 0, PRESENT: 1, LATE: 2, LEAVE: 3, ABSENT: 4 }
 
-export const MEETING_STATUS_MAP = { 1: '到场', 2: '迟到', 3: '请假', 4: '缺席' }
-export const MEETING_STATUS_OPTIONS = Object.keys(MEETING_STATUS_MAP).map(key => ({
-    value: Number(key),
+export const MEETING_STATUS_MAP = { 0: '待参加', 1: '到场', 2: '迟到', 3: '请假', 4: '缺席' }
+// 点名弹窗只能提交 1~4，因此下拉项不含 0
+export const MEETING_STATUS_OPTIONS = [1, 2, 3, 4].map(key => ({
+    value: key,
     label: MEETING_STATUS_MAP[key]
 }))
-export const getMeetingStatusLabel = (status) => dictLabel(MEETING_STATUS_MAP, status, '缺席')
+export const getMeetingStatusLabel = (status) => dictLabel(MEETING_STATUS_MAP, status, '待参加')
 export const getMeetingStatusType = (status) => dictTagType({
-    1: 'success', 2: 'warning', 3: 'info', 4: 'danger'
+    0: 'info', 1: 'success', 2: 'warning', 3: 'info', 4: 'danger'
 }, status)
 
 // 个人参会状态（0待参加 1参加 2迟到 3请假 4缺席）
 export const MEETING_JOIN_STATUS_MAP = { 0: '待参加', 1: '参加', 2: '迟到', 3: '请假', 4: '缺席' }
 export const getMeetingJoinStatusLabel = (status) => dictLabel(MEETING_JOIN_STATUS_MAP, status, '待参加')
-export const getMeetingJoinStatusType = (status) =>
-    Number(status) === 1 ? 'success' : (Number(status) === 2 ? 'warning' : (Number(status) === 4 ? 'danger' : 'info'))
+// 五种状态用不同颜色区分：待参加灰、到场绿、迟到黄、请假蓝、缺席红
+export const getMeetingJoinStatusType = (status) => dictTagType({
+    0: 'info', 1: 'success', 2: 'warning', 3: 'primary', 4: 'danger'
+}, status)
 
 /* ==========================================
  * 12. 考评等级（biz_evaluation_detail：0不合格 1合格 2良好 3优秀）

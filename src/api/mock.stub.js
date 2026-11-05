@@ -42,5 +42,6 @@ export function findAccount() { return null }
 export function currentUser() { return {} }
 export function currentRole() { return 0 }
 export function currentDeptId() { return 100 }
+export function meetingDefaultMembers() { return [] }
 export function filterTasks() { return [] }
 export function filterMaterials() { return [] }

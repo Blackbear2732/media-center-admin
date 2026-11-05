@@ -572,18 +572,42 @@ export const adminApi = {
         : request.get('/admin/meetings', { params: { deptId } }),
 
     // 创建会议（加入内存）
+    // memberIds 为 null/空数组时按默认规则生成应到名单：全中心=全体部长，部门=本部门成员
     createMeeting: (data) => USE_MOCK
         ? delay((() => {
-            mock.adminMeetings.unshift({ ...data, deptId: Number(data.deptId), id: Date.now(), records: [] })
-            return { success: true }
+            const deptId = Number(data.deptId)
+            const defaults = mockNs.meetingDefaultMembers(deptId)
+            const ids = Array.isArray(data.memberIds) && data.memberIds.length ? data.memberIds.map(Number) : null
+            const chosen = ids ? defaults.filter(m => ids.includes(Number(m.id))) : defaults
+            const meeting = {
+                id: Date.now(),
+                title: data.title,
+                time: data.time,
+                location: data.location,
+                host: data.host || '当前用户',
+                deptId,
+                records: chosen.map(m => ({ memberId: m.id, name: m.name, deptId: m.deptId, status: 0 })),
+                markedCount: 0,
+                totalCount: chosen.length
+            }
+            mock.adminMeetings.unshift(meeting)
+            return meeting
         })())
         : request.post('/admin/meetings', data),
 
-    // records: [{ memberId, name, deptId, status: 1到场 2迟到 3请假 4缺席 }]
+    // records: [{ memberId, name, deptId, status: 1到场 2迟到 3请假 4缺席 }]，memberId 为权威匹配键
     saveMeetingRecords: (id, records) => USE_MOCK
         ? delay((() => {
             const target = mock.adminMeetings.find(m => String(m.id) === String(id))
-            if (target) target.records = records
+            if (target) {
+                const patch = new Map(records.map(r => [Number(r.memberId), r]))
+                target.records = (target.records || []).map(r => {
+                    const key = Number(r.memberId ?? r.userId)
+                    return patch.has(key) ? { ...r, ...patch.get(key), status: Number(patch.get(key).status) } : r
+                })
+                target.markedCount = target.records.filter(r => Number(r.status) !== 0).length
+                target.totalCount = target.records.length
+            }
             return { success: true }
         })())
         : request.put(`/admin/meetings/${id}/records`, { records }),
