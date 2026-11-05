@@ -46,7 +46,7 @@
           <div class="dept-name">{{ d.name }}</div>
           <div class="dept-intro">{{ d.intro }}</div>
           <div style="margin-top:10px;color:var(--brand,#2a6fb5);font-size:13px">
-            {{ isLogin ? '查看部门风采 →' : '登录后查看 →' }}
+            查看部门风采 →
           </div>
         </div>
       </div>
@@ -64,7 +64,7 @@
             网宣数据看板
           </div>
           <span class="muted" style="display:flex;align-items:center;gap:4px;color:var(--brand)">
-            {{ isLogin ? '查看详情' : '登录后查看' }} <el-icon><ArrowRight /></el-icon>
+            查看详情 <el-icon><ArrowRight /></el-icon>
           </span>
         </div>
         <div class="panel-body">
@@ -96,7 +96,7 @@
             影音数据看板
           </div>
           <span class="muted" style="display:flex;align-items:center;gap:4px;color:var(--accent)">
-            {{ isLogin ? '查看详情' : '登录后查看' }} <el-icon><ArrowRight /></el-icon>
+            查看详情 <el-icon><ArrowRight /></el-icon>
           </span>
         </div>
         <div class="panel-body">
@@ -164,7 +164,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { homeApi, adminApi } from '@/api'
 // 顶部引入
@@ -194,14 +193,12 @@ const deptGradients = [
 function goWorkspace() { router.push(isLogin.value ? '/tasks' : '/login') }
 function goTask(t) { router.push(isLogin.value ? '/tasks/' + t.id : '/login') }
 function goNotice(n) { router.push(isLogin.value ? '/announcements' : '/login') }
-// 首页部门卡片直接进对应部门的部门风采页；未登录时由路由守卫带回登录页并带回跳地址
+// 首页部门卡片直接进对应部门的部门风采页；该页为公开只读页，未登录游客同样可浏览
 function goDept(deptId) { router.push(`/dept/${deptId}`) }
 
-// 数据看板：未登录也能看到概览数据，但进入详情需要登录
+// 数据看板详情为公开只读页：游客同样可查看网宣/影音数据概览与明细
 function openPanel(type) {
-  if (isLogin.value) return router.push(`/data-panel/${type}`)
-  ElMessage.info('请先登录，即可查看详细数据看板')
-  router.push({ path: '/login', query: { redirect: `/data-panel/${type}` } })
+  router.push(`/data-panel/${type}`)
 }
 
 onMounted(async () => {
