@@ -905,9 +905,11 @@ export const adminApi = {
     })(),
 
     // D-14 打卡记录（deptId 传 0 / 100 表示全部）
+    // params: { date, deptId, status, keyword, pageNum, pageSize }
+    // keyword —— 姓名或学号模糊匹配，空值不过滤
     checkins: (params) => USE_MOCK
         ? delay((() => {
-            const { date, deptId } = params || {}
+            const { date, deptId, keyword, pageNum = 1, pageSize = 10 } = params || {}
             let targetMembers = (mock.members || []).filter(m => Number(m.status) === 1)
             // 打卡只针对部员（role 0）
             targetMembers = targetMembers.filter(m => Number(m.role) === 0)
@@ -916,17 +918,30 @@ export const adminApi = {
                 targetMembers = targetMembers.filter(m => Number(m.deptId) === Number(deptId))
             }
 
-            return targetMembers.map((m) => {
+            // 姓名/学号模糊搜索，空关键字不参与过滤
+            const kw = String(keyword || '').trim()
+            if (kw) {
+                targetMembers = targetMembers.filter(m =>
+                    String(m.name).includes(kw) || String(m.studentNo).includes(kw)
+                )
+            }
+
+            const rows = targetMembers.map((m) => {
                 const record = (mock.checkinRecords || []).find(r => r.date === date && Number(r.deptId) === Number(m.deptId) && r.member === m.name)
                 return {
-                    id: record ? record.id : `temp-${m.id}-${date}`,
+                    // 与后端一致：无记录的成员 id/status 均为 null，按未打卡展示，并带 userId 供成员级标记使用
+                    id: record ? record.id : null,
+                    userId: m.id,
                     date,
                     deptId: m.deptId,
                     member: m.name,
                     studentNo: m.studentNo,
-                    status: record ? Number(record.status) : 0 // 0-未打卡
+                    status: record ? Number(record.status) : null
                 }
             })
+            // 与真实接口一致：返回 { rows, total }，按 pageNum/pageSize 分页
+            const start = (Number(pageNum) - 1) * Number(pageSize)
+            return { rows: rows.slice(start, start + Number(pageSize)), total: rows.length }
         })())
         : request.get('/admin/checkins', { params }),
 
@@ -947,6 +962,32 @@ export const adminApi = {
             return { success: true }
         })())
         : request.put(`/admin/checkins/${id}`, { status }),
+
+    // 成员级标记：用于当天没有记录 id 的未打卡成员（有记录则更新、无记录则插入）
+    // body 沿用 { status }，date 走查询参数（yyyy-MM-dd）
+    markCheckinByMember: (userId, date, data) => USE_MOCK
+        ? delay((() => {
+            const member = (mock.members || []).find(m => Number(m.id) === Number(userId))
+            const target = (mock.checkinRecords || []).find(r => {
+                if (r.date !== date) return false
+                if (r.userId !== undefined && r.userId !== null) return Number(r.userId) === Number(userId)
+                return !!member && Number(r.deptId) === Number(member.deptId) && r.member === member.name
+            })
+            if (target) {
+                target.status = data.status == null ? null : Number(data.status)
+            } else if (member) {
+                mock.checkinRecords.push({
+                    id: Date.now(),
+                    date,
+                    deptId: Number(member.deptId),
+                    member: member.name,
+                    userId: Number(userId),
+                    status: data.status == null ? null : Number(data.status)
+                })
+            }
+            return { success: true }
+        })())
+        : request.put(`/admin/checkins/member/${userId}`, data, { params: { date } }),
 
     // D-15 综合部：打卡申诉审批
     checkinAppeals: () => USE_MOCK ? delay(mock.checkinAppeals) : request.get('/admin/checkins/appeals'),
