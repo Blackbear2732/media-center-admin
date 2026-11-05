@@ -185,6 +185,7 @@ const canManageDevices = computed(() =>
 )
 const active = ref('archive')
 import { useDelayedLoading } from '@/utils/loading'
+import { getFriendlyErrorMessage } from '@/api/request'
 const loading = useDelayedLoading(), saving = ref(false)
 const devices = ref([]), applications = ref([]), usage = ref([])
 const editVisible = ref(false)
@@ -255,7 +256,7 @@ async function remove(row) {
     ElMessage.success('删除成功')
     load()
   } catch (e) {
-    ElMessage.error(e?.message || '删除失败，请检查设备是否在借用中')
+    ElMessage.error(getFriendlyErrorMessage(e, '删除失败，请检查设备是否在借用中'))
   }
 }
 

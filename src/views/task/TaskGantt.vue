@@ -78,6 +78,7 @@ import {
   getDeptLabel
 } from '@/utils/dict'
 import { useDelayedLoading } from '@/utils/loading'
+import { getFriendlyErrorMessage } from '@/api/request'
 
 const router = useRouter()
 const route = useRoute()
@@ -142,8 +143,8 @@ async function loadTasks() {
   } catch (e) {
     console.error('加载任务甘特图失败:', e)
     tasks.value = []
-    // 后端错误统一 200 + code:500 + msg，request 拦截器已把 msg 包成 Error，这里直接展示
-    error.value = e?.response?.data?.msg || e?.message || '请检查网络或筛选条件后重试'
+    // 错误文案统一走兜底函数：SQL/堆栈类原文只留控制台，页面展示可读提示
+    error.value = getFriendlyErrorMessage(e, '请检查网络或筛选条件后重试')
     clearChart()
   } finally {
     loading.value = false

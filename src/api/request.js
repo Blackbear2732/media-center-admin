@@ -82,6 +82,62 @@ const cacheKey = (method, url, token) => method + '|' + url + '|' + (token || ''
 
 const clearGetCache = () => getCache.clear()
 
+/* ===================== 错误文案兜底 =====================
+ * 后端异常时会把 SQL / 堆栈信息塞进 msg（如「... could not execute statement ...」
+ * 「Unknown column ...」「Duplicate entry ...」），直接弹给用户既看不懂也不安全。
+ * 这里统一做一层过滤：
+ * - 命中技术错误关键字 → 替换成可读文案，原文只 console.error 留作排查
+ * - 业务中文提示（如「参与部门与联动部门存在重复」）→ 原样展示
+ */
+const TECHNICAL_ERROR_KEYWORDS = [
+    'SQL',
+    'Duplicate entry',
+    'Column',
+    'constraint',
+    'ORA-',
+    'Exception',
+    'could not execute statement',
+    'DataIntegrityViolation',
+    'syntax error',
+    'not-null property'
+]
+const TECHNICAL_ERROR_TIP = '提交的数据不合法，请检查填写内容后重试'
+
+const isTechnicalError = (msg) => {
+    const text = String(msg || '')
+    if (!text) return false
+    return TECHNICAL_ERROR_KEYWORDS.some(keyword =>
+        new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(text))
+}
+
+/**
+ * 把后端/网络层错误转换成可直接展示给用户的文案。
+ * 技术错误会换成通用提示并打印原文，业务中文 msg 原样返回。
+ * 页面里如果有自己 catch 并展示错误的地方，统一调用这个函数。
+ */
+export function getFriendlyErrorMessage(err, fallback = '操作失败，请稍后重试') {
+    const backendMsg = typeof err === 'object' && err ? err.response?.data?.msg : ''
+    if (backendMsg) {
+        if (isTechnicalError(backendMsg)) {
+            console.error('[接口错误原文]', backendMsg, err)
+            return TECHNICAL_ERROR_TIP
+        }
+        return backendMsg
+    }
+    const raw = typeof err === 'string' ? err : (err?.message || '')
+    if (raw.includes('timeout')) return '系统接口请求超时'
+    if (raw === 'Network Error') return '后端接口连接异常'
+    if (raw.includes('Request failed with status code')) {
+        console.error('[接口错误原文]', raw, err)
+        return '系统接口异常，请稍后重试'
+    }
+    if (isTechnicalError(raw)) {
+        console.error('[接口错误原文]', raw, err)
+        return TECHNICAL_ERROR_TIP
+    }
+    return raw || fallback
+}
+
 service.interceptors.request.use(config => {
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
@@ -119,8 +175,10 @@ service.interceptors.response.use(
             // 匿名请求 401：不跳登录、不弹错（首页为公开页，未登录浏览时接口失败属预期）
             return Promise.reject(new Error(msg || '请求失败'))
         }
-        ElMessage.error(msg || '请求失败')
-        return Promise.reject(new Error(msg || '请求失败'))
+        // 技术类错误（SQL/堆栈）不原样弹给用户，统一换成可读文案，原文写控制台
+        const userMsg = getFriendlyErrorMessage(msg, '请求失败')
+        ElMessage.error(userMsg)
+        return Promise.reject(new Error(userMsg))
     },
     err => {
         // 被取消的请求：GET 返回 null，组件的 await api.xxx() 不会抛异常，
@@ -150,20 +208,9 @@ service.interceptors.response.use(
             return new Promise(resolve => setTimeout(resolve, 600)).then(() => service(cfg))
         }
 
-        // 将常见网络错误的原始英文信息映射为友好中文提示，
-        let errMsg = err.response?.data?.msg
-        if (!errMsg) {
-            const raw = err.message || ''
-            if (raw.includes('timeout')) {
-                errMsg = '系统接口请求超时'
-            } else if (raw === 'Network Error') {
-                errMsg = '后端接口连接异常'
-            } else if (raw.includes('Request failed with status code')) {
-                errMsg = '系统接口' + raw.slice(-3) + '异常'
-            } else {
-                errMsg = raw || '网络异常'
-            }
-        }
+        // 统一转换错误文案：后端技术错误替换为可读提示，业务中文 msg 原样展示，
+        // 没有 msg 的网络层错误（timeout / Network Error / HTTP 状态码）映射成中文
+        const errMsg = getFriendlyErrorMessage(err, '网络异常')
         if (err.response?.data?.code === 401) {
             if (hasAuthHeader(err.config)) {
                 ElMessage.closeAll() // 关掉前面可能弹出的多个错误提示

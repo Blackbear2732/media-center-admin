@@ -8,17 +8,17 @@
         </div>
       </template>
 
-      <el-form :model="form" label-width="96px" style="padding: 20px 10px;">
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px" style="padding: 20px 10px;">
         <el-form-item label="任务名称" required>
           <el-input v-model="form.title" placeholder="请输入任务名称" size="large" />
         </el-form-item>
 
-        <el-form-item label="任务时间" required>
+        <el-form-item label="任务时间" required prop="startTime">
           <el-date-picker v-model="form.startTime" type="datetime" placeholder="开始时间"
-                          value-format="YYYY-MM-DD HH:mm" style="width:48%" />
+                          value-format="YYYY-MM-DD HH:mm" style="width:48%" @change="revalidateTime" />
           <span style="margin:0 8px; color: var(--text-sub);">至</span>
           <el-date-picker v-model="form.endTime" type="datetime" placeholder="结束时间"
-                          value-format="YYYY-MM-DD HH:mm" style="width:48%" />
+                          value-format="YYYY-MM-DD HH:mm" style="width:48%" @change="revalidateTime" />
         </el-form-item>
 
         <el-form-item label="任务地点" required>
@@ -95,11 +95,13 @@ import { ElMessage } from 'element-plus'
 import { taskApi } from '@/api'
 import { userStore } from '@/store/user'
 import { DEPARTMENTS_OPTIONS, DEVICE_STATUS, getDeptLabel } from '@/utils/dict'
+import { validateTimeRange } from '@/utils/validate'
 
 const router = useRouter()
 const submitting = ref(false)
 const deviceLoading = ref(false)
 const tagInput = ref('')
+const formRef = ref()
 
 const rawDevices = ref([])
 
@@ -123,6 +125,24 @@ const form = reactive({
   title: '', startTime: '', endTime: '', location: '', description: '',
   tags: [], deptIds: [], relatedDeptIds: [], equipmentIds: []
 })
+
+// 时间区间校验挂在 startTime 上：两个时间必填，且开始不能晚于结束（允许相等）。
+// 提示会显示在「任务时间」字段下方；用 Date 比较，避免 "16:10" 与 "9:00" 的字符串误判。
+const formRules = {
+  startTime: [{
+    validator: (rule, value, callback) => {
+      const result = validateTimeRange(form.startTime, form.endTime)
+      result.ok ? callback() : callback(new Error(result.message))
+    },
+    trigger: 'change'
+  }]
+}
+
+// 修改任意一端都重新校验，避免只选了结束时间时「请选择开始时间」不出现、
+// 或改了结束时间后旧提示残留在字段下
+function revalidateTime() {
+  formRef.value?.validateField('startTime').catch(() => {})
+}
 
 // 部长进入页面时默认带上自己的部门
 if (lockedDeptId.value !== null) {
@@ -154,8 +174,11 @@ async function submit() {
   // 提交前再兜底剔除一次，防止历史残留值把重复部门一起提交
   pruneDeptOverlap()
 
+  // 时间校验未通过时直接 return，不发请求
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+
   if (!form.title) return ElMessage.warning('请填写任务名称')
-  if (!form.startTime || !form.endTime) return ElMessage.warning('请选择任务时间')
   if (!form.location) return ElMessage.warning('请填写任务地点')
   if (!form.deptIds.length) return ElMessage.warning('请至少选择一个参与部门')
 

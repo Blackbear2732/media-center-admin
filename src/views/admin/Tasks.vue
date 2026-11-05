@@ -100,7 +100,7 @@
 
     <!-- 编辑任务弹窗 -->
     <el-dialog v-model="editVisible" title="编辑任务信息" width="700px" :close-on-click-modal="false">
-      <el-form :model="editForm" label-width="96px">
+      <el-form ref="editFormRef" :model="editForm" :rules="editFormRules" label-width="96px">
         <el-form-item label="任务名称" required>
           <el-input v-model="editForm.title" />
         </el-form-item>
@@ -109,10 +109,10 @@
             <el-option v-for="s in TASK_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="任务时间" required>
-          <el-date-picker v-model="editForm.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:46%" />
+        <el-form-item label="任务时间" required prop="startTime">
+          <el-date-picker v-model="editForm.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:46%" @change="revalidateEditTime" />
           <span style="margin:0 8px;">至</span>
-          <el-date-picker v-model="editForm.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:46%" />
+          <el-date-picker v-model="editForm.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:46%" @change="revalidateEditTime" />
         </el-form-item>
         <el-form-item label="任务地点" required>
           <el-input v-model="editForm.location" />
@@ -181,6 +181,7 @@ import {
   getTaskTagType,
   isAllDept
 } from '@/utils/dict'
+import { validateTimeRange } from '@/utils/validate'
 
 const router = useRouter()
 
@@ -200,6 +201,7 @@ const editVisible = ref(false)
 const savingEdit = ref(false)
 const tagInput = ref('')
 const availableDevices = ref([])
+const editFormRef = ref()
 
 // 部长编辑任务时，本部门同样不能被移出参与部门：
 // 否则把本部门删掉后，该任务会从自己的任务列表里消失
@@ -211,6 +213,21 @@ const editForm = reactive({
   id: null, title: '', status: 0, startTime: '', endTime: '',
   location: '', description: '', tags: [], deptIds: [], relatedDeptIds: [], equipmentIds: []
 })
+
+// 编辑弹窗的时间区间校验：必填 + 开始不能晚于结束（允许相等），提示落在「任务时间」字段下方
+const editFormRules = {
+  startTime: [{
+    validator: (rule, value, callback) => {
+      const result = validateTimeRange(editForm.startTime, editForm.endTime)
+      result.ok ? callback() : callback(new Error(result.message))
+    },
+    trigger: 'change'
+  }]
+}
+
+function revalidateEditTime() {
+  editFormRef.value?.validateField('startTime').catch(() => {})
+}
 
 // 全中心视角看全部参与人，否则只看本部门参与人
 const deptParticipants = (row) => {
@@ -265,6 +282,8 @@ async function openEdit(row) {
   // 历史数据可能已存在同一部门同时出现在参与/联动里，打开弹窗时先按「参与优先」剔除
   pruneEditDeptOverlap()
   editVisible.value = true
+  // 清掉上一次编辑留下的时间校验提示
+  editFormRef.value?.clearValidate()
 }
 
 // 参与/联动部门互斥：参与部门优先，联动部门中的重复项自动移除。
@@ -284,9 +303,10 @@ function addTag() {
 }
 
 async function saveEdit() {
-  if (!editForm.title || !editForm.startTime || !editForm.endTime) {
-    return ElMessage.warning('请填写必填项')
-  }
+  if (!editForm.title) return ElMessage.warning('请填写必填项')
+  // 时间必填与先后顺序先过表单校验，失败时不发请求
+  const valid = await editFormRef.value.validate().catch(() => false)
+  if (!valid) return
   // 提交前兜底剔除参与/联动重复部门，避免把重复 deptId 写入后端
   pruneEditDeptOverlap()
   savingEdit.value = true
