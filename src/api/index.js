@@ -905,9 +905,11 @@ export const adminApi = {
     })(),
 
     // D-14 打卡记录（deptId 传 0 / 100 表示全部）
+    // params: { date, deptId, status, keyword, pageNum, pageSize }
+    // keyword —— 姓名或学号模糊匹配，空值不过滤
     checkins: (params) => USE_MOCK
         ? delay((() => {
-            const { date, deptId } = params || {}
+            const { date, deptId, keyword, pageNum = 1, pageSize = 10 } = params || {}
             let targetMembers = (mock.members || []).filter(m => Number(m.status) === 1)
             // 打卡只针对部员（role 0）
             targetMembers = targetMembers.filter(m => Number(m.role) === 0)
@@ -916,7 +918,15 @@ export const adminApi = {
                 targetMembers = targetMembers.filter(m => Number(m.deptId) === Number(deptId))
             }
 
-            return targetMembers.map((m) => {
+            // 姓名/学号模糊搜索，空关键字不参与过滤
+            const kw = String(keyword || '').trim()
+            if (kw) {
+                targetMembers = targetMembers.filter(m =>
+                    String(m.name).includes(kw) || String(m.studentNo).includes(kw)
+                )
+            }
+
+            const rows = targetMembers.map((m) => {
                 const record = (mock.checkinRecords || []).find(r => r.date === date && Number(r.deptId) === Number(m.deptId) && r.member === m.name)
                 return {
                     id: record ? record.id : `temp-${m.id}-${date}`,
@@ -927,6 +937,9 @@ export const adminApi = {
                     status: record ? Number(record.status) : 0 // 0-未打卡
                 }
             })
+            // 与真实接口一致：返回 { rows, total }，按 pageNum/pageSize 分页
+            const start = (Number(pageNum) - 1) * Number(pageSize)
+            return { rows: rows.slice(start, start + Number(pageSize)), total: rows.length }
         })())
         : request.get('/admin/checkins', { params }),
 

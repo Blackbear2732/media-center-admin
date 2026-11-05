@@ -10,15 +10,32 @@
       <div class="checkin-filters" style="display:flex; gap:16px; align-items:center;">
         <div>
           <label class="muted" style="margin-right:8px;">日期</label>
-          <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" @change="loadData" />
+          <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" @change="reloadFromFirstPage" />
+        </div>
+        <div>
+          <label class="muted" style="margin-right:8px;">姓名</label>
+          <el-input
+            v-model="keyword"
+            clearable
+            placeholder="姓名 / 学号"
+            style="width:180px"
+            @keyup.enter="reloadFromFirstPage"
+            @clear="reloadFromFirstPage"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button type="primary" plain style="margin-left:8px;" @click="reloadFromFirstPage">查询</el-button>
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">部门</label>
-          <el-select v-model="deptId" style="width:140px" :disabled="!canManageAllDepts" @change="onDeptChange">
+          <el-select v-model="deptId" style="width:140px" :disabled="!canManageAllDepts" @change="reloadFromFirstPage">
             <el-option v-if="canManageAllDepts" label="全部部门" :value="ALL_DEPT_ID" />
             <el-option v-for="d in deptOptions" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
           <span v-if="canManageAllDepts && !userStore.isDirector" class="muted" style="margin-left:6px;">综合部可处理全部部门</span>
+          <span v-else-if="!canManageAllDepts" class="muted" style="margin-left:6px;">仅可查看本部门成员的打卡</span>
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">状态</label>
@@ -128,8 +145,8 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import {
@@ -142,8 +159,9 @@ import {
   getDeptLabel
 } from '@/utils/dict'
 
-const router = useRouter()
 const date = ref(new Date().toISOString().split('T')[0])
+// 姓名/学号模糊搜索关键字：回车、点「查询」或清空时生效
+const keyword = ref('')
 // 打卡管理归综合部：主任和综合部部长可处理全部部门，被授权部员同权限
 const canManageAllDepts = computed(() =>
   userStore.isDirector || Number(userStore.deptId) === 101 || userStore.isCheckinManager
@@ -170,26 +188,29 @@ const deptOptions = computed(() => {
   return DEPARTMENTS_OPTIONS.filter(d => Number(d.value) === Number(userStore.deptId))
 })
 
-function onDeptChange() {
-  page.value = 1
-  loadData()
+// 筛选条件（日期/姓名/部门/状态）变化：回到第一页。
+// 页码由下方 watch 统一触发加载，这里仅在页码已是第一页时直接查询，
+// 避免同一次筛选既改页码又手动查询、发出两次请求
+function reloadFromFirstPage() {
+  if (page.value !== 1) page.value = 1
+  else loadData()
 }
 
 // 打卡状态筛选（-1 全部）变化时回到第一页重新查询
-watch(statusFilter, () => {
-  page.value = 1
-  loadData()
-})
+watch(statusFilter, reloadFromFirstPage)
 // 翻页/改每页条数重新查询
 watch([page, size], () => loadData())
 
 async function loadData() {
   loading.value = true
   try {
+    const kw = keyword.value.trim()
     const res = await adminApi.checkins({
       date: date.value,
       deptId: deptId.value,
       status: Number(statusFilter.value) === -1 ? null : statusFilter.value,
+      // 空关键字不作为筛选条件传给后端
+      ...(kw ? { keyword: kw } : {}),
       pageNum: page.value,
       pageSize: size.value
     })
@@ -264,11 +285,7 @@ async function revoke(m) {
 }
 
 onMounted(() => {
-  if (!canManageAllDepts.value) {
-    ElMessage.warning('打卡管理仅综合部可用')
-    router.replace('/admin/overview')
-    return
-  }
+  // 非综合部部长也能进入本页，但只能查看本部门成员（部门已锁定）
   loadData()
 })
 </script>
