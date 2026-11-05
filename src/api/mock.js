@@ -839,7 +839,9 @@ export const ganttTaskList = [
     // 多部门任务：新字段 deptNames / deptIds 返回全部部门，旧的 deptId / deptName 仍保留（参与部门优先）
     { id: 9010, title: '校园开放日全媒体报道', startTime: dt(3, 9), endTime: dt(9, 18), status: 1, deptId: 103, deptName: '影音部', deptIds: [103, 104, 105, 102], deptNames: ['影音部', '摄制部', '新闻部', '网宣部'], publishByName: '王主任', timePending: false, progress: 40 },
     // 时间校验任务：固定同一天的 16:10~17:00，用于核对条形起止日与 tooltip 时间
-    { id: 9011, title: '【时间校验】同天短任务', startTime: '2026-11-05 16:10:00', endTime: '2026-11-05 17:00:00', status: 1, deptId: 105, deptName: '新闻部', publishByName: '张洋', timePending: false, progress: 60 }
+    { id: 9011, title: '【时间校验】同天短任务', startTime: '2026-11-05 16:10:00', endTime: '2026-11-05 17:00:00', status: 1, deptId: 105, deptName: '新闻部', publishByName: '张洋', timePending: false, progress: 60 },
+    // 无部门关联任务：后端新行为是 deptId=null、deptName=''、数组为空，用于验证前端兜底「未知部门」
+    { id: 9012, title: '【空部门】临时通知稿', startTime: dt(10, 9), endTime: dt(14, 18), status: 0, deptId: null, deptName: '', deptIds: [], deptNames: [], publishByName: '张洋', timePending: false, progress: 0 }
 ]
 
 // 入参：{ startDate, endDate, deptId, status }；返回与后端契约一致的任务数组
