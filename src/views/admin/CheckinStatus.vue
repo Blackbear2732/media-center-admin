@@ -52,7 +52,15 @@
           <div class="block-head">
             <span class="block-title">未打卡（{{ undoneList.length }} 人）</span>
           </div>
-          <div v-if="undoneList.length" class="name-line">{{ undoneNames }}</div>
+          <div v-if="undoneGroups.length" class="dept-groups">
+            <div v-for="g in undoneGroups" :key="g.deptId" class="dept-group">
+              <div class="dept-group-head">
+                <span class="dept-group-title">{{ g.label }}（{{ g.count }} 人）</span>
+                <button class="copy-btn" type="button" @click="copyGroup(g)">复制本组名单</button>
+              </div>
+              <div class="name-line">{{ g.namesText }}</div>
+            </div>
+          </div>
           <div v-else class="block-empty muted">暂无未打卡人员</div>
         </section>
 
@@ -60,7 +68,15 @@
           <div class="block-head">
             <span class="block-title">{{ doneTitle }}（{{ doneList.length }} 人）</span>
           </div>
-          <div v-if="doneList.length" class="name-line">{{ doneNames }}</div>
+          <div v-if="doneGroups.length" class="dept-groups">
+            <div v-for="g in doneGroups" :key="g.deptId" class="dept-group">
+              <div class="dept-group-head">
+                <span class="dept-group-title">{{ g.label }}（{{ g.count }} 人）</span>
+                <button class="copy-btn" type="button" @click="copyGroup(g)">复制本组名单</button>
+              </div>
+              <div class="name-line">{{ g.namesText }}</div>
+            </div>
+          </div>
           <div v-else class="block-empty muted">暂无已打卡人员</div>
         </section>
       </div>
@@ -71,6 +87,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
 import { userStore } from '@/store/user'
 import { useDelayedLoading } from '@/utils/loading'
@@ -99,8 +116,68 @@ const doneList = computed(() =>
   list.value.filter(row => Number(row.status) === CHECKIN_STATUS.DONE))
 const undoneList = computed(() =>
   list.value.filter(row => Number(row.status) !== CHECKIN_STATUS.DONE))
-const doneNames = computed(() => doneList.value.map(row => row.member).filter(Boolean).join('　'))
-const undoneNames = computed(() => undoneList.value.map(row => row.member).filter(Boolean).join('　'))
+
+// 按部门分组：接口 rows 已带 deptId，前端直接分组，不额外请求也不编造部门。
+// 组内姓名仍用全角空格分隔、整段可复制；排序按 dept_id 升序（综合部 101 自然在前）。
+// 组内人数按行数统计，与块标题总人数保持口径一致。
+function groupByDept(rows) {
+  const groups = new Map()
+  rows.forEach(row => {
+    const id = Number(row.deptId)
+    if (!groups.has(id)) {
+      groups.set(id, { deptId: id, label: getDeptLabel(row.deptId), count: 0, names: [] })
+    }
+    const group = groups.get(id)
+    group.count += 1
+    if (row.member) group.names.push(row.member)
+  })
+  return [...groups.values()]
+    .sort((a, b) => a.deptId - b.deptId)
+    .map(g => ({ ...g, namesText: g.names.join('　') }))
+}
+const undoneGroups = computed(() => groupByDept(undoneList.value))
+const doneGroups = computed(() => groupByDept(doneList.value))
+
+// 复制单个部门组的名单：一行文本，直接用微信粘贴
+// 形如「新闻部（24 人）：张三 李四 …」，姓名仍是全角空格分隔
+async function copyGroup(group) {
+  const text = `${group.label}（${group.count} 人）：${group.namesText}`
+  const ok = await copyText(text)
+  if (ok) {
+    ElMessage.success(`已复制 ${group.label} ${group.count} 人名单`)
+  } else {
+    ElMessage.error('复制失败，请手动选中名单复制')
+  }
+}
+
+// Clipboard API 需要 https 或 localhost 等安全上下文，线上 http 会失败，
+// 因此必须保留 textarea + execCommand 的降级路径
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch (e) {
+      // 权限被拒或非安全上下文，落到下面的降级方案
+    }
+  }
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'fixed'
+    textarea.style.top = '-9999px'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    textarea.setSelectionRange(0, textarea.value.length)
+    const ok = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return ok
+  } catch (e) {
+    return false
+  }
+}
 
 // 零打卡记录与全满只影响呈现，不改变分组口径：
 // 已打卡 0（且成员非空）→ 只显示一行说明、不渲染名单块；已打卡 >0 且未打卡 0 → 「全部已打卡」；
@@ -202,6 +279,44 @@ onMounted(() => loadData())
 .status-block.undone .block-title { color: #a4600f; }
 .status-block.done .block-title { color: #6b7d73; font-weight: 500; }
 
+/* 块内按部门分组：组标题 + 组内纯文字名单，整段可直接复制 */
+.dept-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dept-group-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.dept-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+.status-block.undone .dept-group-title { color: #a4600f; }
+.status-block.done .dept-group-title { color: #6b7d73; }
+
+/* 复制本组名单：小尺寸、低调，且不因点击或禁用状态引起布局抖动 */
+.copy-btn {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  min-height: 26px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--text-sub);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.copy-btn:hover { color: var(--brand); border-color: var(--brand); }
+
 /* 纯文字名单：姓名之间用全角空格分隔，整块一行排开、自动折行，不用胶囊/表格 */
 .name-line {
   font-size: 14px;
@@ -228,5 +343,7 @@ onMounted(() => loadData())
   .status-filters > div { flex: 1 1 100%; }
   .status-blocks { grid-template-columns: 1fr; }
   .name-line { max-height: 320px; }
+  /* 移动端触控区域放大到 32px，仍保持小按钮观感 */
+  .copy-btn { min-height: 32px; padding: 4px 10px; }
 }
 </style>
