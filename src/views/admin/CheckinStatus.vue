@@ -43,29 +43,27 @@
       </div>
     </div>
 
-    <!-- 全部未打卡：当日没有任何打卡记录，不按普通名单呈现 -->
+    <!-- 零打卡记录：只给一行说明，不渲染任何名单块；成员本身为空时走独立空态 -->
     <div class="status-area" v-loading="loading">
       <div v-if="noData" class="empty-panel muted">当日暂无成员或打卡数据</div>
-      <template v-else>
-        <div v-if="allUndone" class="status-tip">当日暂无打卡记录</div>
-        <div class="status-blocks">
-          <section class="status-block undone">
-            <div class="block-head">
-              <span class="block-title">{{ undoneTitle }}（{{ undoneList.length }} 人）</span>
-            </div>
-            <div v-if="undoneList.length" class="name-line">{{ undoneNames }}</div>
-            <div v-else class="block-empty muted">暂无未打卡人员</div>
-          </section>
+      <div v-else-if="noRecord" class="status-tip">当日暂无打卡记录</div>
+      <div v-else class="status-blocks">
+        <section class="status-block undone">
+          <div class="block-head">
+            <span class="block-title">未打卡（{{ undoneList.length }} 人）</span>
+          </div>
+          <div v-if="undoneList.length" class="name-line">{{ undoneNames }}</div>
+          <div v-else class="block-empty muted">暂无未打卡人员</div>
+        </section>
 
-          <section class="status-block done">
-            <div class="block-head">
-              <span class="block-title">{{ doneTitle }}（{{ doneList.length }} 人）</span>
-            </div>
-            <div v-if="doneList.length" class="name-line">{{ doneNames }}</div>
-            <div v-else class="block-empty muted">暂无已打卡人员</div>
-          </section>
-        </div>
-      </template>
+        <section class="status-block done">
+          <div class="block-head">
+            <span class="block-title">{{ doneTitle }}（{{ doneList.length }} 人）</span>
+          </div>
+          <div v-if="doneList.length" class="name-line">{{ doneNames }}</div>
+          <div v-else class="block-empty muted">暂无已打卡人员</div>
+        </section>
+      </div>
     </div>
   </div>
 </template>
@@ -104,12 +102,12 @@ const undoneList = computed(() =>
 const doneNames = computed(() => doneList.value.map(row => row.member).filter(Boolean).join('　'))
 const undoneNames = computed(() => undoneList.value.map(row => row.member).filter(Boolean).join('　'))
 
-// 全零/全满时只调整措辞，不改变分组口径：
-// 已打卡 0 且未打卡 >0 → 顶部说明 + 「全部未打卡」；已打卡 >0 且未打卡 0 → 「全部已打卡」；都为 0 → 单一空态
-const allUndone = computed(() => doneList.value.length === 0 && undoneList.value.length > 0)
+// 零打卡记录与全满只影响呈现，不改变分组口径：
+// 已打卡 0（且成员非空）→ 只显示一行说明、不渲染名单块；已打卡 >0 且未打卡 0 → 「全部已打卡」；
+// 成员列表为空（含搜索无结果）→ 「当日暂无成员或打卡数据」
+const noData = computed(() => list.value.length === 0)
+const noRecord = computed(() => !noData.value && doneList.value.length === 0)
 const allDone = computed(() => undoneList.value.length === 0 && doneList.value.length > 0)
-const noData = computed(() => doneList.value.length === 0 && undoneList.value.length === 0)
-const undoneTitle = computed(() => (allUndone.value ? '全部未打卡' : '未打卡'))
 const doneTitle = computed(() => (allDone.value ? '全部已打卡' : '已打卡'))
 
 // 日期/部门变化重新查询
