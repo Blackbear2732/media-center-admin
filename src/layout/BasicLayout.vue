@@ -111,7 +111,8 @@
       </div>
     </main>
 
-    <footer class="footer">
+    <!-- 甘特图页需要铺满视口且不产生外层滚动，隐藏页脚（其他页面保持原样） -->
+    <footer v-if="!isGanttPage" class="footer">
       <div class="footer-logos">
         <img src="/image/logo/school.png" alt="校徽" />
         <img src="/image/logo/league.png" alt="团徽" />
@@ -191,6 +192,7 @@ const router = useRouter()
 const msgCount = ref(0)
 const mobileMenuVisible = ref(false) // 手机菜单可见性
 const roleLabel = computed(() => getRoleLabel(userStore.role))
+const isGanttPage = computed(() => route.path === '/task/gantt')
 
 async function updateMsgCount() {
   if (!userStore.isLogin) {

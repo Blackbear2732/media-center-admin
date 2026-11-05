@@ -835,7 +835,11 @@ export const ganttTaskList = [
     { id: 9006, title: '设备清点与维护计划', startTime: dt(-30, 9), endTime: dt(45, 18), status: 0, deptId: 104, deptName: '摄制部', publishByName: '闫佳慧', timePending: false, progress: 10 },
     { id: 9007, title: '国庆主题短视频', startTime: dt(-52, 9), endTime: dt(-30, 18), status: 2, deptId: 103, deptName: '影音部', publishByName: '王主任', timePending: false, progress: 100 },
     { id: 9008, title: '上学期部门总结推文', startTime: dt(-70, 10), endTime: dt(-48, 17), status: 2, deptId: 102, deptName: '网宣部', publishByName: '张三', timePending: false, progress: 100 },
-    { id: 9009, title: '融媒体年度宣传规划', startTime: dt(-40, 9), endTime: dt(95, 18), status: 1, deptId: 101, deptName: '综合部', publishByName: '王主任', timePending: false, progress: 55 }
+    { id: 9009, title: '融媒体年度宣传规划', startTime: dt(-40, 9), endTime: dt(95, 18), status: 1, deptId: 101, deptName: '综合部', publishByName: '王主任', timePending: false, progress: 55 },
+    // 多部门任务：新字段 deptNames / deptIds 返回全部部门，旧的 deptId / deptName 仍保留（参与部门优先）
+    { id: 9010, title: '校园开放日全媒体报道', startTime: dt(3, 9), endTime: dt(9, 18), status: 1, deptId: 103, deptName: '影音部', deptIds: [103, 104, 105, 102], deptNames: ['影音部', '摄制部', '新闻部', '网宣部'], publishByName: '王主任', timePending: false, progress: 40 },
+    // 时间校验任务：固定同一天的 16:10~17:00，用于核对条形起止日与 tooltip 时间
+    { id: 9011, title: '【时间校验】同天短任务', startTime: '2026-11-05 16:10:00', endTime: '2026-11-05 17:00:00', status: 1, deptId: 105, deptName: '新闻部', publishByName: '张洋', timePending: false, progress: 60 }
 ]
 
 // 入参：{ startDate, endDate, deptId, status }；返回与后端契约一致的任务数组
@@ -843,7 +847,9 @@ export const ganttTasks = (params = {}) => {
     let list = ganttTaskList.slice()
     const deptId = params.deptId
     if (deptId !== undefined && deptId !== null && deptId !== '' && Number(deptId) !== 100) {
-        list = list.filter(t => Number(t.deptId) === Number(deptId))
+        // 多部门任务按 deptIds 匹配（任一参与部门命中即返回），旧数据回退 deptId
+        list = list.filter(t => (Array.isArray(t.deptIds) && t.deptIds.length ? t.deptIds : [t.deptId])
+            .map(Number).includes(Number(deptId)))
     }
     const status = params.status
     if (status !== undefined && status !== null && status !== '' && Number(status) !== -1) {

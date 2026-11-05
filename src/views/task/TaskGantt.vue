@@ -1,5 +1,5 @@
 <template>
-  <div class="page">
+  <div ref="pageRef" class="page gantt-page">
     <div class="list-head">
       <div>
         <h2>任务甘特图</h2>
@@ -86,14 +86,15 @@ const tasks = ref([])
 const error = ref('')
 const loading = useDelayedLoading()
 const chartRef = ref()
+const pageRef = ref()
 let gantt = null
-let userPickedView = false
 let resizeTimer = null
 
 // 默认值：列表页筛选可通过 ?status= 带过来
 const status = ref(route.query.status !== undefined && route.query.status !== '' ? Number(route.query.status) : -1)
 const deptId = ref(userStore.isDirector ? ALL_DEPT_ID : (userStore.deptId ?? ALL_DEPT_ID))
-const viewMode = ref('Week')
+// 默认日视图；不再自动切月，手动切换后始终由用户控制
+const viewMode = ref('Day')
 const range = ref(defaultRange())
 
 const statusOptions = [{ value: -1, label: '全部状态' }, ...TASK_STATUS_OPTIONS]
@@ -123,16 +124,6 @@ function defaultRange() {
   return [toDateStr(start), toDateStr(end)]
 }
 
-// 数据整体跨度超过 90 天时，首次加载自动切到月视图
-function spanDays(list) {
-  if (!list.length) return 0
-  const parse = v => new Date(String(v).replace(' ', 'T'))
-  const starts = list.map(t => parse(t.startTime).getTime()).filter(Number.isFinite)
-  const ends = list.map(t => parse(t.endTime).getTime()).filter(Number.isFinite)
-  if (!starts.length || !ends.length) return 0
-  return (Math.max(...ends) - Math.min(...starts)) / 86400000
-}
-
 async function loadTasks() {
   loading.value = true
   error.value = ''
@@ -146,7 +137,6 @@ async function loadTasks() {
     // 请求被后续筛选取消时 request 封装会 resolve(null)，此时保留当前图表，不要当成空数据
     if (data === null) return
     tasks.value = Array.isArray(data) ? data : []
-    if (!userPickedView && spanDays(tasks.value) > 90) viewMode.value = 'Month'
     await nextTick()
     renderChart()
   } catch (e) {
@@ -261,11 +251,24 @@ const fmtTime = v => {
   return `${m[1]}年${Number(m[2])}月${Number(m[3])}日 ${m[4]}`
 }
 
+// 部门展示：后端新字段 deptNames / deptIds 返回全部部门，旧的 deptId / deptName 兜底。
+// 后端暂不区分「参与 / 联动」，按数组顺序用顿号连接
+function deptText(t) {
+  const names = Array.isArray(t.deptNames)
+      ? t.deptNames.map(v => String(v ?? '').trim()).filter(Boolean)
+      : []
+  if (names.length) return names.join('、')
+  const legacy = String(t.deptName ?? '').trim()
+  if (legacy) return legacy
+  const ids = Array.isArray(t.deptIds) ? t.deptIds : (t.deptId ? [t.deptId] : [])
+  const labels = ids.filter(Boolean).map(getDeptLabel).filter(Boolean)
+  return labels.length ? labels.join('、') : '未知部门'
+}
+
 // tooltip 内容：标题 / 部门 / 发布人 / 起止时间 / 进度
 // 后端可能返回 deptId=null、deptName / publishByName 空串，统一兜底，避免空行或 undefined
 function tooltipHtml(t) {
-  const deptName = String(t.deptName ?? '').trim()
-  const dept = deptName || (t.deptId ? getDeptLabel(t.deptId) : '未知部门')
+  const dept = deptText(t)
   const publisher = String(t.publishByName ?? '').trim() || '未知发布人'
   const title = String(t.title ?? '').trim() || '未命名任务'
   return `<div class="gantt-tip">
@@ -304,13 +307,12 @@ function renderChart() {
     on_click: task => router.push('/tasks/' + task.id)
   })
   // 库的 setup_options 在传入自定义 view_modes 时会强制取 view_modes[0]（Day），
-  // 这里再显式切回当前应展示的视图，保证「默认周/跨度大自动月」不被覆盖
+  // 这里再显式切回当前应展示的视图（默认 Day，用户手动切周/月后保持一致）
   if (gantt.options.view_mode?.name !== viewMode.value) gantt.change_view_mode(viewMode.value)
   localizeTodayButton()
 }
 
 function onViewModeChange(mode) {
-  userPickedView = true
   if (gantt) {
     gantt.change_view_mode(mode)
     localizeTodayButton()
@@ -341,18 +343,39 @@ function clampPopup() {
   popup.style.top = `${top}px`
 }
 
+/* ===== 页面高度铺满视口 =====
+ * 页面高度 = 可视高度 - 页面在视口中的起始偏移 - main-inner 的下内边距（实测，不写死）。
+ * 页头/工具栏的实际占用由 flex 自动让出，图表卡片吃掉剩余高度；
+ * 图表竖向滚动交给库自带的 .gantt-container（overflow:auto），页面本身不滚动。
+ */
+const viewportHeight = () => window.visualViewport?.height || window.innerHeight
+
+function syncPageHeight() {
+  const page = pageRef.value
+  if (!page) return
+  const top = page.getBoundingClientRect().top
+  const parent = page.parentElement
+  const padBottom = parent ? parseFloat(getComputedStyle(parent).paddingBottom) || 0 : 0
+  // 取整避免多出 1px 触发外层滚动
+  page.style.height = `${Math.max(320, Math.floor(viewportHeight() - top - padBottom))}px`
+}
+
 function onResize() {
   if (resizeTimer) clearTimeout(resizeTimer)
   resizeTimer = setTimeout(() => {
+    syncPageHeight()
     // 重新按当前视图模式布局，避免窄屏切换后列宽残留
     if (gantt) gantt.change_view_mode(viewMode.value)
   }, 200)
 }
 
 onMounted(() => {
+  syncPageHeight()
   loadTasks()
   chartRef.value?.addEventListener('mouseover', scheduleClampPopup)
   window.addEventListener('resize', onResize)
+  // 移动端地址栏收起/展开时 innerHeight 可能滞后，visualViewport 更准
+  window.visualViewport?.addEventListener('resize', onResize)
 })
 
 onBeforeUnmount(() => {
@@ -360,6 +383,7 @@ onBeforeUnmount(() => {
   if (clampTimer) clearTimeout(clampTimer)
   clampTimer = null
   window.removeEventListener('resize', onResize)
+  window.visualViewport?.removeEventListener('resize', onResize)
   if (resizeTimer) clearTimeout(resizeTimer)
   resizeTimer = null
   clearChart()
@@ -384,8 +408,13 @@ onBeforeUnmount(() => {
 .legend-done { background: #67b97c; }
 .legend-pending { background: transparent; border: 1px dashed #909399; }
 
-.gantt-card { padding: 10px 12px 14px; overflow: hidden; }
-.gantt-chart { width: 100%; max-width: 100%; overflow-x: auto; }
+/* 页面铺满视口：页头/工具栏按内容高度，图表卡片吃掉剩余高度（页面高度由 syncPageHeight 实测写入） */
+.gantt-page { display: flex; flex-direction: column; min-height: 0; }
+.gantt-card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 14px; overflow: hidden; }
+.gantt-chart { flex: 1 1 auto; min-height: 0; width: 100%; max-width: 100%; overflow: hidden; }
+/* 库在 container_height:'auto' 时会给 .gantt-container 写行内高度（=内容高度），这里强制铺满卡片；
+   横向/竖向滚动都交给库自带的 .gantt-container{overflow:auto}，页面外层不再出现第二个滚动条 */
+:deep(.gantt-container) { height: 100% !important; width: 100%; max-width: 100%; }
 .gantt-chart-hidden { display: none; }
 
 .gantt-state { padding: 36px 16px; text-align: center; }
