@@ -97,8 +97,8 @@ async function loadMenus() {
   if (userStore.isDirector && !list.some(m => m.path === 'election')) {
     list.push({ path: 'election', label: '换届管理' })
   }
-  // 打卡管理：所有部长可见（普通部长仅能看本部门），主任全中心；被授权部员也显示
-  const canCheckin = userStore.canManage || userStore.isCheckinManager
+  // 打卡管理归综合部：主任/综合部/被授权部员可见；其他部长只走「打卡情况」只读页
+  const canCheckin = userStore.isDirector || Number(userStore.deptId) === 101 || userStore.isCheckinManager
   if (canCheckin && !list.some(m => m.path === 'checkins')) {
     list.push({ path: 'checkins', label: '打卡管理' })
   }

@@ -35,7 +35,6 @@
             <el-option v-for="d in deptOptions" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
           <span v-if="canManageAllDepts && !userStore.isDirector" class="muted" style="margin-left:6px;">综合部可处理全部部门</span>
-          <span v-else-if="!canManageAllDepts" class="muted" style="margin-left:6px;">仅可查看本部门成员的打卡</span>
         </div>
         <div>
           <label class="muted" style="margin-right:8px;">状态</label>
@@ -145,6 +144,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
@@ -159,6 +159,7 @@ import {
   getDeptLabel
 } from '@/utils/dict'
 
+const router = useRouter()
 const date = ref(new Date().toISOString().split('T')[0])
 // 姓名/学号模糊搜索关键字：回车、点「查询」或清空时生效
 const keyword = ref('')
@@ -285,7 +286,12 @@ async function revoke(m) {
 }
 
 onMounted(() => {
-  // 非综合部部长也能进入本页，但只能查看本部门成员（部门已锁定）
+  // 非综合部部长没有本页权限，统一跳到只读的「打卡情况」页
+  if (!canManageAllDepts.value) {
+    ElMessage.warning('打卡管理仅综合部可用')
+    router.replace('/admin/checkin-status')
+    return
+  }
   loadData()
 })
 </script>

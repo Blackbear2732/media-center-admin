@@ -806,13 +806,19 @@ export const baseAdminMenus = [
 ]
 
 export const specialAdminMenus = {
-    101: [ // 综合部
+    101: [ // 综合部：打卡管理（全中心） + 只读打卡情况
         { path: 'checkins', label: '打卡管理' },
+        { path: 'checkin-status', label: '打卡情况' },
         { path: 'dashboard', label: '数据看板' }
     ],
+    102: [{ path: 'checkin-status', label: '打卡情况' }], // 网宣部
+    103: [{ path: 'checkin-status', label: '打卡情况' }], // 影音部
     104: [ // 摄制部
-        { path: 'devices', label: '设备管理' }
-    ]
+        { path: 'devices', label: '设备管理' },
+        { path: 'checkin-status', label: '打卡情况' }
+    ],
+    105: [{ path: 'checkin-status', label: '打卡情况' }], // 新闻部
+    106: [{ path: 'checkin-status', label: '打卡情况' }]  // 设计部
 }
 
 /* ========== 部门模块挂载（biz_dept_module） ========== */
