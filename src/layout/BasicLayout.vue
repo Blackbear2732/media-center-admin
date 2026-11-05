@@ -183,6 +183,7 @@ import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { messageApi, userApi } from '@/api'
+import { getFriendlyErrorMessage } from '@/api/request'
 import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
 import { routeLoading } from '@/router'
@@ -280,9 +281,10 @@ function startCodeCountdown() {
   }, 1000)
 }
 
-// 真实接口的中文提示在响应体 msg 里（拦截器另外会弹一次），这里取出来展示在弹窗内
+// 真实接口的中文提示在响应体 msg 里（拦截器另外会弹一次），这里取出来展示在弹窗内；
+// 技术类错误（SQL/堆栈）由兜底函数换成可读文案，原文只写控制台
 function apiErrMsg(e, fallback) {
-  return e?.response?.data?.msg || e?.message || fallback
+  return getFriendlyErrorMessage(e, fallback)
 }
 
 async function sendEmailCode() {

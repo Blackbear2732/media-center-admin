@@ -34,7 +34,7 @@
 
         <el-card shadow="never" class="surface-card">
           <template #header><b>提交设备申请</b></template>
-          <el-form :model="form" label-width="96px">
+          <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px">
             <el-form-item label="申请设备" required>
               <el-select v-model="form.deviceId" placeholder="请选择设备" style="width:100%" @change="handleDeviceChange">
                 <el-option
@@ -56,11 +56,11 @@
             <el-form-item label="使用用途" required>
               <el-input v-model="form.purpose" type="textarea" :rows="3" placeholder="请说明设备使用用途" />
             </el-form-item>
-            <el-form-item label="使用时间" required>
+            <el-form-item label="使用时间" required prop="startTime">
               <el-date-picker v-model="form.startTime" type="datetime" placeholder="开始时间"
-                              value-format="YYYY-MM-DD HH:mm" style="width:100%;margin-bottom:8px" />
+                              value-format="YYYY-MM-DD HH:mm" style="width:100%;margin-bottom:8px" @change="revalidateTime" />
               <el-date-picker v-model="form.endTime" type="datetime" placeholder="结束时间"
-                              value-format="YYYY-MM-DD HH:mm" style="width:100%" />
+                              value-format="YYYY-MM-DD HH:mm" style="width:100%" @change="revalidateTime" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" :loading="submitting" @click="submit">提交申请</el-button>
@@ -112,6 +112,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { deviceApi } from '@/api'
+import { validateTimeRange } from '@/utils/validate'
 import {
   APPLY_STATUS,
   DEVICE_STATUS,
@@ -129,6 +130,22 @@ const loadingDevices = ref(false)
 const submitting = ref(false)
 
 const form = reactive({ deviceId: null, applyNum: 1, purpose: '', startTime: '', endTime: '' })
+const formRef = ref()
+
+// 设备使用时间同样是时间区间：必填且开始早于结束，提示落在「使用时间」字段下方
+const formRules = {
+  startTime: [{
+    validator: (rule, value, callback) => {
+      const result = validateTimeRange(form.startTime, form.endTime)
+      result.ok ? callback() : callback(new Error(result.message))
+    },
+    trigger: 'change'
+  }]
+}
+
+function revalidateTime() {
+  formRef.value?.validateField('startTime').catch(() => {})
+}
 
 // 动态获取当前选中设备的最大可借数量
 const maxStock = computed(() => {
@@ -178,12 +195,15 @@ function reset() {
   form.purpose = ''
   form.startTime = ''
   form.endTime = ''
+  formRef.value?.clearValidate()
 }
 
 async function submit() {
   if (!form.deviceId) return ElMessage.warning('请选择设备')
   if (!form.purpose) return ElMessage.warning('请填写使用用途')
-  if (!form.startTime || !form.endTime) return ElMessage.warning('请选择使用时间')
+  // 时间必填与先后顺序校验，未通过时不发请求
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
 
   submitting.value = true
   try {

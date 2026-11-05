@@ -154,6 +154,7 @@ import {
 } from '@/utils/dict'
 
 import { useDelayedLoading } from '@/utils/loading'
+import { getFriendlyErrorMessage } from '@/api/request'
 const loading = useDelayedLoading(), saving = ref(false), savingRoll = ref(false)
 const list = ref([])
 const createVisible = ref(false), rollVisible = ref(false)
@@ -294,7 +295,7 @@ async function createMeeting() {
     // 重新拉列表，以后端返回的应到名单和统计为准
     await load()
   } catch (e) {
-    ElMessage.error(e?.response?.data?.msg || '创建失败')
+    ElMessage.error(getFriendlyErrorMessage(e, '创建失败'))
   } finally {
     saving.value = false
   }
@@ -342,7 +343,7 @@ async function saveRoll() {
     // 重新拉列表，显示后端统计的已点名人数
     await load()
   } catch (e) {
-    ElMessage.error(e?.response?.data?.msg || '保存失败')
+    ElMessage.error(getFriendlyErrorMessage(e, '保存失败'))
   } finally {
     savingRoll.value = false
   }

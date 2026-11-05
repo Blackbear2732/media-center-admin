@@ -95,6 +95,7 @@ import { Picture } from '@element-plus/icons-vue'
 import { adminApi, homeApi } from '@/api'
 import { DEPT_OPTIONS, DEPT_MAP, getDeptLabel, ALL_DEPT_ID, isAllDept } from '@/utils/dict'
 import { useDelayedLoading } from '@/utils/loading'
+import { getFriendlyErrorMessage } from '@/api/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -147,7 +148,7 @@ function resetForm() {
 
 function errorText(e) {
   if (!e?.response) return '网络异常或服务不可用，请稍后重试'
-  return e.response.data?.msg || e.message || '请稍后重试'
+  return getFriendlyErrorMessage(e, '请稍后重试')
 }
 
 async function load() {

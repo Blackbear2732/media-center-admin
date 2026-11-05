@@ -85,6 +85,7 @@ import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { userApi } from '@/api'
+import { getFriendlyErrorMessage } from '@/api/request'
 import { userStore } from '@/store/user'
 // 可选：如果想让标签更醒目
 import { QuestionFilled } from '@element-plus/icons-vue'
@@ -124,9 +125,9 @@ function startCodeCountdown() {
   }, 1000)
 }
 
-// 真实接口的中文提示在响应体 msg 里，拦截器也会弹一次，这里兜底取出来
+// 真实接口的中文提示在响应体 msg 里；技术类错误（SQL/堆栈）由兜底函数换成可读文案
 function apiErrMsg(e, fallback) {
-  return e?.response?.data?.msg || e?.message || fallback
+  return getFriendlyErrorMessage(e, fallback)
 }
 
 async function sendCode() {
