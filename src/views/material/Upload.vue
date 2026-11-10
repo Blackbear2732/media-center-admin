@@ -79,8 +79,9 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
-import { userApi, materialApi, taskApi } from '@/api'
-import { DEPARTMENTS_OPTIONS, getDeptLabel, isAllDept } from '@/utils/dict'
+import { materialApi, taskApi } from '@/api'
+import { userStore } from '@/store/user'
+import { DEPARTMENTS_OPTIONS, getDeptLabel } from '@/utils/dict'
 import { validateUploadFile } from '@/utils/validate'
 
 const deptId = ref(null)
@@ -176,9 +177,9 @@ async function loadFields() {
 async function init() {
   loading.value = true
   try {
-    const u = await userApi.profile()
-    isDirector.value = isAllDept(u?.deptId)
-    deptId.value = isDirector.value ? DEFAULT_UPLOAD_DEPT_ID : Number(u?.deptId || DEFAULT_UPLOAD_DEPT_ID)
+    // 部门身份统一从 userStore 读取：activeDeptId 是切换身份后的唯一生效来源
+    isDirector.value = userStore.isDirector
+    deptId.value = isDirector.value ? DEFAULT_UPLOAD_DEPT_ID : Number(userStore.deptId || DEFAULT_UPLOAD_DEPT_ID)
 
     await loadFields()
 
