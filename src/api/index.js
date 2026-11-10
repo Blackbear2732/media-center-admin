@@ -27,6 +27,15 @@ const delay = (data, ms = 0) => new Promise(resolve => setTimeout(() => {
 // 统一封装：mock 走 mockFn，否则走真实 axios 请求
 const pick = (real, mockFn) => (...args) => USE_MOCK ? mockFn(...args) : real(...args)
 
+// Mock 内部抛业务错误时转成 rejected Promise，保持与 axios 请求失败一致的语义
+const mockRejectable = (fn) => () => {
+    try {
+        return delay(fn())
+    } catch (e) {
+        return Promise.reject(e)
+    }
+}
+
 // 任务是否属于某个部门（参与部门 或 联动部门）；全中心视角恒为 true
 const taskInDept = (task, deptId) => {
     if (isAllDept(deptId)) return true
@@ -1029,6 +1038,22 @@ export const adminApi = {
 
     // D-16 综合部：打卡统计
     checkinStats: () => USE_MOCK ? delay(mock.checkinStats) : request.get('/admin/checkins/stats'),
+
+    // 打卡名单导入：预览（只解析匹配，不写库）
+    // 入参：{ date, deptId, text, defaultStatus, source, fileName }
+    checkinImportPreview: (payload) => USE_MOCK
+        ? mockRejectable(() => mock.checkinImportPreview(payload))()
+        : request.post('/admin/checkins/import/preview', payload),
+
+    // 打卡名单导入：提交（后端单事务写库），入参额外带 picks / allowSkipUnmatched
+    checkinImportCommit: (payload) => USE_MOCK
+        ? mockRejectable(() => mock.checkinImportCommit(payload))()
+        : request.post('/admin/checkins/import/commit', payload),
+
+    // 打卡名单导入：撤销最近一个未撤销批次
+    checkinImportRevoke: (importId) => USE_MOCK
+        ? mockRejectable(() => mock.checkinImportRevoke(importId))()
+        : request.post(`/admin/checkins/import/${importId}/revoke`),
 
     // D-18 摄制部：设备档案管理
     devices: () => USE_MOCK

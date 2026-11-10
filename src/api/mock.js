@@ -683,6 +683,410 @@ export const checkinStats = [
     { deptId: 101, rate: 98, total: 20, normal: 19, absent: 1 }
 ]
 
+/* ========== 打卡名单导入（Mock） ==========
+ * 与后端 CheckinImportAppServiceImpl 的解析口径保持一致：
+ * 行首「XX部：」限定部门、行尾「未打卡/已打卡」给出状态、混用分隔符、同部门同状态去重、
+ * 8-20 位纯数字按学号优先匹配；预览不写库，提交写 checkinRecords，撤销按明细回滚。
+ */
+export const checkinImportBatches = []
+
+const IMPORT_DEPT_PREFIX = /^\s*([\u4e00-\u9fa5A-Za-z]{2,8}部)\s*[：:]\s*/
+const IMPORT_STATUS_SUFFIX = /(未打卡|已打卡)\s*[。．.!！?？,，;；]*\s*$/
+const IMPORT_SEPARATOR = /[\s\u3000,，、;；|/]+/
+const IMPORT_ORDER_PREFIX = /^[（(]?\d{1,3}[)）.、]\s*/
+const IMPORT_STUDENT_NO = /^\d{8,20}$/
+const IMPORT_NOISE = new Set(['打卡', '名单', '未打卡名单', '已打卡名单', '部门', '姓名', '学号', '未打卡', '已打卡'])
+
+const importPad2 = (n) => String(n).padStart(2, '0')
+
+function importNowText() {
+    const d = new Date()
+    return `${d.getFullYear()}-${importPad2(d.getMonth() + 1)}-${importPad2(d.getDate())} ${importPad2(d.getHours())}:${importPad2(d.getMinutes())}:${importPad2(d.getSeconds())}`
+}
+
+const importToday = () => {
+    const d = new Date()
+    return `${d.getFullYear()}-${importPad2(d.getMonth() + 1)}-${importPad2(d.getDate())}`
+}
+
+const importDeptIdByName = (name) => {
+    const dept = departments.find(d => d.name === name)
+    return dept ? dept.id : null
+}
+
+const importDeptNameById = (deptId) => {
+    const dept = departments.find(d => Number(d.id) === Number(deptId))
+    return dept ? dept.name : ''
+}
+
+/** 解析名单文本，返回 { total, unique, deduped, dedupedCount, needsStatusChoice } */
+function parseImportText(text, defaultStatus) {
+    const entries = []
+    let anyStatusWord = false
+    let hasStatusless = false
+    String(text || '').split(/\r?\n/).forEach(rawLine => {
+        let line = String(rawLine || '').trim()
+        if (!line) return
+        let deptName = null
+        const deptMatcher = IMPORT_DEPT_PREFIX.exec(line)
+        if (deptMatcher) {
+            deptName = deptMatcher[1]
+            line = line.slice(deptMatcher[0].length).trim()
+        }
+        let lineStatus = null
+        const statusMatcher = IMPORT_STATUS_SUFFIX.exec(line)
+        if (statusMatcher) {
+            lineStatus = statusMatcher[1] === '已打卡' ? 1 : 0
+            anyStatusWord = true
+            line = line.slice(0, statusMatcher.index).trim()
+        }
+        if (!line) return
+        line.split(IMPORT_SEPARATOR).forEach(part => {
+            let token = String(part || '')
+                .replace(IMPORT_ORDER_PREFIX, '')
+                .replace(/^[「『“"']+|[」』”"']+$/g, '')
+                .trim()
+            if (!token || IMPORT_NOISE.has(token)) return
+            let tokenDept = deptName
+            const nameDept = /^(.+?)[（(]([\u4e00-\u9fa5A-Za-z]{2,8}部)[)）]$/.exec(token)
+            if (nameDept) {
+                token = nameDept[1].trim()
+                tokenDept = nameDept[2]
+            }
+            if (!token || IMPORT_NOISE.has(token)) return
+            if (lineStatus == null) hasStatusless = true
+            entries.push({
+                token,
+                type: IMPORT_STUDENT_NO.test(token) ? 'STUDENT_NO' : 'NAME',
+                deptName: tokenDept,
+                status: lineStatus != null ? lineStatus : (defaultStatus == null ? null : Number(defaultStatus))
+            })
+        })
+    })
+
+    // 同部门 + 同名/同学号 + 同状态视为重复，去重后提示
+    const map = new Map()
+    entries.forEach(e => {
+        const key = `${e.type}|${e.token}|${e.deptName || ''}|${e.status}`
+        const hit = map.get(key)
+        if (hit) hit.count++
+        else map.set(key, { ...e, count: 1 })
+    })
+    const unique = []
+    const deduped = []
+    let dedupedCount = 0
+    map.forEach(v => {
+        const { count, ...entry } = v
+        unique.push(entry)
+        if (count > 1) {
+            dedupedCount += count - 1
+            deduped.push({ token: entry.token, deptName: entry.deptName, count })
+        }
+    })
+    return {
+        total: entries.length,
+        unique,
+        deduped,
+        dedupedCount,
+        needsStatusChoice: unique.length > 0 && defaultStatus == null && (hasStatusless || !anyStatusWord)
+    }
+}
+
+const importMemberVO = (m) => ({
+    userId: m.id,
+    name: m.name,
+    studentNo: m.studentNo,
+    deptId: m.deptId,
+    deptName: importDeptNameById(m.deptId)
+})
+
+const importUnmatched = (token, deptName, reason) => ({
+    token,
+    deptName,
+    reason,
+    reasonText: {
+        OUT_OF_SCOPE: '不在当前部门范围',
+        NOT_MEMBER: '系统内不是部员',
+        UNKNOWN_DEPT: '部门名无法识别',
+        STATUS_CONFLICT: '同一人出现已打卡/未打卡两种状态'
+    }[reason] || '系统内查无此人'
+})
+
+/** 匹配：部门前缀限定范围，学号优先于姓名，重名给候选（不预选） */
+function matchImportEntries(entries, deptScope) {
+    const allMembers = (members || []).filter(m => Number(m.role) === 0 && Number(m.status) === 1)
+    const inScope = !deptScope || Number(deptScope) === 100
+        ? allMembers
+        : allMembers.filter(m => Number(m.deptId) === Number(deptScope))
+    const matched = []
+    const duplicates = []
+    const unmatched = []
+
+    entries.forEach(entry => {
+        let scoped = inScope
+        if (entry.deptName) {
+            const deptId = importDeptIdByName(entry.deptName)
+            if (!deptId) {
+                unmatched.push(importUnmatched(entry.token, entry.deptName, 'UNKNOWN_DEPT'))
+                return
+            }
+            if (deptScope && Number(deptScope) !== 100 && Number(deptId) !== Number(deptScope)) {
+                unmatched.push(importUnmatched(entry.token, entry.deptName, 'OUT_OF_SCOPE'))
+                return
+            }
+            scoped = inScope.filter(m => Number(m.deptId) === Number(deptId))
+        }
+        if (entry.type === 'STUDENT_NO') {
+            const hit = scoped.find(m => String(m.studentNo) === entry.token)
+            if (hit) {
+                matched.push({ ...importMemberVO(hit), token: entry.token, targetStatus: entry.status, matchedBy: 'STUDENT_NO', currentStatus: null, recordId: null })
+                return
+            }
+            const exists = allMembers.some(m => String(m.studentNo) === entry.token)
+            unmatched.push(importUnmatched(entry.token, entry.deptName, exists ? 'OUT_OF_SCOPE' : 'NOT_FOUND'))
+            return
+        }
+        const hits = scoped.filter(m => m.name === entry.token)
+        if (hits.length === 1) {
+            matched.push({ ...importMemberVO(hits[0]), token: entry.token, targetStatus: entry.status, matchedBy: 'NAME', currentStatus: null, recordId: null })
+        } else if (hits.length > 1) {
+            duplicates.push({
+                token: entry.token,
+                deptName: entry.deptName,
+                targetStatus: entry.status,
+                candidates: hits.map(importMemberVO)
+            })
+        } else {
+            const exists = allMembers.some(m => m.name === entry.token)
+            unmatched.push(importUnmatched(entry.token, entry.deptName, exists ? 'OUT_OF_SCOPE' : 'NOT_FOUND'))
+        }
+    })
+
+    // 同一人在同一份名单里出现两种状态：无法判定，整体列为未匹配
+    const statusByUser = new Map()
+    matched.forEach(m => {
+        const set = statusByUser.get(m.userId) || new Set()
+        set.add(Number(m.targetStatus))
+        statusByUser.set(m.userId, set)
+    })
+    const conflictUsers = new Set([...statusByUser.entries()].filter(([, set]) => set.size > 1).map(([userId]) => userId))
+    if (conflictUsers.size) {
+        for (let i = matched.length - 1; i >= 0; i--) {
+            if (conflictUsers.has(matched[i].userId)) {
+                unmatched.push(importUnmatched(matched[i].token, matched[i].deptName, 'STATUS_CONFLICT'))
+                matched.splice(i, 1)
+            }
+        }
+    }
+    return { matched, duplicates, unmatched }
+}
+
+/** 当天记录查找：优先 userId，老数据按部门 + 姓名兜底 */
+function findImportRecord(date, matched) {
+    const list = checkinRecords || []
+    return list.find(r => r.date === date && r.userId != null && Number(r.userId) === Number(matched.userId))
+        || list.find(r => r.date === date && Number(r.deptId) === Number(matched.deptId) && r.member === matched.name)
+        || null
+}
+
+const nextCheckinRecordId = () => {
+    const list = checkinRecords || []
+    return list.length ? Math.max(...list.map(r => Number(r.id) || 0)) + 1 : 1
+}
+
+/** 预览：只解析 + 匹配，不写库 */
+export function checkinImportPreview(payload = {}) {
+    const date = payload.date || importToday()
+    const deptScope = payload.deptId == null ? 100 : Number(payload.deptId)
+    const parsed = parseImportText(payload.text, payload.defaultStatus)
+    const vo = {
+        date,
+        deptId: deptScope,
+        needsStatusChoice: parsed.needsStatusChoice,
+        summary: {
+            total: parsed.total,
+            unique: parsed.unique.length,
+            dedup: parsed.dedupedCount,
+            matched: 0,
+            duplicate: 0,
+            unmatched: 0
+        },
+        matched: [],
+        duplicates: [],
+        unmatched: [],
+        deduped: parsed.deduped
+    }
+    if (!parsed.unique.length) return vo
+    const result = matchImportEntries(parsed.unique, deptScope)
+    result.matched.forEach(m => {
+        const record = findImportRecord(date, m)
+        m.currentStatus = record && record.status != null ? Number(record.status) : null
+        m.recordId = record ? record.id : null
+    })
+    vo.matched = result.matched
+    vo.duplicates = result.duplicates
+    vo.unmatched = result.unmatched
+    vo.summary.matched = result.matched.length
+    vo.summary.duplicate = result.duplicates.length
+    vo.summary.unmatched = result.unmatched.length
+    return vo
+}
+
+/** 提交：写打卡记录并留存批次明细，供撤销回滚 */
+export function checkinImportCommit(payload = {}) {
+    const date = payload.date || importToday()
+    const deptScope = payload.deptId == null ? 100 : Number(payload.deptId)
+    const parsed = parseImportText(payload.text, payload.defaultStatus)
+    if (!parsed.unique.length) throw new Error('名单里没有识别到姓名或学号')
+    if (parsed.needsStatusChoice) throw new Error('请先选择这份名单是已打卡还是未打卡名单')
+
+    const result = matchImportEntries(parsed.unique, deptScope)
+    // 重名点选：按 token + 部门 + 目标状态定位候选，未选择的不写入
+    ;(payload.picks || []).forEach(pick => {
+        const index = result.duplicates.findIndex(d =>
+            d.token === pick.token &&
+            (d.deptName || '') === (pick.deptName || '') &&
+            Number(d.targetStatus) === Number(pick.targetStatus)
+        )
+        if (index < 0) return
+        const duplicate = result.duplicates[index]
+        const candidate = duplicate.candidates.find(c => Number(c.userId) === Number(pick.userId))
+        if (!candidate) return
+        result.matched.push({
+            ...candidate,
+            token: duplicate.token,
+            targetStatus: duplicate.targetStatus,
+            matchedBy: 'NAME',
+            currentStatus: null,
+            recordId: null
+        })
+        result.duplicates.splice(index, 1)
+    })
+
+    const now = importNowText()
+    const batch = {
+        id: checkinImportBatches.length ? Math.max(...checkinImportBatches.map(b => b.id)) + 1 : 1,
+        date,
+        deptId: deptScope,
+        createTime: now,
+        importBy: currentUser()?.id ?? null,
+        revoked: 0,
+        items: []
+    }
+    let created = 0
+    let updated = 0
+    let skipped = 0
+    result.matched.forEach(m => {
+        const item = {
+            token: m.token,
+            userId: m.userId,
+            deptId: m.deptId,
+            result: 'MATCHED',
+            reason: '',
+            beforeRecordId: null,
+            beforeStatus: null,
+            beforeMarkBy: null,
+            beforeMarkTime: null,
+            afterStatus: m.targetStatus
+        }
+        let record = findImportRecord(date, m)
+        if (!record) {
+            record = {
+                id: nextCheckinRecordId(),
+                date,
+                deptId: Number(m.deptId),
+                member: m.name,
+                userId: Number(m.userId),
+                status: Number(m.targetStatus),
+                markBy: batch.importBy,
+                markTime: now
+            }
+            checkinRecords.push(record)
+            created++
+        } else {
+            item.beforeRecordId = record.id
+            item.beforeStatus = record.status == null ? null : Number(record.status)
+            item.beforeMarkBy = record.markBy ?? null
+            item.beforeMarkTime = record.markTime ?? null
+            if (Number(record.status == null ? 0 : record.status) === Number(m.targetStatus)) {
+                item.result = 'SKIPPED'
+                skipped++
+            } else {
+                record.status = Number(m.targetStatus)
+                record.markBy = batch.importBy
+                record.markTime = now
+                updated++
+            }
+        }
+        batch.items.push(item)
+    })
+    result.unmatched.forEach(u => batch.items.push({ token: u.token, userId: null, deptId: null, result: 'UNMATCHED', reason: u.reason }))
+    result.duplicates.forEach(d => batch.items.push({ token: d.token, userId: null, deptId: null, result: 'DUPLICATE', reason: 'UNSELECTED' }))
+    parsed.deduped.forEach(d => batch.items.push({ token: d.token, userId: null, deptId: null, result: 'DEDUP', reason: 'DEDUP' }))
+    checkinImportBatches.push(batch)
+
+    return {
+        importId: batch.id,
+        date,
+        created,
+        updated,
+        skipped,
+        unmatched: result.unmatched.length,
+        unselected: result.duplicates.length,
+        dedup: parsed.dedupedCount
+    }
+}
+
+/** 撤销：仅最近一个未撤销批次；记录在导入后被改过的，整批拒绝 */
+export function checkinImportRevoke(importId) {
+    const id = Number(importId)
+    const batch = checkinImportBatches.find(b => Number(b.id) === id)
+    if (!batch) throw new Error('导入批次不存在')
+    if (Number(batch.revoked) === 1) throw new Error('该批次已撤销')
+    const latest = [...checkinImportBatches].reverse().find(b => b.date === batch.date && Number(b.revoked) !== 1)
+    if (latest && Number(latest.id) !== id) {
+        throw new Error(`只能撤销该日期最近一次导入（批次 #${latest.id}）`)
+    }
+
+    const written = batch.items.filter(i => i.result === 'MATCHED')
+    const conflicts = []
+    written.forEach(item => {
+        const record = findImportRecord(batch.date, { userId: item.userId, deptId: item.deptId, name: item.token })
+        if (!record) {
+            conflicts.push(item.token)
+            return
+        }
+        if (item.beforeRecordId != null && Number(item.beforeRecordId) !== Number(record.id)) {
+            conflicts.push(item.token)
+            return
+        }
+        if (Number(record.status == null ? 0 : record.status) !== Number(item.afterStatus)) {
+            conflicts.push(item.token)
+        }
+    })
+    if (conflicts.length) {
+        throw new Error(`以下成员在导入后已被修改，无法撤销：${conflicts.slice(0, 20).join('、')}`)
+    }
+
+    let deleted = 0
+    let restored = 0
+    written.forEach(item => {
+        const record = findImportRecord(batch.date, { userId: item.userId, deptId: item.deptId, name: item.token })
+        if (item.beforeRecordId == null) {
+            const index = checkinRecords.findIndex(r => Number(r.id) === Number(record.id))
+            if (index >= 0) checkinRecords.splice(index, 1)
+            deleted++
+        } else {
+            record.status = item.beforeStatus == null ? 0 : Number(item.beforeStatus)
+            record.markBy = item.beforeMarkBy
+            record.markTime = item.beforeMarkTime
+            restored++
+        }
+    })
+    batch.revoked = 1
+    return { importId, deleted, restored, skipped: batch.items.length - written.length }
+}
+
 export const dashboardData = {
     wx: {
         summary: { totalViews: 245000, totalLikes: 8500, totalOriginal: 12, totalCount: 142 },
