@@ -184,6 +184,87 @@
           </div>
         </div>
         <el-empty v-else description="暂无考评记录" :image-size="50" />
+
+        <!-- 打卡情况：近 12 个月汇总，点击月份展开逐日明细 -->
+        <div class="ck-head-row">
+          <div class="sec-title" style="font-size:14px; margin-top: 20px;">打卡情况</div>
+          <span class="muted ck-range">近 12 个月</span>
+        </div>
+
+        <!-- 多部门成员按部门分别统计：切换后月度汇总与逐日明细都带 deptId 重新请求 -->
+        <div v-if="checkin.depts.length > 1" class="ck-dept-switch">
+          <button
+            type="button"
+            class="ck-dept-btn"
+            :class="{ active: checkin.deptId === '' }"
+            @click="switchCheckinDept('')"
+          >全部部门</button>
+          <button
+            v-for="d in checkin.depts"
+            :key="d.deptId"
+            type="button"
+            class="ck-dept-btn"
+            :class="{ active: Number(checkin.deptId) === Number(d.deptId) }"
+            @click="switchCheckinDept(d.deptId)"
+          >{{ d.deptName }}</button>
+        </div>
+
+        <div class="ck-panel" v-loading="checkin.loading">
+          <div v-if="checkin.loading && checkin.months.length === 0" class="ck-state muted">打卡数据加载中…</div>
+          <div v-else-if="checkin.error" class="ck-state ck-error">{{ checkin.error }}</div>
+          <template v-else-if="checkin.months.length > 0">
+            <div class="ck-legend">
+              <span class="ck-legend-item"><i class="ck-dot done"></i>已打卡</span>
+              <span class="ck-legend-item"><i class="ck-dot absent"></i>未打卡</span>
+              <span class="ck-legend-item"><i class="ck-dot unmarked"></i>未标记</span>
+              <span class="muted ck-legend-tip">点击月份查看逐日明细</span>
+            </div>
+
+            <div class="ck-head">
+              <span></span>
+              <span>月份</span>
+              <span>已打卡/应打卡</span>
+              <span>出勤率</span>
+              <span>未标记</span>
+            </div>
+
+            <div v-for="row in checkin.months" :key="monthKey(row)" class="ck-month">
+              <div
+                class="ck-month-row"
+                :class="{ open: checkin.openKey === monthKey(row) }"
+                role="button"
+                tabindex="0"
+                @click="toggleMonth(row)"
+                @keydown.enter.prevent="toggleMonth(row)"
+              >
+                <span class="ck-caret" :class="{ open: checkin.openKey === monthKey(row) }">▸</span>
+                <span class="ck-month-name">
+                  {{ row.month }}
+                  <span v-if="checkin.depts.length > 1" class="ck-month-dept">{{ row.deptName }}</span>
+                </span>
+                <span class="ck-month-days">{{ row.checkedDays }} / {{ row.recordDays }} 天</span>
+                <span class="ck-rate" :class="rateClass(row.rate)">{{ row.rate }}%</span>
+                <span class="ck-unmarked" :class="{ zero: Number(row.unmarkedDays) === 0 }">
+                  {{ row.unmarkedDays }} 天
+                </span>
+              </div>
+
+              <div v-if="checkin.openKey === monthKey(row)" class="ck-day-panel">
+                <div v-if="checkin.dayLoading" class="ck-state muted">逐日明细加载中…</div>
+                <div v-else-if="checkin.dayError" class="ck-state ck-error">{{ checkin.dayError }}</div>
+                <div v-else-if="checkin.days.length === 0" class="ck-state muted">该月暂无打卡记录</div>
+                <div v-else class="ck-day-list">
+                  <div v-for="d in checkin.days" :key="d.id ?? d.date" class="ck-day-row">
+                    <span class="ck-day-date">{{ d.date }}</span>
+                    <span class="ck-day-status" :class="dayStatusClass(d.status)">{{ dayStatusLabel(d.status) }}</span>
+                    <span class="ck-day-mark muted" :title="markText(d)">{{ markText(d) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="ck-state muted">该成员近 12 个月暂无打卡记录</div>
+        </div>
       </div>
     </el-drawer>
   </div>
@@ -194,9 +275,11 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
+import { getFriendlyErrorMessage } from '@/api/request'
 import { userStore } from '@/store/user'
 import {
   ALL_DEPT_ID,
+  CHECKIN_STATUS,
   DEPARTMENTS_OPTIONS,
   MEMBER_STATUS,
   ROLE_OPTIONS,
@@ -227,6 +310,156 @@ const loading = useDelayedLoading(), saving = ref(false)
 const editVisible = ref(false), detailVisible = ref(false), detailLoading = ref(false)
 const current = ref(null)
 const detail = ref({ tasks: [], checkins: [] })
+
+/* ================= 成员详情 · 打卡情况 =================
+ * 月度汇总按「月份 + 部门」返回，多部门成员不合并：
+ * - deptId 为空 → 全部所属部门，用于提取部门切换选项并分组展示；
+ * - 选中具体部门 → 月度汇总与逐日明细都带同一个 deptId 重新请求。
+ */
+const CHECKIN_MONTH_SPAN = 12
+const checkin = reactive({
+  loading: false,
+  error: '',
+  months: [],
+  depts: [],
+  deptId: '',
+  openKey: '',
+  dayLoading: false,
+  dayError: '',
+  days: []
+})
+// 请求序号：快速切换成员/部门/月份时丢弃过期响应，避免旧数据覆盖新状态
+let monthsSeq = 0
+let daysSeq = 0
+
+const monthKey = (row) => `${row.month}|${row.deptId ?? ''}`
+
+function resetCheckin() {
+  monthsSeq++
+  daysSeq++
+  Object.assign(checkin, {
+    loading: false,
+    error: '',
+    months: [],
+    depts: [],
+    deptId: '',
+    openKey: '',
+    dayLoading: false,
+    dayError: '',
+    days: []
+  })
+}
+
+async function loadCheckinMonths() {
+  const userId = current.value?.id
+  if (!userId) return
+  const seq = ++monthsSeq
+  checkin.loading = true
+  checkin.error = ''
+  checkin.openKey = ''
+  checkin.dayLoading = false
+  checkin.dayError = ''
+  checkin.days = []
+  try {
+    const params = { months: CHECKIN_MONTH_SPAN }
+    if (checkin.deptId !== '') params.deptId = checkin.deptId
+    const rows = await adminApi.memberCheckinMonths(userId, params)
+    if (seq !== monthsSeq) return
+    checkin.months = Array.isArray(rows) ? rows : []
+    // 部门选项 = 列表中的该成员所属部门 + 月度数据里出现的部门，切换部门时保留已有选项
+    if (checkin.deptId === '') {
+      const map = new Map(checkin.depts.map(d => [Number(d.deptId), d]))
+      checkin.months.forEach(row => {
+        if (row.deptId === null || row.deptId === undefined) return
+        const id = Number(row.deptId)
+        if (!map.has(id)) {
+          map.set(id, { deptId: id, deptName: row.deptName || getDeptLabel(row.deptId) })
+        }
+      })
+      checkin.depts = [...map.values()]
+    }
+  } catch (e) {
+    if (seq !== monthsSeq) return
+    // 无权限/请求失败：后端中文提示由拦截器转换后带在 message 上，这里落到区块内展示
+    checkin.error = getFriendlyErrorMessage(e, '打卡数据加载失败，请稍后重试')
+    checkin.months = []
+  } finally {
+    if (seq === monthsSeq) checkin.loading = false
+  }
+}
+
+function switchCheckinDept(deptId) {
+  const next = deptId === '' ? '' : Number(deptId)
+  if (checkin.deptId === next) return
+  checkin.deptId = next
+  loadCheckinMonths()
+}
+
+// 成员列表会把多部门成员展开为多行，先按 id 收集该成员所属部门，保证无打卡记录的部门也能切换
+function seedCheckinDepts(row) {
+  const map = new Map()
+  const add = (deptId, deptName) => {
+    if (deptId === null || deptId === undefined || deptId === '') return
+    const id = Number(deptId)
+    if (!map.has(id)) map.set(id, { deptId: id, deptName: deptName || getDeptLabel(id) })
+  }
+  rawList.value.forEach(item => {
+    if (Number(item.id) === Number(row.id)) add(item.deptId, item.deptName)
+  })
+  add(row.deptId, row.deptName)
+  return [...map.values()]
+}
+
+async function toggleMonth(row) {
+  const key = monthKey(row)
+  if (checkin.openKey === key) {
+    checkin.openKey = ''
+    checkin.dayLoading = false
+    checkin.dayError = ''
+    checkin.days = []
+    return
+  }
+  checkin.openKey = key
+  checkin.dayLoading = true
+  checkin.dayError = ''
+  checkin.days = []
+  const seq = ++daysSeq
+  try {
+    const params = { month: row.month }
+    // 明细与当前月份行同部门：全部部门视角下也不能把两个部门的同月记录合并
+    if (row.deptId !== null && row.deptId !== undefined) params.deptId = row.deptId
+    const rows = await adminApi.memberCheckins(current.value.id, params)
+    if (seq !== daysSeq) return
+    checkin.days = Array.isArray(rows) ? rows : []
+  } catch (e) {
+    if (seq !== daysSeq) return
+    checkin.dayError = getFriendlyErrorMessage(e, '打卡明细加载失败，请稍后重试')
+  } finally {
+    if (seq === daysSeq) checkin.dayLoading = false
+  }
+}
+
+const isUnmarked = (status) => status === null || status === undefined || status === ''
+const dayStatusLabel = (status) => {
+  if (isUnmarked(status)) return '未标记'
+  return Number(status) === CHECKIN_STATUS.DONE ? '已打卡' : '未打卡'
+}
+const dayStatusClass = (status) => {
+  if (isUnmarked(status)) return 'unmarked'
+  return Number(status) === CHECKIN_STATUS.DONE ? 'done' : 'absent'
+}
+const markText = (day) => {
+  // 后端补充 markByName 后优先展示姓名，早期数据缺少该字段时回退到 markBy
+  const name = day?.markByName || day?.markBy
+  const by = name ? `标记人 ${name}` : ''
+  return [by, day?.markTime].filter(Boolean).join(' · ') || '—'
+}
+const rateClass = (rate) => {
+  const value = Number(rate) || 0
+  if (value >= 90) return 'good'
+  if (value >= 60) return 'mid'
+  return 'bad'
+}
 
 const form = reactive({
   id: null, deptId: 101, role: 0, studentNo: '', name: '', grade: '',
@@ -331,8 +564,228 @@ async function openDetail(row) {
   current.value = row
   detailVisible.value = true
   detailLoading.value = true
+  resetCheckin()
+  checkin.depts = seedCheckinDepts(row)
+  // 打卡数据独立加载：不阻塞任务/会议/考评详情，也便于单独展示无权限与失败提示
+  loadCheckinMonths()
   try { detail.value = await adminApi.memberDetail(row.id) } finally { detailLoading.value = false }
 }
 
 onMounted(load)
 </script>
+
+<style scoped>
+/* ===== 成员详情 · 打卡情况 ===== */
+.ck-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.ck-range {
+  font-size: 12px;
+}
+
+/* 多部门切换：切换后月度汇总与逐日明细都会带 deptId 重新请求 */
+.ck-dept-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+.ck-dept-btn {
+  padding: 3px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-sub);
+  background: #f5f6f8;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.ck-dept-btn:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+}
+.ck-dept-btn.active {
+  color: #fff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.ck-panel {
+  margin-top: 8px;
+  min-height: 56px;
+}
+/* 空数据 / 无权限 / 请求失败统一走这块提示，不留空白 */
+.ck-state {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.7;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+.ck-state.ck-error {
+  color: #b4453b;
+  background: #fdf5f4;
+  border-color: #f0c9c3;
+  border-style: solid;
+  text-align: left;
+}
+
+.ck-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.ck-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ck-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.ck-dot.done { background: #2f9e63; }
+.ck-dot.absent { background: #d9534f; }
+.ck-dot.unmarked { background: #a8adb5; }
+.ck-legend-tip {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.ck-head,
+.ck-month-row {
+  display: grid;
+  grid-template-columns: 14px minmax(76px, 1.1fr) minmax(96px, 1fr) 56px 58px;
+  align-items: center;
+  column-gap: 8px;
+}
+.ck-head {
+  padding: 0 8px 4px 10px;
+  font-size: 12px;
+  color: var(--text-sub);
+  border-bottom: 1px solid var(--border);
+}
+.ck-month {
+  border-bottom: 1px dashed var(--border);
+}
+.ck-month:last-child {
+  border-bottom: none;
+}
+.ck-month-row {
+  padding: 9px 8px 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.ck-month-row:hover,
+.ck-month-row.open {
+  background: #f7f8fa;
+}
+.ck-caret {
+  font-size: 11px;
+  color: #9aa0a6;
+  transition: transform .15s;
+}
+.ck-caret.open {
+  transform: rotate(90deg);
+}
+.ck-month-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ck-month-dept {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-sub);
+}
+.ck-month-days {
+  font-size: 13px;
+}
+.ck-rate {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ck-rate.good { color: #2f9e63; }
+.ck-rate.mid { color: #c98a13; }
+.ck-rate.bad { color: #d9534f; }
+.ck-unmarked {
+  font-size: 12px;
+  color: #c98a13;
+}
+.ck-unmarked.zero {
+  color: var(--text-sub);
+}
+
+/* 逐日明细 */
+.ck-day-panel {
+  padding: 4px 8px 10px 32px;
+  background: #fafbfc;
+  border-radius: 0 0 8px 8px;
+}
+.ck-day-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.ck-day-row {
+  display: grid;
+  grid-template-columns: 82px 58px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  padding: 6px 4px;
+  font-size: 12px;
+  border-bottom: 1px dashed #e8eaed;
+}
+.ck-day-row:last-child {
+  border-bottom: none;
+}
+.ck-day-date {
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.ck-day-status {
+  padding: 1px 0;
+  font-size: 11px;
+  text-align: center;
+  border-radius: 4px;
+}
+.ck-day-status.done {
+  color: #2f7d4f;
+  background: #eaf6ef;
+}
+.ck-day-status.absent {
+  color: #b4453b;
+  background: #fdeeec;
+}
+.ck-day-status.unmarked {
+  color: #6f757d;
+  background: #eef0f2;
+}
+.ck-day-mark {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .ck-head,
+  .ck-month-row {
+    grid-template-columns: 12px minmax(66px, 1fr) 84px 46px 50px;
+    column-gap: 6px;
+  }
+  .ck-day-panel {
+    padding-left: 18px;
+  }
+}
+</style>
