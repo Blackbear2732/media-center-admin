@@ -516,6 +516,18 @@ export const adminApi = {
         })())
         : request.get(`/admin/members/${id}/detail`),
 
+    // 成员月度打卡汇总（多部门分别统计，不合并）
+    // 入参：{ months = 12, deptId? }；deptId 为空表示成员全部所属部门
+    // 返回项：{ month, deptId, deptName, recordDays, checkedDays, absentDays, unmarkedDays, deptRecordDays, rate }
+    memberCheckinMonths: (userId, params = {}) =>
+        request.get(`/admin/members/${userId}/checkin-months`, { params }),
+
+    // 成员某月逐日打卡明细
+    // 入参：{ month: 'yyyy-MM', deptId? }；deptId 与月度汇总保持一致，避免多部门月份串数据
+    // 返回项：{ id, date, deptId, deptName, status(1已打卡/0未打卡/null未标记), markBy, markByName, markTime }
+    memberCheckins: (userId, params = {}) =>
+        request.get(`/admin/members/${userId}/checkins`, { params }),
+
     // D-04/D-10 任务参与管理
     tasks: (deptId) => USE_MOCK
         ? delay(isAllDept(deptId)
