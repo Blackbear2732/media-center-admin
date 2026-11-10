@@ -1088,6 +1088,91 @@ export function checkinImportRevoke(importId) {
     return { importId, deleted, restored, skipped: batch.items.length - written.length }
 }
 
+/* ========== 打卡批量标记（Mock） ==========
+ * 与后端 PUT /admin/checkins/batch 口径一致：
+ * userIds 与 allUnmarked 二选一、deptId 必须为具体部门、status 仅 0/1、单批上限 200；
+ * 已是目标状态的计入 skipped 且不刷新标记时间。
+ */
+const CHECKIN_BATCH_LIMIT = 200
+
+export function checkinBatchMark(payload = {}) {
+    const { date, deptId, status, userIds, allUnmarked } = payload
+    if (!date) throw new Error('请选择打卡日期')
+    const targetDept = Number(deptId)
+    if (!targetDept || targetDept === 100) throw new Error('「全部部门」视图不支持批量标记，请先选择具体部门')
+    const targetStatus = Number(status)
+    if (targetStatus !== 0 && targetStatus !== 1) throw new Error('批量标记状态仅支持已打卡或未打卡')
+
+    const hasUsers = Array.isArray(userIds) && userIds.length > 0
+    if (hasUsers === !!allUnmarked) throw new Error('成员列表与「全部未标记」只能二选一')
+    if (hasUsers && userIds.length > CHECKIN_BATCH_LIMIT) throw new Error(`单次最多批量标记 ${CHECKIN_BATCH_LIMIT} 人`)
+
+    const deptMembers = (members || []).filter(m =>
+        Number(m.status) === 1 && Number(m.role) === 0 && Number(m.deptId) === targetDept
+    )
+    if (!deptMembers.length) throw new Error('该部门没有可标记的部员')
+
+    const recordOf = (m) => (checkinRecords || []).find(r =>
+        r.date === date && r.userId != null && Number(r.userId) === Number(m.id))
+        || (checkinRecords || []).find(r =>
+            r.date === date && Number(r.deptId) === Number(m.deptId) && r.member === m.name)
+        || null
+
+    let targets
+    if (hasUsers) {
+        const ids = new Set(userIds.map(Number))
+        targets = deptMembers.filter(m => ids.has(Number(m.id)))
+        if (targets.length !== ids.size) throw new Error('存在不属于该部门的成员，请刷新后重试')
+    } else {
+        // 未标记：当天没有记录，或记录状态为 NULL
+        targets = deptMembers.filter(m => {
+            const record = recordOf(m)
+            return !record || record.status == null
+        })
+    }
+
+    const now = importNowText()
+    const operator = currentUser()?.id ?? null
+    let created = 0
+    let updated = 0
+    let skipped = 0
+    targets.forEach(m => {
+        const record = recordOf(m)
+        if (!record) {
+            checkinRecords.push({
+                id: nextCheckinRecordId(),
+                date,
+                deptId: Number(m.deptId),
+                member: m.name,
+                userId: Number(m.id),
+                status: targetStatus,
+                markBy: operator,
+                markTime: now
+            })
+            created++
+            return
+        }
+        if (record.status != null && Number(record.status) === targetStatus) {
+            skipped++
+            return
+        }
+        record.status = targetStatus
+        record.markBy = operator
+        record.markTime = now
+        updated++
+    })
+
+    return {
+        date,
+        deptId: targetDept,
+        status: targetStatus,
+        created,
+        updated,
+        skipped,
+        total: created + updated + skipped
+    }
+}
+
 export const dashboardData = {
     wx: {
         summary: { totalViews: 245000, totalLikes: 8500, totalOriginal: 12, totalCount: 142 },
