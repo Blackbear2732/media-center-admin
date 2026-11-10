@@ -6,14 +6,14 @@
         <p class="sub muted">按日期与部门维护成员打卡状态</p>
       </div>
     </div>
-    <div class="flex-between checkin-toolbar" style="margin-bottom:16px;">
-      <div class="checkin-filters" style="display:flex; gap:16px; align-items:center;">
-        <div>
-          <label class="muted" style="margin-right:8px;">日期</label>
+    <div class="checkin-toolbar">
+      <div class="checkin-filters">
+        <div class="checkin-filter">
+          <label class="muted">日期</label>
           <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" />
         </div>
-        <div>
-          <label class="muted" style="margin-right:8px;">姓名</label>
+        <div class="checkin-filter checkin-filter--keyword">
+          <label class="muted">姓名</label>
           <el-input
             v-model="keyword"
             clearable
@@ -26,18 +26,18 @@
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button type="primary" plain style="margin-left:8px;" @click="reloadFromFirstPage">查询</el-button>
+          <el-button type="primary" plain @click="reloadFromFirstPage">查询</el-button>
         </div>
-        <div>
-          <label class="muted" style="margin-right:8px;">部门</label>
+        <div class="checkin-filter checkin-filter--dept">
+          <label class="muted">部门</label>
           <el-select v-model="deptId" style="width:140px" :disabled="!canManageAllDepts" @change="reloadFromFirstPage">
             <el-option v-if="canManageAllDepts" label="全部部门" :value="ALL_DEPT_ID" />
             <el-option v-for="d in deptOptions" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
-          <span v-if="canManageAllDepts && !userStore.isDirector" class="muted" style="margin-left:6px;">综合部可处理全部部门</span>
+          <span v-if="canManageAllDepts && !userStore.isDirector" class="muted checkin-filter-hint">综合部可处理全部部门</span>
         </div>
-        <div>
-          <label class="muted" style="margin-right:8px;">状态</label>
+        <div class="checkin-filter">
+          <label class="muted">状态</label>
           <el-select v-model="statusFilter" style="width:120px">
             <el-option label="全部状态" :value="-1" />
             <el-option label="未标记" :value="-2" />
@@ -45,7 +45,7 @@
           </el-select>
         </div>
       </div>
-      <div class="checkin-actions" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div class="checkin-actions">
         <el-button v-if="canImport" size="small" type="primary" plain @click="openImportDialog">导入名单</el-button>
         <el-button v-if="canImport" size="small" type="success" plain :disabled="isAllDeptView" @click="markAllUnmarked">
           未标记人员一键标已打卡
@@ -915,12 +915,71 @@ onMounted(() => {
   display: block;
 }
 
-/* 窄屏：筛选条件纵向堆叠，避免工具栏横向溢出 */
+/* ===== 筛选工具栏：筛选区与操作区分行，避免相互挤压 ===== */
+.checkin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.checkin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 单个筛选项整体不换行，避免「查询」按钮掉到输入框下方 */
+.checkin-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.checkin-filter > label {
+  margin-right: 0;
+}
+
+.checkin-filter--keyword .el-button {
+  margin-left: 0;
+}
+
+.checkin-filter-hint {
+  font-size: 12px;
+}
+
+/* 操作按钮独立成组，空间不足时整组换行而不是拆成两行 */
+.checkin-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* 中等宽度：筛选两列，操作按钮单独占一行 */
+@media (max-width: 960px) {
+  .checkin-toolbar { align-items: stretch; }
+  .checkin-filters { flex: 1 1 100%; }
+  .checkin-filter { flex: 1 1 calc(50% - 10px); }
+  .checkin-actions { flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; margin-left: 0; }
+}
+
+/* 窄屏：筛选单列，操作按钮可换行 */
+@media (max-width: 480px) {
+  .checkin-filter { flex: 1 1 100%; }
+  .checkin-actions { gap: 8px; }
+}
+
+/* 窄屏：批量操作栏与导入弹窗内容换行，避免挤压 */
 @media (max-width: 768px) {
-  .checkin-toolbar { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
-  .checkin-filters { flex-wrap: wrap; width: 100%; gap: 10px 16px !important; }
-  .checkin-filters > div { flex: 1 1 100%; }
-  .checkin-actions { width: 100%; justify-content: flex-start; }
   .batch-bar { margin: 10px 12px 0; gap: 8px; }
   .batch-bar-text { flex: 1 1 100%; }
   .batch-bar-reason, .batch-hint-inline { flex: 1 1 100%; line-height: 1.6; }
