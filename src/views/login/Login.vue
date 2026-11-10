@@ -81,6 +81,17 @@
         <el-button type="primary" :loading="resetting" @click="handleReset">确认重置</el-button>
       </template>
     </el-dialog>
+
+    <!-- 多部门用户登录后选择本次身份 -->
+    <DeptIdentityDialog
+      v-model="deptDialogVisible"
+      :depts="deptOptions"
+      :active-dept-id="activeDeptId"
+      title="选择登录身份"
+      tip="该账号关联多个部门，请选择本次登录的身份。"
+      confirm-text="确认进入"
+      @success="onDeptConfirmed"
+    />
   </div>
 </template>
 
@@ -91,12 +102,27 @@ import { ElMessage } from 'element-plus'
 import { User, Lock, Message, Key } from '@element-plus/icons-vue'
 import { authApi, USE_MOCK } from '@/api'
 import { userStore } from '@/store/user'
+import DeptIdentityDialog from '@/components/DeptIdentityDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
 const form = reactive({ username: '', password: '' }) // 不在页面预填账号密码
 import { useDelayedLoading } from '@/utils/loading'
 const loading = useDelayedLoading()
+
+// 多部门身份选择
+const deptDialogVisible = ref(false)
+const deptOptions = ref([])
+const activeDeptId = ref(null)
+
+// 按角色/打卡管理权限决定进入管理区还是前台；保持原有跳转口径
+function enterSystem(role) {
+  let redirect = route.query.redirect
+  if (!redirect) {
+    redirect = Number(role) > 0 ? '/admin/overview' : (userStore.userInfo?.checkinManager ? '/admin/checkins' : '/')
+  }
+  router.replace(redirect)
+}
 
 async function handleLogin() {
   if (!form.username || !form.password) {
@@ -105,7 +131,7 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    // 调用后端登录接口，后端应返回 { token, role, user }
+    // 调用后端登录接口，后端应返回 { token, role, user, depts, activeDeptId, needDeptSelect }
     const res = await authApi.login({ username: form.username, password: form.password })
 
     // Mock 模式下账号/密码不匹配时接口静默返回 null（真实后端异常由拦截器弹提示），
@@ -117,20 +143,37 @@ async function handleLogin() {
 
     // 存入 Store；needEmailBind 由后端登录接口返回，缺失时 store 内按 false 处理
     userStore.login(res.token, res.role, res.user, undefined, res.needEmailBind)
-    ElMessage.success(`欢迎回来，${res.user?.name || form.username}`)
+    // 持久化可切换身份列表与当前生效部门（单部门用户仅一项，不触发任何新流程）
+    userStore.setDepts(res.depts, res.activeDeptId)
 
-    // 根据角色跳转：主任/部长去管理后台；被授权打卡管理的部员直接进打卡管理；普通部员去前台首页
-    let redirect = route.query.redirect
-    if (!redirect) {
-      redirect = Number(res.role) > 0 ? '/admin/overview' : (res.user?.checkinManager ? '/admin/checkins' : '/')
+    // 多部门用户：先选择本次登录身份，确认并调用 /auth/dept 成功后再进入系统
+    if (res.needDeptSelect === true) {
+      if (!Array.isArray(res.depts) || res.depts.length === 0) {
+        ElMessage.error('登录返回的部门身份信息不完整，请稍后重试')
+        return
+      }
+      deptOptions.value = res.depts
+      activeDeptId.value = res.activeDeptId
+      deptDialogVisible.value = true
+      return
     }
-    router.replace(redirect)
+
+    ElMessage.success(`欢迎回来，${res.user?.name || form.username}`)
+    enterSystem(res.role)
   } catch (e) {
     console.error(e)
     // request.js 拦截器已经弹出了错误信息，这里无需重复弹
   } finally {
     loading.value = false
   }
+}
+
+// 身份选择成功：同步后端返回的角色/用户/部门，再按原跳转规则进入系统
+function onDeptConfirmed(res) {
+  userStore.applyIdentity(res)
+  deptDialogVisible.value = false
+  ElMessage.success(`欢迎回来，${userStore.name}`)
+  enterSystem(res.role ?? userStore.role)
 }
 
 /* ================= 找回密码 ================= */

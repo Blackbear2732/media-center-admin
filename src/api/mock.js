@@ -29,7 +29,8 @@ export const accounts = [
         user: { id: 1002, studentNo: '2024010001', name: '赵景磊', deptId: 101, role: 1, title: '综合部部长', phone: '13800001001', gender: '男', college: '动物科学学院', className: '动科2403', grade: '2024级', email: 'zh@example.com', status: 1 }
     },
     {
-        role: 1, deptId: 102, token: 'mock-wx', label: '部长',
+        // 演示多部门身份：网宣部为主部门，同时兼任设计部
+        role: 1, deptId: 102, deptIds: [102, 106], token: 'mock-wx', label: '部长',
         user: { id: 1003, studentNo: '2024010008', name: '刘怡昕', deptId: 102, role: 1, title: '网宣部部长', phone: '13800001008', gender: '女', college: '食品科学与工程学院', className: '营养2401', grade: '2024级', email: 'wx@example.com', status: 1 }
     },
     {

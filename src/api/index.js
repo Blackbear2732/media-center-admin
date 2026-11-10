@@ -1,7 +1,7 @@
 import request from './request'
 // 通过别名引用：VITE_USE_MOCK=false 时构建会替换为空实现（见 vite.config.js）
 import * as mockNs from '@/api/mock'
-import { ALL_DEPT_ID, ROLE, isAllDept } from '@/utils/dict'
+import { ALL_DEPT_ID, ROLE, isAllDept, getDeptLabel } from '@/utils/dict'
 
 // ESM 命名空间导入只读，用解构拿到可变的对象引用
 const mock = { ...mockNs }
@@ -65,20 +65,56 @@ export const homeApi = {
 }
 
 /* ================= 登录认证 ================= */
+// Mock 多部门身份：与后端一致，返回 [{ deptId, deptLabel, primary }]
+const mockDeptOptions = (acc) => {
+    const ids = Array.isArray(acc.deptIds) && acc.deptIds.length ? acc.deptIds : [acc.deptId]
+    return ids.map(id => ({
+        deptId: Number(id),
+        deptLabel: getDeptLabel(id),
+        primary: Number(id) === Number(acc.deptId)
+    }))
+}
+
 export const authApi = {
     // 入参：{ username, password }；Mock 模式统一密码 123456
     login: (payload = {}) => USE_MOCK
         ? delay((() => {
             const acc = mock.findAccountByUsername(payload.username, payload.password)
             if (!acc) return null
+            const depts = mockDeptOptions(acc)
             return {
                 token: `${acc.token}-${Date.now()}`,
                 role: acc.role,
                 label: acc.label,
-                user: { ...acc.user }
+                user: { ...acc.user },
+                // 多部门身份：可切换部门列表、当前生效部门、是否需要登录后选择身份
+                depts,
+                activeDeptId: acc.user.deptId,
+                needDeptSelect: depts.length > 1
             }
         })())
         : request.post('/auth/login', payload),
+    // 切换身份：body { deptId }，后端改写会话并续期 token，返回结构同登录
+    switchDept: (deptId) => USE_MOCK
+        ? delay((() => {
+            const id = Number(deptId)
+            let depts = []
+            try {
+                depts = JSON.parse(localStorage.getItem('depts') || '[]')
+            } catch (e) {}
+            const target = depts.find(d => Number(d.deptId) === id)
+            if (!target) throw new Error('无权切换到该部门身份')
+            const role = mock.currentRole()
+            return {
+                deptId: id,
+                deptLabel: target.deptLabel,
+                role,
+                user: { ...mock.currentUser(), deptId: id, deptLabel: target.deptLabel },
+                depts,
+                activeDeptId: id
+            }
+        })())
+        : request.post('/auth/dept', { deptId }),
     logout: pick(() => request.post('/auth/logout'), () => delay({ success: true })),
     // 找回密码：发送邮箱验证码 / 验证码校验并重置密码（Mock 模式直接成功，便于演示流程）
     sendForgotCode: (email) => USE_MOCK
