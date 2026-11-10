@@ -65,6 +65,9 @@
                   <el-dropdown-item command="/my/meetings">我的会议</el-dropdown-item>
                   <el-dropdown-item command="/my/evaluations">我的考评</el-dropdown-item>
                   <el-dropdown-item v-if="userStore.canManage" command="/admin" divided>部门管理区</el-dropdown-item>
+                  <el-dropdown-item v-if="userStore.depts.length > 1" command="switchDept" divided>
+                    切换身份（{{ userStore.deptLabel }}）
+                  </el-dropdown-item>
                   <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -94,6 +97,9 @@
           <router-link to="/profile" class="mobile-nav-item" @click="mobileMenuVisible=false">个人信息</router-link>
           <router-link to="/my/tasks" class="mobile-nav-item" @click="mobileMenuVisible=false">我的任务</router-link>
           <router-link to="/my/messages" class="mobile-nav-item" @click="mobileMenuVisible=false">我的消息 ({{ msgCount }})</router-link>
+          <div v-if="userStore.depts.length > 1" class="mobile-nav-item" @click="openDeptSwitch">
+            切换身份（当前：{{ userStore.deptLabel }}）
+          </div>
           <div class="mobile-nav-item" style="color: #f56c6c;" @click="onCommand('logout')">退出登录</div>
         </template>
         <router-link v-else to="/login" class="mobile-nav-item" @click="mobileMenuVisible=false">登录系统</router-link>
@@ -174,6 +180,18 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 多部门用户切换身份：不退出登录，成功后整页刷新按新部门加载数据 -->
+    <DeptIdentityDialog
+        v-model="deptDialogVisible"
+        :depts="userStore.depts"
+        :active-dept-id="userStore.activeDeptId"
+        title="切换身份"
+        tip="切换后将按新部门重新加载列表、菜单与统计数据，不会退出登录。"
+        confirm-text="确认切换"
+        closable
+        @success="onIdentitySwitched"
+    />
   </div>
 </template>
 
@@ -188,10 +206,12 @@ import { userStore } from '@/store/user'
 import { getRoleLabel } from '@/utils/dict'
 import { routeLoading } from '@/router'
 import { Menu, Bell, ArrowDown, ChatDotRound } from '@element-plus/icons-vue'
+import DeptIdentityDialog from '@/components/DeptIdentityDialog.vue'
 const route = useRoute()
 const router = useRouter()
 const msgCount = ref(0)
 const mobileMenuVisible = ref(false) // 手机菜单可见性
+const deptDialogVisible = ref(false) // 多部门身份切换弹窗
 const roleLabel = computed(() => getRoleLabel(userStore.role))
 const isGanttPage = computed(() => route.path === '/task/gantt')
 
@@ -366,7 +386,24 @@ async function onCommand(cmd) {
     } catch (e) {}
     return
   }
+  if (cmd === 'switchDept') {
+    openDeptSwitch()
+    return
+  }
   if (cmd) router.push(cmd)
+}
+
+function openDeptSwitch() {
+  mobileMenuVisible.value = false
+  deptDialogVisible.value = true
+}
+
+// 切换身份成功：更新本地身份后刷新页面，列表/菜单/统计数据全部按新部门重新加载
+function onIdentitySwitched(res) {
+  userStore.applyIdentity(res)
+  deptDialogVisible.value = false
+  ElMessage.success(`已切换为${userStore.deptLabel}身份，正在刷新数据…`)
+  setTimeout(() => window.location.reload(), 300)
 }
 </script>
 

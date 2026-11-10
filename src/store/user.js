@@ -7,7 +7,10 @@ const KEYS = {
     ROLE: 'role',
     USER: 'user',
     ADMIN_DEPT: 'adminDept',
-    NEED_EMAIL_BIND: 'needEmailBind'
+    NEED_EMAIL_BIND: 'needEmailBind',
+    // 多部门身份：可切换部门列表与当前生效部门
+    DEPTS: 'depts',
+    ACTIVE_DEPT: 'activeDeptId'
 }
 
 // 兼容早期以字符串保存的角色（member / minister / director）
@@ -36,6 +39,16 @@ const readUser = () => {
     }
 }
 
+// 读取可切换部门列表：[{ deptId, deptLabel, primary }]
+const readDepts = () => {
+    try {
+        const list = JSON.parse(localStorage.getItem(KEYS.DEPTS) || '[]')
+        return Array.isArray(list) ? list : []
+    } catch (e) {
+        return []
+    }
+}
+
 // 初始化状态（从本地读取）
 const initState = () => ({
     token: localStorage.getItem(KEYS.TOKEN) || '',
@@ -43,7 +56,9 @@ const initState = () => ({
     userInfo: readUser(),
     adminDept: normalizeDeptId(localStorage.getItem(KEYS.ADMIN_DEPT)),
     // 后端登录接口返回：邮箱未绑定或仍是假邮箱时为 true
-    needEmailBind: localStorage.getItem(KEYS.NEED_EMAIL_BIND) === '1'
+    needEmailBind: localStorage.getItem(KEYS.NEED_EMAIL_BIND) === '1',
+    depts: readDepts(),
+    activeDeptId: normalizeDeptId(localStorage.getItem(KEYS.ACTIVE_DEPT))
 })
 
 // 创建响应式全局对象
@@ -71,13 +86,16 @@ export const userStore = reactive({
     get isCheckinManager() {
         return !!this.userInfo.checkinManager
     },
-    // 当前用户所属部门 ID
+    // 当前身份部门 ID（多部门以 activeDeptId 为唯一来源，未选择时回退登录用户部门）
     get deptId() {
-        return normalizeDeptId(this.userInfo.deptId)
+        return normalizeDeptId(this.activeDeptId) ?? normalizeDeptId(this.userInfo.deptId)
     },
-    // 当前用户所属部门名称
+    // 当前身份部门名称：优先取可切换部门列表中的名称，避免 userInfo 里的登录旧值
     get deptLabel() {
-        return this.deptId ? getDeptLabel(this.deptId) : '未分配'
+        const id = this.deptId
+        if (!id) return '未分配'
+        const active = this.depts.find(dept => Number(dept.deptId) === Number(id))
+        return active?.deptLabel || this.userInfo.deptLabel || getDeptLabel(id)
     },
     // 管理区实际生效的部门 ID（主任默认全中心 100）
     get viewDeptId() {
@@ -122,11 +140,15 @@ export const userStore = reactive({
         this.userInfo = {}
         this.adminDept = null
         this.needEmailBind = false
+        this.depts = []
+        this.activeDeptId = null
         localStorage.removeItem(KEYS.TOKEN)
         localStorage.removeItem(KEYS.ROLE)
         localStorage.removeItem(KEYS.USER)
         localStorage.removeItem(KEYS.ADMIN_DEPT)
         localStorage.removeItem(KEYS.NEED_EMAIL_BIND)
+        localStorage.removeItem(KEYS.DEPTS)
+        localStorage.removeItem(KEYS.ACTIVE_DEPT)
     },
 
     // 补填成功后同步内存与本地缓存，避免同一次登录内反复弹窗
@@ -139,5 +161,28 @@ export const userStore = reactive({
     setAdminDept(deptId) {
         this.adminDept = normalizeDeptId(deptId)
         localStorage.setItem(KEYS.ADMIN_DEPT, this.adminDept === null ? '' : String(this.adminDept))
+    },
+
+    // 4. 登录 / 切换身份后同步可切换部门列表与当前生效身份
+    //    单部门用户 depts 只有一项，行为与旧版本一致
+    setDepts(depts, activeDeptId) {
+        this.depts = Array.isArray(depts) ? depts : []
+        this.activeDeptId = normalizeDeptId(activeDeptId)
+        localStorage.setItem(KEYS.DEPTS, JSON.stringify(this.depts))
+        localStorage.setItem(KEYS.ACTIVE_DEPT, this.activeDeptId === null ? '' : String(this.activeDeptId))
+    },
+
+    // 5. 应用后端返回的身份信息（登录选身份 / 已登录切换身份共用）
+    //    接口返回：{ role, user, depts, activeDeptId }
+    applyIdentity(res) {
+        if (!res || typeof res !== 'object') return
+        const roleNum = normalizeRole(res.role)
+        if (roleNum !== null) this.role = roleNum
+        if (res.user) this.userInfo = res.user
+        this.setDepts(res.depts, res.activeDeptId ?? res.user?.deptId)
+        // 主任保留自己的全中心/部门视角选择；部长/部员的管理视角跟随新身份部门
+        if (!this.isDirector) this.setAdminDept(this.deptId)
+        localStorage.setItem(KEYS.ROLE, String(this.role))
+        localStorage.setItem(KEYS.USER, JSON.stringify(this.userInfo))
     }
 })
