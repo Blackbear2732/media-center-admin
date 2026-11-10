@@ -954,7 +954,7 @@ export const adminApi = {
     // keyword —— 姓名或学号模糊匹配，空值不过滤
     checkins: (params) => USE_MOCK
         ? delay((() => {
-            const { date, deptId, keyword, pageNum = 1, pageSize = 10 } = params || {}
+            const { date, deptId, status, keyword, pageNum = 1, pageSize = 10 } = params || {}
             let targetMembers = (mock.members || []).filter(m => Number(m.status) === 1)
             // 打卡只针对部员（role 0）
             targetMembers = targetMembers.filter(m => Number(m.role) === 0)
@@ -984,9 +984,17 @@ export const adminApi = {
                     status: record ? Number(record.status) : null
                 }
             })
+            // 状态筛选：-2 表示未标记（无记录或 status 为 NULL），其余按状态精确匹配
+            const statusNum = status === null || status === undefined || status === '' ? null : Number(status)
+            let filtered = rows
+            if (statusNum === -2) {
+                filtered = rows.filter(r => r.status === null)
+            } else if (statusNum !== null && !Number.isNaN(statusNum)) {
+                filtered = rows.filter(r => Number(r.status) === statusNum)
+            }
             // 与真实接口一致：返回 { rows, total }，按 pageNum/pageSize 分页
             const start = (Number(pageNum) - 1) * Number(pageSize)
-            return { rows: rows.slice(start, start + Number(pageSize)), total: rows.length }
+            return { rows: filtered.slice(start, start + Number(pageSize)), total: filtered.length }
         })())
         : request.get('/admin/checkins', { params }),
 
@@ -1033,6 +1041,13 @@ export const adminApi = {
             return { success: true }
         })())
         : request.put(`/admin/checkins/member/${userId}`, data, { params: { date } }),
+
+    // 批量标记：userIds 与 allUnmarked=true 二选一；deptId 必须为具体部门；status 仅 0/1
+    // 入参：{ date, deptId, status, userIds, allUnmarked }
+    // 返回：{ date, deptId, status, created, updated, skipped, total }
+    checkinBatchMark: (payload = {}) => USE_MOCK
+        ? mockRejectable(() => mock.checkinBatchMark(payload))()
+        : request.put('/admin/checkins/batch', payload),
 
     // D-15 综合部：打卡申诉审批
     checkinAppeals: () => USE_MOCK ? delay(mock.checkinAppeals) : request.get('/admin/checkins/appeals'),

@@ -6,14 +6,14 @@
         <p class="sub muted">按日期与部门维护成员打卡状态</p>
       </div>
     </div>
-    <div class="flex-between checkin-toolbar" style="margin-bottom:16px;">
-      <div class="checkin-filters" style="display:flex; gap:16px; align-items:center;">
-        <div>
-          <label class="muted" style="margin-right:8px;">日期</label>
+    <div class="checkin-toolbar">
+      <div class="checkin-filters">
+        <div class="checkin-filter">
+          <label class="muted">日期</label>
           <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" style="width:140px" />
         </div>
-        <div>
-          <label class="muted" style="margin-right:8px;">姓名</label>
+        <div class="checkin-filter checkin-filter--keyword">
+          <label class="muted">姓名</label>
           <el-input
             v-model="keyword"
             clearable
@@ -26,35 +26,64 @@
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button type="primary" plain style="margin-left:8px;" @click="reloadFromFirstPage">查询</el-button>
+          <el-button type="primary" plain @click="reloadFromFirstPage">查询</el-button>
         </div>
-        <div>
-          <label class="muted" style="margin-right:8px;">部门</label>
+        <div class="checkin-filter checkin-filter--dept">
+          <label class="muted">部门</label>
           <el-select v-model="deptId" style="width:140px" :disabled="!canManageAllDepts" @change="reloadFromFirstPage">
             <el-option v-if="canManageAllDepts" label="全部部门" :value="ALL_DEPT_ID" />
             <el-option v-for="d in deptOptions" :key="d.value" :label="d.label" :value="d.value" />
           </el-select>
-          <span v-if="canManageAllDepts && !userStore.isDirector" class="muted" style="margin-left:6px;">综合部可处理全部部门</span>
+          <span v-if="canManageAllDepts && !userStore.isDirector" class="muted checkin-filter-hint">综合部可处理全部部门</span>
         </div>
-        <div>
-          <label class="muted" style="margin-right:8px;">状态</label>
+        <div class="checkin-filter">
+          <label class="muted">状态</label>
           <el-select v-model="statusFilter" style="width:120px">
             <el-option label="全部状态" :value="-1" />
+            <el-option label="未标记" :value="-2" />
             <el-option v-for="s in CHECKIN_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </div>
       </div>
-      <div style="display:flex; gap:10px; align-items:center;">
+      <div class="checkin-actions">
         <el-button v-if="canImport" size="small" type="primary" plain @click="openImportDialog">导入名单</el-button>
+        <el-button v-if="canImport" size="small" type="success" plain :disabled="isAllDeptView" @click="markAllUnmarked">
+          未标记人员一键标已打卡
+        </el-button>
         <el-button v-if="canGrant" size="small" @click="openManagerDialog">权限管理</el-button>
+        <span v-if="canImport && isAllDeptView" class="muted batch-hint-inline">
+          「全部部门」视图不支持批量标记，请选择具体部门
+        </span>
       </div>
     </div>
 
     <div class="surface-card" style="padding: 0;">
-      <div style="padding: 12px 16px 0;">
+      <div class="checkin-table-head" style="padding: 12px 16px 0;">
         <span class="muted">共 {{ total }} 人</span>
+        <span v-if="selectedRows.length" class="muted">已选 {{ selectedRows.length }} 人</span>
       </div>
-      <el-table :data="list" v-loading="loading" stripe style="width: 100%">
+      <div v-if="selectedRows.length" class="batch-bar">
+        <span class="batch-bar-text">已选 {{ selectedRows.length }} 人</span>
+        <el-button size="small" type="primary" :disabled="isAllDeptView" @click="batchMark(CHECKIN_STATUS.DONE)">
+          批量标为已打卡
+        </el-button>
+        <el-button size="small" type="danger" plain :disabled="isAllDeptView" @click="batchMark(CHECKIN_STATUS.NOT_DONE)">
+          批量标为未打卡
+        </el-button>
+        <el-button size="small" link @click="clearSelection">取消选择</el-button>
+        <span v-if="isAllDeptView" class="batch-bar-reason">
+          「全部部门」视图不支持批量标记，请先选择具体部门
+        </span>
+      </div>
+      <el-table
+        ref="tableRef"
+        :data="list"
+        v-loading="loading"
+        stripe
+        style="width: 100%"
+        @selection-change="onSelectionChange"
+      >
+        <el-table-column type="selection" width="46" />
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column prop="deptId" label="部门" width="120">
           <template #default="{ row }">
@@ -69,7 +98,7 @@
                     :type="getCheckinStatusType(row.status)" size="small" effect="dark" round>
               {{ getCheckinStatusLabel(row.status) }}
             </el-tag>
-            <span v-else class="muted"></span>
+            <el-tag v-else size="small" type="info" effect="plain" round>未标记</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" min-width="190">
@@ -254,6 +283,21 @@
             </div>
           </template>
         </el-result>
+
+        <!-- 导入后跟进：仅手动触发，不自动批量写库 -->
+        <div v-if="importHasUnmarked" class="import-followup">
+          <div class="import-block-title">名单外未标记人员</div>
+          <div class="muted import-followup-desc">
+            本次导入为「未打卡」的成员不受影响；可把该部门其余未标记人员（无记录或状态为空）补标为已打卡。
+            需要手动确认后才会写库，不会自动执行。
+          </div>
+          <el-button type="success" plain :disabled="isAllDeptView" @click="markUnmarkedAfterImport">
+            名单外未标记人员一键标已打卡
+          </el-button>
+          <div v-if="isAllDeptView" class="muted" style="margin-top:6px;">
+            「全部部门」视图不支持批量标记，请先选择具体部门。
+          </div>
+        </div>
       </div>
 
       <template #footer>
@@ -315,8 +359,19 @@ const canBackfill = computed(() =>
 )
 // 打卡管理默认展示综合部（101），管理全中心者可切换到全部部门
 const deptId = ref(canManageAllDepts.value ? 101 : (userStore.deptId ?? ALL_DEPT_ID))
-const statusFilter = ref(-1) // -1 表示全部
+const statusFilter = ref(-1) // -1 表示全部，-2 表示未标记
 const list = ref([])
+// 「全部部门」视图后端拒绝批量标记，需在界面上禁用并说明原因
+const isAllDeptView = computed(() => Number(deptId.value) === Number(ALL_DEPT_ID))
+const tableRef = ref(null)
+const selectedRows = ref([])
+function onSelectionChange(rows) {
+  selectedRows.value = rows || []
+}
+function clearSelection() {
+  tableRef.value?.clearSelection()
+  selectedRows.value = []
+}
 import { useDelayedLoading } from '@/utils/loading'
 const loading = useDelayedLoading()
 
@@ -361,6 +416,8 @@ async function loadData() {
     })
     list.value = res?.rows || []
     total.value = res?.total || 0
+    // 数据刷新后原选中行已失效，清空避免对旧数据批量操作
+    clearSelection()
   } catch (e) {
     console.error(e)
   } finally {
@@ -380,6 +437,114 @@ async function mark(row, status) {
     ElMessage.success(status == null ? '已清除打卡状态' : `已标记为${getCheckinStatusLabel(status)}`)
   } catch (e) {
     console.error(e)
+  }
+}
+
+// ===== 批量标记（PUT /admin/checkins/batch） =====
+function showBatchResult(res, title) {
+  const detail = [
+    `新增 ${res?.created || 0} 条`,
+    `更新 ${res?.updated || 0} 条`,
+    `跳过 ${res?.skipped || 0} 条（已是目标状态）`,
+    `合计 ${res?.total || 0} 人`
+  ].join('；')
+  ElMessageBox.alert(detail, `${title}完成`, {
+    type: 'success',
+    confirmButtonText: '知道了'
+  }).catch(() => {})
+}
+
+// 勾选成员批量标记：仅传 userIds，目标状态由按钮决定
+async function batchMark(status) {
+  if (!canImport.value) return
+  if (isAllDeptView.value) {
+    ElMessage.warning('「全部部门」视图不支持批量标记，请先选择具体部门')
+    return
+  }
+  const userIds = selectedRows.value
+    .map(row => Number(row.userId))
+    .filter(id => !Number.isNaN(id))
+  if (!userIds.length) {
+    ElMessage.warning('请先勾选需要标记的成员')
+    return
+  }
+  if (userIds.length > 200) {
+    ElMessage.warning('单次最多批量标记 200 人')
+    return
+  }
+  const statusLabel = getCheckinStatusLabel(status)
+  try {
+    await ElMessageBox.confirm(
+      `将把选中的 ${userIds.length} 名成员在 ${date.value}（${getDeptLabel(deptId.value)}）标为「${statusLabel}」。已是该状态的成员会自动跳过，是否继续？`,
+      '批量标记',
+      { type: 'warning', confirmButtonText: '确认标记', cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return
+  }
+  try {
+    const res = await adminApi.checkinBatchMark({
+      date: date.value,
+      deptId: Number(deptId.value),
+      status: Number(status),
+      userIds
+    })
+    showBatchResult(res, '批量标记')
+    loadData()
+  } catch (e) {
+    ElMessage.error(e?.message || '批量标记失败')
+  }
+}
+
+// 未标记人员一键标已打卡：先用 status=-2 查人数，确认后再写库
+async function markAllUnmarked() {
+  await runMarkAllUnmarked({ markDate: date.value, markDeptId: deptId.value })
+}
+
+async function runMarkAllUnmarked({ markDate, markDeptId }) {
+  if (!canImport.value) return
+  if (Number(markDeptId) === Number(ALL_DEPT_ID)) {
+    ElMessage.warning('「全部部门」视图不支持批量标记，请先选择具体部门')
+    return
+  }
+  let count = 0
+  try {
+    const res = await adminApi.checkins({
+      date: markDate,
+      deptId: markDeptId,
+      status: -2,
+      pageNum: 1,
+      pageSize: 1
+    })
+    count = Number(res?.total || 0)
+  } catch (e) {
+    ElMessage.error('查询未标记人数失败，请稍后重试')
+    return
+  }
+  if (!count) {
+    ElMessage.info(`${markDate} · ${getDeptLabel(markDeptId)} 没有未标记人员`)
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `${markDate} · ${getDeptLabel(markDeptId)} 当前有 ${count} 名未标记人员（无记录或状态为空）。一键标为已打卡不会影响已标记为「未打卡」的成员，是否继续？`,
+      '未标记人员一键标已打卡',
+      { type: 'warning', confirmButtonText: `标记 ${count} 人`, cancelButtonText: '取消' }
+    )
+  } catch (e) {
+    return
+  }
+  try {
+    const res = await adminApi.checkinBatchMark({
+      date: markDate,
+      deptId: Number(markDeptId),
+      status: 1,
+      allUnmarked: true
+    })
+    showBatchResult(res, '一键标已打卡')
+    if (date.value === markDate && Number(deptId.value) === Number(markDeptId)) loadData()
+  } catch (e) {
+    ElMessage.error(e?.message || '一键标记失败')
   }
 }
 
@@ -447,6 +612,12 @@ const previewLoading = ref(false)
 const commitLoading = ref(false)
 const revokeLoading = ref(false)
 const importResult = ref(null)
+// 本次导入是否包含「未打卡」：只有此时才提供名单外补标入口
+const importHasUnmarked = computed(() => {
+  if (importStep.value !== 'result' || !importResult.value) return false
+  if (Number(importStatusChoice.value) === 0) return true
+  return (preview.value?.matched || []).some(m => Number(m.targetStatus) === 0)
+})
 
 const localDateText = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -584,6 +755,11 @@ function closeImport() {
   loadData()
 }
 
+// 导入完成后手动触发：把该部门名单外的未标记人员补标为已打卡
+async function markUnmarkedAfterImport() {
+  await runMarkAllUnmarked({ markDate: importDate.value, markDeptId: deptId.value })
+}
+
 onMounted(() => {
   // 非综合部部长没有本页权限，统一跳到只读的「打卡情况」页
   if (!canManageAllDepts.value) {
@@ -696,11 +872,117 @@ onMounted(() => {
   font-size: 14px;
 }
 
-/* 窄屏：筛选条件纵向堆叠，避免工具栏横向溢出 */
+/* ===== 批量标记 ===== */
+.checkin-table-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e4e7ed);
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.batch-bar-text {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.batch-bar-reason,
+.batch-hint-inline {
+  font-size: 12px;
+}
+
+.import-followup {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border, #e4e7ed);
+}
+
+.import-followup-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* ===== 筛选工具栏：筛选区与操作区分行，避免相互挤压 ===== */
+.checkin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.checkin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 单个筛选项整体不换行，避免「查询」按钮掉到输入框下方 */
+.checkin-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.checkin-filter > label {
+  margin-right: 0;
+}
+
+.checkin-filter--keyword .el-button {
+  margin-left: 0;
+}
+
+.checkin-filter-hint {
+  font-size: 12px;
+}
+
+/* 操作按钮独立成组，空间不足时整组换行而不是拆成两行 */
+.checkin-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* 中等宽度：筛选两列，操作按钮单独占一行 */
+@media (max-width: 960px) {
+  .checkin-toolbar { align-items: stretch; }
+  .checkin-filters { flex: 1 1 100%; }
+  .checkin-filter { flex: 1 1 calc(50% - 10px); }
+  .checkin-actions { flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; margin-left: 0; }
+}
+
+/* 窄屏：筛选单列，操作按钮可换行 */
+@media (max-width: 480px) {
+  .checkin-filter { flex: 1 1 100%; }
+  .checkin-actions { gap: 8px; }
+}
+
+/* 窄屏：批量操作栏与导入弹窗内容换行，避免挤压 */
 @media (max-width: 768px) {
-  .checkin-toolbar { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
-  .checkin-filters { flex-wrap: wrap; width: 100%; gap: 10px 16px !important; }
-  .checkin-filters > div { flex: 1 1 100%; }
+  .batch-bar { margin: 10px 12px 0; gap: 8px; }
+  .batch-bar-text { flex: 1 1 100%; }
+  .batch-bar-reason, .batch-hint-inline { flex: 1 1 100%; line-height: 1.6; }
   .manager-row { flex-wrap: wrap; gap: 6px; }
   .import-field { flex-wrap: wrap; }
   .matched-row, .unmatched-row { gap: 6px; }
