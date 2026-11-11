@@ -23,7 +23,7 @@
               <el-checkbox-group v-model="selectedParticipants[row.id]" style="margin-bottom: 16px; min-height: 32px;">
                 <el-checkbox
                     v-for="p in deptParticipants(row)"
-                    :key="p.name"
+                    :key="p.userId || p.name"
                     :label="p.name"
                     border
                     size="small"
@@ -63,7 +63,7 @@
                   >
                     <el-option
                         v-for="m in getAvailableMembers(row)"
-                        :key="m.id"
+                        :key="m.userId"
                         :label="m.name"
                         :value="m.name"
                     />
@@ -241,16 +241,19 @@ const pendingSignups = (row) => (row.signups || []).filter(s =>
 )
 
 function getAvailableMembers(row) {
-  const currentNames = (row.participants || []).map(p => p.name)
-  return deptMembers.value.filter(m => !currentNames.includes(m.name))
+  const joined = new Set((row.participants || []).map(p =>
+      p.userId != null ? 'u' + p.userId : 'n' + p.name))
+  return deptMembers.value.filter(m =>
+      !joined.has(m.userId != null ? 'u' + m.userId : 'n' + m.name))
 }
 
 async function load() {
   loading.value = true
   try {
     list.value = await adminApi.tasks(deptId)
-    const res = await adminApi.members({ deptId: isAllDept(deptId) ? ALL_DEPT_ID : deptId, pageNum: 1, pageSize: 9999 })
-    deptMembers.value = res?.rows || []
+    // 选人候选按用户去重，避免多部门成员在下拉框里出现两次
+    const res = await adminApi.memberOptions({ deptId: isAllDept(deptId) ? ALL_DEPT_ID : deptId }, { retry: false })
+    deptMembers.value = Array.isArray(res) ? res : (res?.rows || [])
 
     list.value.forEach(t => {
       selectedNames[t.id] = []
@@ -338,8 +341,10 @@ async function handleDelete(row) {
 async function confirm(row, s) {
   await adminApi.confirmSignup(row.id, s.name)
   row.signups = row.signups.filter(x => x.name !== s.name)
-  if (!row.participants.some(p => p.name === s.name && Number(p.deptId) === Number(s.deptId))) {
-    row.participants.push({ name: s.name, deptId: s.deptId })
+  const exists = row.participants.some(p =>
+      s.userId != null ? String(p.userId) === String(s.userId) : p.name === s.name)
+  if (!exists) {
+    row.participants.push({ userId: s.userId, name: s.name, deptId: s.deptId })
   }
   ElMessage.success('已确认报名')
 }

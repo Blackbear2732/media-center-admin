@@ -465,6 +465,24 @@ export const adminApi = {
             : (mock.members || []).filter(m => Number(m.deptId) === Number(params.deptId)))
         : request.get('/admin/members', { params, ...config }),
 
+    // 选人候选：按用户去重，一人一行
+    // 入参：{ deptId?, nameLike? }，返回 [{ userId, name, deptId, deptIds }]
+    // deptId 为主部门，deptIds 为逗号分隔的全部所属部门，供下拉框展示「网宣部/设计部」
+    memberOptions: (params = {}, config = {}) => USE_MOCK
+        ? delay((() => {
+            const list = isAllDept(params.deptId)
+                ? (mock.members || [])
+                : (mock.members || []).filter(m => Number(m.deptId) === Number(params.deptId))
+            const seen = new Map()
+            list.forEach(m => {
+                if (!seen.has(m.name)) {
+                    seen.set(m.name, { userId: m.id, name: m.name, deptId: m.deptId, deptIds: String(m.deptId) })
+                }
+            })
+            return Array.from(seen.values())
+        })())
+        : request.get('/admin/members/options', { params, ...config }),
+
     // 保存成员（加入内存）
     saveMember: (data) => USE_MOCK
         ? delay((() => {

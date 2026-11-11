@@ -152,34 +152,36 @@
         <el-card shadow="never" class="surface-card">
           <template #header>
             <div class="flex-between">
-              <b>参与人（{{ (task.participants || []).length }}）</b>
+              <b>参与人（{{ participantCount }}）</b>
               <span v-if="userStore.canManage" class="tag-soft" style="font-size: 11px;">可管理</span>
             </div>
           </template>
 
-          <div v-for="p in (task.participants || [])" :key="p.name" class="flex-between" style="padding:8px 0;border-bottom:1px solid #f0f2f5">
-            <span>
-              <el-avatar :size="26" style="margin-right:8px">{{ p.name.slice(0,1) }}</el-avatar>
-              {{ p.name }}
-              <el-tag v-if="p.extraScore" type="warning" size="small" effect="plain" style="margin-left: 8px;">
-                附加分 +{{ p.extraScore }}
-              </el-tag>
-            </span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-tag size="small" type="info">{{ getDeptLabel(p.deptId) }}</el-tag>
-
-              <template v-if="canManageDept(p.deptId)">
-                <el-button v-if="p.attendStatus != 1" link type="warning" size="small" @click="handleAttend(p)">确认到场</el-button>
-                <template v-else>
-                  <el-tag size="small" type="success">已到场</el-tag>
-                  <el-button link type="danger" size="small" @click="handleUndoAttend(p)">撤销到场</el-button>
+          <!-- 按部门分组展示：同一人只在其所属分组里出现一次 -->
+          <template v-for="group in participantGroups" :key="group.deptId">
+            <div class="muted" style="margin: 12px 0 4px; font-weight: 600;">{{ group.deptLabel }}（{{ group.list.length }}）</div>
+            <div v-for="p in group.list" :key="p.userId || p.name" class="flex-between" style="padding:8px 0;border-bottom:1px solid #f0f2f5">
+              <span>
+                <el-avatar :size="26" style="margin-right:8px">{{ p.name.slice(0,1) }}</el-avatar>
+                {{ p.name }}
+                <el-tag v-if="p.extraScore" type="warning" size="small" effect="plain" style="margin-left: 8px;">
+                  附加分 +{{ p.extraScore }}
+                </el-tag>
+              </span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <template v-if="canManageDept(p.deptId)">
+                  <el-button v-if="p.attendStatus != 1" link type="warning" size="small" @click="handleAttend(p)">确认到场</el-button>
+                  <template v-else>
+                    <el-tag size="small" type="success">已到场</el-tag>
+                    <el-button link type="danger" size="small" @click="handleUndoAttend(p)">撤销到场</el-button>
+                  </template>
+                  <el-button link type="primary" size="small" @click="openScoreDialog(p)">打分</el-button>
+                  <el-button link type="danger" size="small" @click="handleRemove(p)">移除</el-button>
                 </template>
-                <el-button link type="primary" size="small" @click="openScoreDialog(p)">打分</el-button>
-                <el-button link type="danger" size="small" @click="handleRemove(p)">移除</el-button>
-              </template>
+              </div>
             </div>
-          </div>
-          <el-empty v-if="!task.participants || task.participants.length === 0" description="暂无参与人" :image-size="50" />
+          </template>
+          <el-empty v-if="participantCount === 0" description="暂无参与人" :image-size="50" />
 
           <!-- 管理者视角 -->
           <template v-if="userStore.canManage">
@@ -196,8 +198,13 @@
 
             <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border);">
               <div class="muted" style="margin-bottom:8px; font-weight: 600;">添加人员</div>
-              <el-select v-model="selectedMember" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;" filterable>
-                <el-option v-for="m in availableMembers" :key="m.id" :label="`${m.name} (${getDeptLabel(m.deptId)})`" :value="m.name" />
+              <el-select v-model="selectedMemberId" placeholder="请选择成员" size="small" style="width: 100%; margin-bottom: 10px;" filterable>
+                <el-option
+                    v-for="m in availableMembers"
+                    :key="m.userId"
+                    :label="`${m.name} (${memberDeptLabels(m)})`"
+                    :value="m.userId"
+                />
               </el-select>
               <el-button type="primary" size="small" style="width: 100%;" @click="handleAddParticipant">添加到任务</el-button>
             </div>
@@ -376,8 +383,22 @@ async function removeDevice(deviceId) {
 }
 
 // --- 人员管理 ---
-const selectedMember = ref('')
+const selectedMemberId = ref(null)
 const deptMembers = ref([])
+
+// 候选/参与人统一按 userId 去重（历史数据可能没有 userId，退回按姓名）
+const memberKey = (m) => m.userId != null ? 'u' + m.userId : 'n' + m.name
+
+// 逗号分隔的部门串 → 「网宣部/设计部」
+function memberDeptLabels(m) {
+  const ids = String(m.deptIds || m.deptId || '').split(',').map(Number).filter(Boolean)
+  if (!ids.length) return getDeptLabel(m.deptId)
+  return ids.map(getDeptLabel).join('/')
+}
+
+function memberInDept(m, deptId) {
+  return String(m.deptIds || m.deptId || '').split(',').map(Number).includes(Number(deptId))
+}
 
 // --- 打分逻辑 ---
 const scoreVisible = ref(false)
@@ -430,14 +451,37 @@ const myParticipantStatus = computed(() => {
 })
 
 const availableMembers = computed(() => {
-  const currentNames = (task.value.participants || []).map(p => p.name)
-  if (userStore.isDirector) {
-    return (deptMembers.value || []).filter(m => !currentNames.includes(m.name))
-  }
-  return (deptMembers.value || []).filter(m =>
-      Number(m.deptId) === Number(userStore.deptId) && !currentNames.includes(m.name)
-  )
+  const joined = new Set((task.value.participants || []).map(memberKey))
+  return (deptMembers.value || []).filter(m => {
+    if (joined.has(memberKey(m))) return false
+    if (userStore.isDirector) return true
+    return memberInDept(m, userStore.deptId)
+  })
 })
+
+// 参与人按部门分组展示：同一人只出现一次（多部门兼职按主部门归组）
+const participantGroups = computed(() => {
+  const seen = new Set()
+  const index = new Map()
+  const groups = []
+  for (const p of (task.value.participants || [])) {
+    const key = memberKey(p)
+    if (seen.has(key)) continue
+    seen.add(key)
+    const deptId = Number(p.deptId)
+    let group = index.get(deptId)
+    if (!group) {
+      group = { deptId, deptLabel: getDeptLabel(p.deptId), list: [] }
+      index.set(deptId, group)
+      groups.push(group)
+    }
+    group.list.push(p)
+  }
+  return groups
+})
+
+const participantCount = computed(() =>
+    participantGroups.value.reduce((total, group) => total + group.list.length, 0))
 
 // ---------------- 业务操作 ----------------
 
@@ -445,9 +489,10 @@ async function loadMembers() {
   if (!userStore.canManage) return
   try {
     const targetDeptId = userStore.isDirector ? ALL_DEPT_ID : userStore.deptId
+    // 选人候选必须用按用户去重的接口，否则多部门成员在下拉框里重复出现
     // retry:false —— 全量成员查询本身就慢，失败后再 600ms 重放一次等于把超时翻倍
-    const res = await adminApi.members({ deptId: targetDeptId, pageNum: 1, pageSize: 9999 }, { retry: false })
-    deptMembers.value = res?.rows || []
+    const res = await adminApi.memberOptions({ deptId: targetDeptId }, { retry: false })
+    deptMembers.value = Array.isArray(res) ? res : (res?.rows || [])
   } catch (e) {
     deptMembers.value = []
   }
@@ -466,13 +511,19 @@ async function handleSignup() {
 }
 
 async function handleAddParticipant() {
-  if (!selectedMember.value) return ElMessage.warning('请选择要添加的成员')
-  const member = deptMembers.value.find(m => m.name === selectedMember.value)
+  if (selectedMemberId.value == null) return ElMessage.warning('请选择要添加的成员')
+  const member = deptMembers.value.find(m => String(m.userId) === String(selectedMemberId.value))
   if (!member) return
 
+  const exists = (task.value.participants || []).some(p => memberKey(p) === memberKey(member))
+  if (exists) {
+    selectedMemberId.value = null
+    return ElMessage.warning('该成员已在任务中')
+  }
+
   await adminApi.addParticipant(task.value.id, { name: member.name, deptId: member.deptId })
-  task.value.participants.push({ name: member.name, deptId: member.deptId })
-  selectedMember.value = ''
+  task.value.participants.push({ userId: member.userId, name: member.name, deptId: member.deptId })
+  selectedMemberId.value = null
   ElMessage.success('添加成功')
 }
 
@@ -486,9 +537,8 @@ async function handleRemove(p) {
 async function handleConfirm(s) {
   await adminApi.confirmSignup(task.value.id, s.name)
   task.value.signups = task.value.signups.filter(x => x.name !== s.name)
-  const exists = task.value.participants.some(p =>
-      p.name === s.name && Number(p.deptId) === Number(s.deptId))
-  if (!exists) task.value.participants.push({ name: s.name, deptId: s.deptId })
+  const exists = task.value.participants.some(p => memberKey(p) === memberKey(s))
+  if (!exists) task.value.participants.push({ userId: s.userId, name: s.name, deptId: s.deptId })
   ElMessage.success('已确认报名')
 }
 
