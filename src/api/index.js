@@ -426,6 +426,40 @@ export const deviceApi = {
 }
 
 /* ================= 部门管理区 (部长/主任) ================= */
+
+/**
+ * 选人候选项归一化：按用户去重，并把同一个人多行记录的部门合并成 deptIds。
+ * 保证下拉框的 key/value 唯一（同一人只对应一个选项），
+ * 避免重复 key 的残留选项，以及同一 value 被多个部门标签覆盖。
+ */
+const normalizeMemberOptions = (list) => {
+    const map = new Map()
+    for (const item of (Array.isArray(list) ? list : [])) {
+        if (!item) continue
+        const userId = item.userId != null ? item.userId : item.id
+        const key = userId != null ? 'u' + userId : 'n' + item.name
+        const depts = String(item.deptIds || item.deptId || '')
+            .split(',').map(Number).filter(Boolean)
+        const exist = map.get(key)
+        if (exist) {
+            depts.forEach(d => exist.depts.add(d))
+        } else {
+            map.set(key, {
+                userId,
+                name: item.name,
+                deptId: item.deptId == null ? null : Number(item.deptId),
+                depts: new Set(depts)
+            })
+        }
+    }
+    return Array.from(map.values()).map(m => ({
+        userId: m.userId,
+        name: m.name,
+        deptId: m.deptId,
+        deptIds: Array.from(m.depts).sort((a, b) => a - b).join(',')
+    }))
+}
+
 export const adminApi = {
     // D-01 部门概览
     overview: (deptId) => USE_MOCK
@@ -468,20 +502,16 @@ export const adminApi = {
     // 选人候选：按用户去重，一人一行
     // 入参：{ deptId?, nameLike? }，返回 [{ userId, name, deptId, deptIds }]
     // deptId 为主部门，deptIds 为逗号分隔的全部所属部门，供下拉框展示「网宣部/设计部」
-    memberOptions: (params = {}, config = {}) => USE_MOCK
+    // 这里再做一次客户端兜底去重：即使接口返回的是按部门展开的旧结构（一人多行），
+    // 也不会出现重复 key 的幽灵选项，以及同一 value 对应多个部门标签互相覆盖的问题
+    memberOptions: (params = {}, config = {}) => (USE_MOCK
         ? delay((() => {
             const list = isAllDept(params.deptId)
                 ? (mock.members || [])
                 : (mock.members || []).filter(m => Number(m.deptId) === Number(params.deptId))
-            const seen = new Map()
-            list.forEach(m => {
-                if (!seen.has(m.name)) {
-                    seen.set(m.name, { userId: m.id, name: m.name, deptId: m.deptId, deptIds: String(m.deptId) })
-                }
-            })
-            return Array.from(seen.values())
+            return list.map(m => ({ userId: m.id, name: m.name, deptId: m.deptId, deptIds: String(m.deptId) }))
         })())
-        : request.get('/admin/members/options', { params, ...config }),
+        : request.get('/admin/members/options', { params, ...config })).then(normalizeMemberOptions),
 
     // 保存成员（加入内存）
     saveMember: (data) => USE_MOCK
