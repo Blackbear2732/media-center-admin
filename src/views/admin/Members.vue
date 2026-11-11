@@ -506,6 +506,7 @@ async function load() {
       role: roleFilter.value === '' ? null : roleFilter.value,
       politicalStatus: politicalFilter.value || null,
       nameLike: nameFilter.value || null,
+      includeDisabled: true,
       pageNum: page.value,
       pageSize: size.value
     })
