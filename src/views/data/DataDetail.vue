@@ -88,9 +88,10 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="type" label="类型" width="120">
+        <!-- 类型 / 操作两列仅网宣数据需要；视频号标题本身即原文入口，两列不渲染 -->
+        <el-table-column v-if="isWx" prop="type" label="类型" width="120">
           <template #default="{ row }">
-            <el-tag size="small" effect="plain" :type="isWx ? 'primary' : 'warning'">{{ row.type }}</el-tag>
+            <el-tag size="small" effect="plain" type="primary">{{ row.type }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="date" label="发布时间" width="140" />
@@ -112,7 +113,7 @@
             <el-tag v-if="row.hotEligible === false" size="small" type="info" style="margin-left: 4px;">样本不足</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" align="center">
+        <el-table-column v-if="isWx" label="操作" width="120" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="openLink(row.url)">查看原文</el-button>
           </template>
