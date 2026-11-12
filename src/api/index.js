@@ -564,6 +564,26 @@ export const adminApi = {
         })())
         : request.get(`/admin/members/${id}/detail`),
 
+    // 成员所属部门（含主部门标记）：{ primaryDeptId, depts: [{ deptId, deptName, primary }] }
+    memberDepts: (userId) => USE_MOCK
+        ? delay((() => {
+            const member = mock.members.find(m => String(m.id) === String(userId))
+            return member
+                ? { primaryDeptId: member.deptId, depts: [{ deptId: member.deptId, deptName: '', primary: true }] }
+                : { primaryDeptId: null, depts: [] }
+        })())
+        : request.get(`/admin/members/${userId}/depts`),
+
+    // 追加兼职部门（写入 sys_user_dept，不动主部门）
+    addMemberDept: (userId, deptId) => USE_MOCK
+        ? delay({ success: true })
+        : request.post(`/admin/members/${userId}/depts`, { deptId }),
+
+    // 移除兼职部门（主部门不可移除，需走成员编辑换主部门）
+    removeMemberDept: (userId, deptId) => USE_MOCK
+        ? delay({ success: true })
+        : request.delete(`/admin/members/${userId}/depts/${deptId}`),
+
     // 成员月度打卡汇总（多部门分别统计，不合并）
     // 入参：{ months = 12, deptId? }；deptId 为空表示成员全部所属部门
     // 返回项：{ month, deptId, deptName, recordDays, checkedDays, absentDays, unmarkedDays, deptRecordDays, rate }

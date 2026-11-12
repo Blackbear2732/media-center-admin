@@ -143,7 +143,36 @@
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="学号">{{ current.studentNo }}</el-descriptions-item>
           <el-descriptions-item label="姓名">{{ current.name }}</el-descriptions-item>
-          <el-descriptions-item label="部门">{{ getDeptLabel(current.deptId) }}</el-descriptions-item>
+          <el-descriptions-item label="部门" :span="2">
+            <div class="dept-manage">
+              <el-tag
+                v-for="d in memberDepts.depts"
+                :key="d.deptId"
+                size="small"
+                :type="d.primary ? 'primary' : 'info'"
+                :closable="userStore.canManage && !d.primary"
+                style="margin-right: 6px; margin-bottom: 4px;"
+                @close="removeDept(d)"
+              >{{ d.deptName || getDeptLabel(d.deptId) }}{{ d.primary ? '（主部门）' : '' }}</el-tag>
+              <el-select
+                v-if="userStore.canManage"
+                v-model="memberDepts.addDeptId"
+                size="small"
+                placeholder="添加兼职部门"
+                style="width: 150px;"
+                :loading="memberDepts.saving"
+                :disabled="deptAddOptions.length === 0"
+                @change="addDept"
+              >
+                <el-option
+                  v-for="opt in deptAddOptions"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </el-select>
+            </div>
+          </el-descriptions-item>
           <el-descriptions-item label="角色">{{ getRoleLabel(current.role) }}</el-descriptions-item>
           <el-descriptions-item label="职务">{{ current.title }}</el-descriptions-item>
           <el-descriptions-item label="政治面貌">{{ current.politicalStatus }}</el-descriptions-item>
@@ -311,6 +340,17 @@ const editVisible = ref(false), detailVisible = ref(false), detailLoading = ref(
 const current = ref(null)
 const detail = ref({ tasks: [], checkins: [] })
 
+/* ================= 成员详情 · 部门管理 =================
+ * 主部门由成员编辑维护（sys_user.dept_id），这里只做兼职部门的追加/移除，
+ * 写入 sys_user_dept，主部门不可移除。
+ */
+const memberDepts = reactive({ loading: false, saving: false, depts: [], primaryDeptId: null, addDeptId: null })
+// 可追加的部门：部门字典里排除“全中心”和该成员已属于的部门
+const deptAddOptions = computed(() => {
+  const owned = new Set(memberDepts.depts.map(d => Number(d.deptId)))
+  return DEPARTMENTS_OPTIONS.filter(o => Number(o.value) !== ALL_DEPT_ID && !owned.has(Number(o.value)))
+})
+
 /* ================= 成员详情 · 打卡情况 =================
  * 月度汇总按「月份 + 部门」返回，多部门成员不合并：
  * - deptId 为空 → 全部所属部门，用于提取部门切换选项并分组展示；
@@ -409,6 +449,59 @@ function seedCheckinDepts(row) {
   add(row.deptId, row.deptName)
   return [...map.values()]
 }
+
+async function loadMemberDepts() {
+  if (!current.value || !userStore.canManage) return
+  memberDepts.loading = true
+  try {
+    const res = await adminApi.memberDepts(current.value.id)
+    memberDepts.depts = res?.depts || []
+    memberDepts.primaryDeptId = res?.primaryDeptId ?? current.value.deptId
+  } catch (e) {
+    memberDepts.depts = []
+  } finally {
+    memberDepts.loading = false
+  }
+}
+
+async function addDept(deptId) {
+  if (!deptId || !current.value) return
+  memberDepts.saving = true
+  try {
+    await adminApi.addMemberDept(current.value.id, deptId)
+    ElMessage.success('已添加部门')
+    memberDepts.addDeptId = null
+    await afterDeptChanged()
+  } finally {
+    memberDepts.saving = false
+  }
+}
+
+async function removeDept(d) {
+  if (!current.value || !d || d.primary) return
+  const name = d.deptName || getDeptLabel(d.deptId)
+  await ElMessageBox.confirm(`确认将「${name}」从该成员的所属部门中移除吗？`, '提示', { type: 'warning' })
+  memberDepts.saving = true
+  try {
+    await adminApi.removeMemberDept(current.value.id, d.deptId)
+    ElMessage.success('已移除部门')
+    await afterDeptChanged()
+  } finally {
+    memberDepts.saving = false
+  }
+}
+
+// 部门变更后：刷新部门标签、打卡部门选项与月汇总，并刷新列表（成员按部门展开多行）
+async function afterDeptChanged() {
+  await loadMemberDepts()
+  if (checkin.deptId !== '' && !memberDepts.depts.some(d => Number(d.deptId) === Number(checkin.deptId))) {
+    checkin.deptId = ''
+  }
+  checkin.depts = memberDepts.depts.map(d => ({ deptId: d.deptId, deptName: d.deptName || getDeptLabel(d.deptId) }))
+  await loadCheckinMonths()
+  load()
+}
+
 
 async function toggleMonth(row) {
   const key = monthKey(row)
@@ -567,6 +660,12 @@ async function openDetail(row) {
   detailLoading.value = true
   resetCheckin()
   checkin.depts = seedCheckinDepts(row)
+  // 部门管理：无管理权限（如授权打卡管理员）只展示主部门，不请求、不显示操作入口
+  memberDepts.addDeptId = null
+  memberDepts.depts = userStore.canManage
+      ? []
+      : [{ deptId: row.deptId, deptName: row.deptName, primary: true }]
+  if (userStore.canManage) loadMemberDepts()
   // 打卡数据独立加载：不阻塞任务/会议/考评详情，也便于单独展示无权限与失败提示
   loadCheckinMonths()
   try { detail.value = await adminApi.memberDetail(row.id) } finally { detailLoading.value = false }
