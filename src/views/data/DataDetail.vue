@@ -73,7 +73,13 @@
 
     <!-- 数据列表 -->
     <div class="surface-card" style="padding: 0; overflow: hidden;">
-      <el-table :data="pagedList" stripe style="width: 100%;" :header-cell-style="{ background: '#fafbfc' }">
+      <el-table
+        :data="pagedList"
+        stripe
+        style="width: 100%;"
+        :header-cell-style="{ background: '#fafbfc' }"
+        @sort-change="handleSortChange"
+      >
         <el-table-column type="index" :index="indexMethod" label="排名" width="80" align="center" />
         <el-table-column prop="title" label="标题" min-width="300">
           <template #default="{ row }">
@@ -88,12 +94,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="date" label="发布时间" width="140" />
-        <el-table-column prop="views" label="浏览量" width="120" sortable>
+        <el-table-column prop="views" label="浏览量" width="120" sortable="custom" :sort-orders="SORT_ORDERS">
           <template #default="{ row }">
             <span style="font-weight: 600; color: var(--brand);">{{ formatNumber(row.views) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="likes" label="点赞/喜欢" width="120" sortable>
+        <el-table-column prop="likes" label="点赞/喜欢" width="120" sortable="custom" :sort-orders="SORT_ORDERS">
           <template #default="{ row }">
             <span style="color: var(--accent);">{{ formatNumber(row.likes) }}</span>
           </template>
@@ -106,12 +112,14 @@
       </el-table>
       <div class="table-pagination">
         <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="pageSize"
+          :current-page="page"
+          :page-size="pageSize"
           :page-sizes="[20, 50, 100, 200]"
           :total="total"
           layout="total, sizes, prev, pager, next"
           background
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
         />
       </div>
     </div>
@@ -148,24 +156,46 @@ const pageSize = ref(20)
 // 年份筛选
 const selectedYear = ref('')
 
-// 年份选项：从后端返回的 trend 中提取（trend.month 格式为 yyyy-MM）
-const yearOptions = computed(() => {
-  const years = new Set()
-  for (const t of trend.value) {
-    const y = formatYear(t.month)
-    if (y) years.add(y)
-  }
-  return [...years].sort().reverse()
+// 年份选项：只在「全部年份」查询时刷新（取全量趋势里的年份），
+// 不随当前筛选结果变化，避免选中某一年后其他年份从下拉框消失
+const allYears = ref([])
+const yearOptions = computed(() => allYears.value)
+
+// 排序：后端分页接口固定按发布时间倒序，表格若在前端对当前页排序只能覆盖本页，
+// 因此排序时先取当前筛选条件下的全量数据，再在前端排序并按页切片
+const sortProp = ref('')
+const sortOrder = ref('')
+const hasSort = computed(() => Boolean(sortProp.value && sortOrder.value))
+
+// 当前筛选条件下的全量数据缓存（仅排序态使用）
+const fullRows = ref(null)
+const fullRowsKey = ref('')
+
+const filterKey = computed(() => `${type.value}|${selectedYear.value}`)
+
+// 全量数据按排序字段排序后的结果
+const sortedRows = computed(() => {
+  if (!fullRows.value) return []
+  const dir = sortOrder.value === 'ascending' ? 1 : -1
+  const prop = sortProp.value
+  return [...fullRows.value].sort((a, b) => ((Number(a[prop]) || 0) - (Number(b[prop]) || 0)) * dir)
 })
 
-// 表格直接展示后端返回的 rows
-const pagedList = computed(() => rows.value)
+// 表格展示：排序态下按页切片全量排序结果；默认态直接用后端分页结果
+const pagedList = computed(() => {
+  if (!hasSort.value) return rows.value
+  const start = (page.value - 1) * pageSize.value
+  return sortedRows.value.slice(start, start + pageSize.value)
+})
 
 const trendMinWidth = computed(() => `${Math.max(600, trend.value.length * COLUMN_PITCH)}px`)
 const indexMethod = (index) => (page.value - 1) * pageSize.value + index + 1
 
 // 时间轴每根柱子的固定列宽，供月份/年份标签对齐
 const COLUMN_PITCH = 56
+
+// 排序列表头点击顺序：降序 → 升序 → 取消排序（取消后回到后端默认的发布时间倒序）
+const SORT_ORDERS = ['descending', 'ascending', null]
 
 // 按年份归组连续月份，用于时间轴底部的年份区间标签
 const yearGroups = computed(() => {
@@ -215,8 +245,22 @@ function openLink(url) {
   if (url) window.open(url, '_blank')
 }
 
+/** 从趋势数据中提取去重后的年份（倒序），作为「全部年份」下的完整年份选项 */
+function extractYears(trendData) {
+  const years = new Set()
+  for (const t of trendData || []) {
+    const y = formatYear(t.month)
+    if (y) years.add(y)
+  }
+  return [...years].sort().reverse()
+}
+
+// 请求序号：快速切换年份时丢弃过期响应，避免旧筛选结果覆盖新筛选结果
+let requestSeq = 0
+
 /** 调用后端分页接口加载数据 */
 async function loadData() {
+  const seq = ++requestSeq
   loading.value = true
   try {
     const params = {
@@ -228,30 +272,110 @@ async function loadData() {
       params.year = selectedYear.value
     }
     const res = await adminApi.mediaList(params)
+    if (seq !== requestSeq) return
     if (res) {
       summary.value = res.summary || {}
       trend.value = res.trend || []
       rows.value = res.rows || []
       total.value = res.total || 0
+      // 仅在「全部年份」查询时刷新年份选项，选中具体年份后不再覆盖
+      if (!selectedYear.value) {
+        allYears.value = extractYears(res.trend)
+      }
     }
   } catch (e) {
     if (e?.code !== 'ERR_CANCELED' && e?.code !== 'ECONNABORTED' && !e?.message?.includes('timeout')) {
       console.error('加载详情数据失败', e)
     }
   } finally {
-    loading.value = false
+    if (seq === requestSeq) loading.value = false
   }
 }
 
-// 年份改变 → 重置页码并重新加载
+/** 排序态：拉取当前筛选条件下的全量数据，供前端按排序字段全量排序 */
+async function loadFullRows() {
+  // 已有同一筛选条件的全量缓存则直接复用
+  if (fullRows.value && fullRowsKey.value === filterKey.value) return
+
+  // 记录本次请求对应的筛选条件，响应回来时若筛选已变化则丢弃
+  const key = filterKey.value
+
+  // 先走一次普通分页查询，拿到当前筛选条件下的总数（同时刷新 summary / trend）
+  await loadData()
+  if (key !== filterKey.value) return
+  if (total.value <= pageSize.value) {
+    // 不足一页，当前结果本身即全量
+    fullRows.value = rows.value
+    fullRowsKey.value = key
+    return
+  }
+
+  const seq = ++requestSeq
+  loading.value = true
+  try {
+    const params = {
+      type: type.value,
+      pageNum: 1,
+      pageSize: total.value
+    }
+    if (selectedYear.value) {
+      params.year = selectedYear.value
+    }
+    const res = await adminApi.mediaList(params)
+    if (seq !== requestSeq || key !== filterKey.value) return
+    if (res) {
+      fullRows.value = Array.isArray(res.rows) ? res.rows : []
+      fullRowsKey.value = key
+      total.value = res.total || fullRows.value.length
+    }
+  } catch (e) {
+    if (e?.code !== 'ERR_CANCELED' && e?.code !== 'ECONNABORTED' && !e?.message?.includes('timeout')) {
+      console.error('加载全量排序数据失败', e)
+    }
+  } finally {
+    if (seq === requestSeq) loading.value = false
+  }
+}
+
+/** 按当前筛选 + 排序状态重新加载 */
+async function reload() {
+  if (!hasSort.value) {
+    // 退出排序态：清掉全量缓存，回到后端分页（发布时间倒序）
+    fullRows.value = null
+    fullRowsKey.value = ''
+    await loadData()
+    return
+  }
+  await loadFullRows()
+}
+
+/** 表头排序变化：排序态下由前端在全量数据上排序，取消排序则回退到后端分页顺序 */
+function handleSortChange({ prop, order }) {
+  const valid = Boolean(order) && (prop === 'views' || prop === 'likes')
+  sortProp.value = valid ? prop : ''
+  sortOrder.value = valid ? order : ''
+  page.value = 1
+  reload()
+}
+
+function handlePageChange(next) {
+  if (next === page.value) return
+  page.value = next
+  // 排序态下的分页在前端切片，无需再请求后端
+  if (!hasSort.value) loadData()
+}
+
+function handleSizeChange(size) {
+  if (size === pageSize.value) return
+  pageSize.value = size
+  page.value = 1
+  if (!hasSort.value) loadData()
+}
+
+// 年份改变 → 重置页码并重新加载（排序态下会对新年份的全量数据重新排序）
 watch(selectedYear, () => {
   page.value = 1
-  loadData()
-})
-
-// 页码/每页条数改变 → 重新加载
-watch([page, pageSize], () => {
-  loadData()
+  reload()
 })
 
 onMounted(async () => {
@@ -260,7 +384,7 @@ onMounted(async () => {
     router.replace('/')
     return
   }
-  await loadData()
+  await reload()
 })
 </script>
 
