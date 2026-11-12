@@ -143,7 +143,14 @@ async function doUpload(type) {
 
   try {
     const res = await adminApi.uploadCsv(type, file)
-    ElMessage.success(`解析成功，共导入 ${res.rows} 条数据`)
+    const skipped = res.skipped || 0
+    const messages = Array.isArray(res.messages) ? res.messages : []
+    if (skipped > 0 || messages.length) {
+      // 行级解析告警：定位到行号与列名，避免整批静默丢弃
+      ElMessage.warning(`导入 ${res.rows} 条，跳过 ${skipped} 行：${messages.slice(0, 3).join('；')}`)
+    } else {
+      ElMessage.success(`解析成功，共导入 ${res.rows} 条数据`)
+    }
 
     await loadUploadHistory()
 

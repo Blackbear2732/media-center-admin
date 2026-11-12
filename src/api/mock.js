@@ -1209,13 +1209,33 @@ function buildMockMediaList(type) {
         const year = i % 3 === 0 ? 2025 : 2026
         const month = String(((i * 7) % 12) + 1).padStart(2, '0')
         const day = String(((i * 13) % 28) + 1).padStart(2, '0')
+        const views = Math.floor(Math.random() * 50000) + 500
+        const likes = Math.floor(Math.random() * 2000) + 20
+        const completionRate = Math.round((0.1 + Math.random() * 0.6) * 10000) / 10000
+        const ageHours = 24 + i * 6
+        const velocity = views / (ageHours + 3)
+        const likeRateSmooth = (likes + 1000 * 0.04) / (views + 1000)
+        const completionSmooth = (views * completionRate + 800 * 0.35) / (views + 800)
+        const hotScore = views < 50 ? 0 : views / Math.pow(ageHours + 3, 1.3)
+            * Math.pow(likeRateSmooth / 0.04, 0.5) * Math.pow(completionSmooth / 0.35, 1.0)
         items.push({
             id: i + 1,
             title: titles[i % titles.length] + (i >= titles.length ? ` #${Math.floor(i / titles.length) + 1}` : ''),
             type: types[i % types.length],
             date: `${year}-${month}-${day}`,
-            views: Math.floor(Math.random() * 50000) + 500,
-            likes: Math.floor(Math.random() * 2000) + 20,
+            views,
+            likes,
+            comments: Math.floor(likes * 0.05),
+            shares: Math.floor(likes * 0.1),
+            favorites: Math.floor(likes * 0.03),
+            recommends: Math.floor(likes * 0.2),
+            completionRate,
+            hotScore,
+            velocity,
+            likeRateSmooth,
+            completionSmooth,
+            ageHours,
+            hotEligible: views >= 50,
             url: `https://${type === 'yy' ? 'channels.weixin.qq.com' : 'mp.weixin.qq.com'}/xxx${i}`
         })
     }
@@ -1226,9 +1246,15 @@ const mockWxList = buildMockMediaList('wx')
 const mockYyList = buildMockMediaList('yy')
 
 export function mediaListData(params) {
-    const { type, year, pageNum = 1, pageSize = 20 } = params || {}
+    const { type, year, sortBy, sortOrder = 'desc', pageNum = 1, pageSize = 20 } = params || {}
     const allList = type === 'yy' ? mockYyList : mockWxList
-    const filtered = year ? allList.filter(d => d.date.startsWith(year)) : allList
+    let filtered = year ? allList.filter(d => d.date.startsWith(year)) : allList
+    // 与后端一致：views/likes/hot 由服务端排序，取消排序回退发布时间倒序
+    if (sortBy === 'views' || sortBy === 'likes' || sortBy === 'hot') {
+        const prop = sortBy === 'hot' ? 'hotScore' : sortBy
+        const dir = sortOrder === 'asc' ? 1 : -1
+        filtered = [...filtered].sort((a, b) => ((Number(a[prop]) || 0) - (Number(b[prop]) || 0)) * dir)
+    }
     const page = Math.max(1, pageNum)
     const size = Math.max(1, pageSize)
     const start = (page - 1) * size

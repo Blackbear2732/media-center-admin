@@ -104,6 +104,14 @@
             <span style="color: var(--accent);">{{ formatNumber(row.likes) }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="hotScore" label="热度分" width="150" sortable="custom" :sort-orders="SORT_ORDERS">
+          <template #default="{ row }">
+            <el-link type="warning" :underline="false" style="font-weight: 600;" @click="openHotDetail(row)">
+              {{ formatHot(row.hotScore) }}
+            </el-link>
+            <el-tag v-if="row.hotEligible === false" size="small" type="info" style="margin-left: 4px;">样本不足</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="120" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="openLink(row.url)">查看原文</el-button>
@@ -123,6 +131,37 @@
         />
       </div>
     </div>
+
+    <!-- 热度分拆解：热度由后端服务层统一计算，这里只展示拆解项 -->
+    <el-dialog v-model="hotDialogVisible" title="热度分拆解" width="560px">
+      <template v-if="hotRow">
+        <div class="hot-title">{{ hotRow.title }}</div>
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="综合热度分">
+            <strong>{{ formatHot(hotRow.hotScore) }}</strong>
+          </el-descriptions-item>
+          <el-descriptions-item label="速度项（播放量 / (发布小时数 + c)）">
+            {{ formatDecimal(hotRow.velocity, 2) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平滑点赞率">
+            {{ formatPercent(hotRow.likeRateSmooth) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平滑完播率">
+            {{ formatPercent(hotRow.completionSmooth) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="发布至今">
+            {{ formatDecimal(hotRow.ageHours, 1) }} 小时
+          </el-descriptions-item>
+          <el-descriptions-item label="样本门槛">
+            {{ hotRow.hotEligible ? '已满足（播放量 ≥ 50）' : '未满足（播放量 < 50，不进入热度榜）' }}
+          </el-descriptions-item>
+        </el-descriptions>
+        <div class="hot-tip">
+          热度分在服务端按统一参数计算（时间衰减 + 平滑点赞率 + 平滑完播率），前端仅展示；
+          完播率缺失时按 35% 基准参与计算。
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -161,32 +200,17 @@ const selectedYear = ref('')
 const allYears = ref([])
 const yearOptions = computed(() => allYears.value)
 
-// 排序：后端分页接口固定按发布时间倒序，表格若在前端对当前页排序只能覆盖本页，
-// 因此排序时先取当前筛选条件下的全量数据，再在前端排序并按页切片
-const sortProp = ref('')
+// 排序：热度分由后端服务层计算，排序也交给后端（views/likes/hot），
+// 避免出现「只对当前页排序」的问题；取消排序后回到发布时间倒序。
+const sortBy = ref('')
 const sortOrder = ref('')
-const hasSort = computed(() => Boolean(sortProp.value && sortOrder.value))
 
-// 当前筛选条件下的全量数据缓存（仅排序态使用）
-const fullRows = ref(null)
-const fullRowsKey = ref('')
+// 热度拆解弹窗
+const hotDialogVisible = ref(false)
+const hotRow = ref(null)
 
-const filterKey = computed(() => `${type.value}|${selectedYear.value}`)
-
-// 全量数据按排序字段排序后的结果
-const sortedRows = computed(() => {
-  if (!fullRows.value) return []
-  const dir = sortOrder.value === 'ascending' ? 1 : -1
-  const prop = sortProp.value
-  return [...fullRows.value].sort((a, b) => ((Number(a[prop]) || 0) - (Number(b[prop]) || 0)) * dir)
-})
-
-// 表格展示：排序态下按页切片全量排序结果；默认态直接用后端分页结果
-const pagedList = computed(() => {
-  if (!hasSort.value) return rows.value
-  const start = (page.value - 1) * pageSize.value
-  return sortedRows.value.slice(start, start + pageSize.value)
-})
+// 表格直接展示后端分页结果
+const pagedList = computed(() => rows.value)
 
 const trendMinWidth = computed(() => `${Math.max(600, trend.value.length * COLUMN_PITCH)}px`)
 const indexMethod = (index) => (page.value - 1) * pageSize.value + index + 1
@@ -225,6 +249,27 @@ const formatNumber = (num) => {
   if (!num) return 0
   if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
   return num
+}
+
+// 热度分：后端返回原始浮点数，这里只做展示格式化
+const formatHot = (score) => Number(score || 0).toFixed(1)
+
+const formatDecimal = (value, digits = 2) => {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return '-'
+  return num.toFixed(digits)
+}
+
+// 平滑点赞率/平滑完播率按百分比展示
+const formatPercent = (rate) => {
+  const num = Number(rate)
+  if (!Number.isFinite(num)) return '-'
+  return (num * 100).toFixed(1) + '%'
+}
+
+function openHotDetail(row) {
+  hotRow.value = row
+  hotDialogVisible.value = true
 }
 
 // 从月份字段中提取"年"数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
@@ -271,6 +316,10 @@ async function loadData() {
     if (selectedYear.value) {
       params.year = selectedYear.value
     }
+    if (sortBy.value) {
+      params.sortBy = sortBy.value
+      params.sortOrder = sortOrder.value || 'desc'
+    }
     const res = await adminApi.mediaList(params)
     if (seq !== requestSeq) return
     if (res) {
@@ -292,90 +341,32 @@ async function loadData() {
   }
 }
 
-/** 排序态：拉取当前筛选条件下的全量数据，供前端按排序字段全量排序 */
-async function loadFullRows() {
-  // 已有同一筛选条件的全量缓存则直接复用
-  if (fullRows.value && fullRowsKey.value === filterKey.value) return
-
-  // 记录本次请求对应的筛选条件，响应回来时若筛选已变化则丢弃
-  const key = filterKey.value
-
-  // 先走一次普通分页查询，拿到当前筛选条件下的总数（同时刷新 summary / trend）
-  await loadData()
-  if (key !== filterKey.value) return
-  if (total.value <= pageSize.value) {
-    // 不足一页，当前结果本身即全量
-    fullRows.value = rows.value
-    fullRowsKey.value = key
-    return
-  }
-
-  const seq = ++requestSeq
-  loading.value = true
-  try {
-    const params = {
-      type: type.value,
-      pageNum: 1,
-      pageSize: total.value
-    }
-    if (selectedYear.value) {
-      params.year = selectedYear.value
-    }
-    const res = await adminApi.mediaList(params)
-    if (seq !== requestSeq || key !== filterKey.value) return
-    if (res) {
-      fullRows.value = Array.isArray(res.rows) ? res.rows : []
-      fullRowsKey.value = key
-      total.value = res.total || fullRows.value.length
-    }
-  } catch (e) {
-    if (e?.code !== 'ERR_CANCELED' && e?.code !== 'ECONNABORTED' && !e?.message?.includes('timeout')) {
-      console.error('加载全量排序数据失败', e)
-    }
-  } finally {
-    if (seq === requestSeq) loading.value = false
-  }
-}
-
-/** 按当前筛选 + 排序状态重新加载 */
-async function reload() {
-  if (!hasSort.value) {
-    // 退出排序态：清掉全量缓存，回到后端分页（发布时间倒序）
-    fullRows.value = null
-    fullRowsKey.value = ''
-    await loadData()
-    return
-  }
-  await loadFullRows()
-}
-
-/** 表头排序变化：排序态下由前端在全量数据上排序，取消排序则回退到后端分页顺序 */
+/** 表头排序变化：排序字段与方向直接交给后端（取消排序回退发布时间倒序） */
 function handleSortChange({ prop, order }) {
-  const valid = Boolean(order) && (prop === 'views' || prop === 'likes')
-  sortProp.value = valid ? prop : ''
-  sortOrder.value = valid ? order : ''
+  const valid = Boolean(order) && ['views', 'likes', 'hotScore'].includes(prop)
+  sortBy.value = valid ? (prop === 'hotScore' ? 'hot' : prop) : ''
+  sortOrder.value = valid ? (order === 'ascending' ? 'asc' : 'desc') : ''
   page.value = 1
-  reload()
+  loadData()
 }
 
 function handlePageChange(next) {
   if (next === page.value) return
   page.value = next
-  // 排序态下的分页在前端切片，无需再请求后端
-  if (!hasSort.value) loadData()
+  loadData()
 }
 
 function handleSizeChange(size) {
   if (size === pageSize.value) return
   pageSize.value = size
   page.value = 1
-  if (!hasSort.value) loadData()
+  loadData()
 }
 
-// 年份改变 → 重置页码并重新加载（排序态下会对新年份的全量数据重新排序）
+// 年份改变 → 重置页码并重新加载
 watch(selectedYear, () => {
   page.value = 1
-  reload()
+  loadData()
 })
 
 onMounted(async () => {
@@ -384,7 +375,7 @@ onMounted(async () => {
     router.replace('/')
     return
   }
-  await reload()
+  await loadData()
 })
 </script>
 
@@ -440,5 +431,18 @@ onMounted(async () => {
   font-size: 11px;
   color: var(--text-secondary, #909399);
   white-space: nowrap;
+}
+
+.hot-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.hot-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary, #909399);
 }
 </style>
