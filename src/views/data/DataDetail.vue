@@ -83,8 +83,8 @@
         <el-table-column type="index" :index="indexMethod" label="排名" width="80" align="center" />
         <el-table-column prop="title" label="标题" min-width="300">
           <template #default="{ row }">
-            <el-link type="primary" :href="row.url" target="_blank" :underline="false" style="font-weight: 500;">
-              {{ row.title }}
+            <el-link type="primary" :href="row.url" target="_blank" :underline="false" style="font-weight: 500;" :title="cleanTitle(row.title)">
+              {{ cleanTitle(row.title) }}
             </el-link>
           </template>
         </el-table-column>
@@ -135,7 +135,7 @@
     <!-- 热度分拆解：热度由后端服务层统一计算，这里只展示拆解项 -->
     <el-dialog v-model="hotDialogVisible" title="热度分拆解" width="560px">
       <template v-if="hotRow">
-        <div class="hot-title">{{ hotRow.title }}</div>
+        <div class="hot-title">{{ cleanTitle(hotRow.title) }}</div>
         <el-descriptions :column="1" border size="small">
           <el-descriptions-item label="综合热度分">
             <strong>{{ formatHot(hotRow.hotScore) }}</strong>
@@ -170,6 +170,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminApi } from '@/api'
+import { stripMentions } from '@/utils/text'
 
 const route = useRoute()
 const router = useRouter()
@@ -271,6 +272,9 @@ function openHotDetail(row) {
   hotRow.value = row
   hotDialogVisible.value = true
 }
+
+// 视频号标题统一在展示层清洗 @提及 与话题；网宣数据保持原样
+const cleanTitle = (title) => (isWx.value ? title : stripMentions(title))
 
 // 从月份字段中提取"年"数字，兼容后端返回的 yyyy-MM、yyyy-MM-dd、yyyy-MM-dd HH:mm:ss 等格式
 const formatYear = (month) => {

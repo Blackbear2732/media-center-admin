@@ -109,7 +109,7 @@
             <div v-for="(item, idx) in (dashboard?.yy?.list || []).slice(0, 3)" :key="idx" class="top-item">
               <div class="top-rank" :class="'rank-' + (idx + 1)">{{ idx + 1 }}</div>
               <div class="top-content">
-                <div class="top-title" :title="item.title">{{ item.title }}</div>
+                <div class="top-title" :title="stripMentions(item.title)">{{ stripMentions(item.title) }}</div>
                 <div class="top-meta">
                   <span>{{ item.type }}</span>
                   <span>{{ formatNumber(item.views) }} 播</span>
@@ -168,6 +168,7 @@ import { ArrowRight } from '@element-plus/icons-vue'
 import { homeApi, adminApi } from '@/api'
 // 顶部引入
 import { getTaskDotClass, getTaskStatusLabel, getNoticeScopeLabel } from '@/utils/dict'
+import { stripMentions } from '@/utils/text'
 
 const router = useRouter()
 import { useDelayedLoading } from '@/utils/loading'
