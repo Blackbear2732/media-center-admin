@@ -56,14 +56,31 @@ const redirectToLogin = () => {
 /* ===================== 后端维护拦截 =====================
  * 后端定时关机（23:00 - 次日 07:00）或宝塔停用站点时，存在两种表现：
  * - 拿不到任何响应：error.response 为空（网络层错误/超时），直接判定为维护
- * - 拿到错误页：502/503/504 判定为维护；403 需甄别——业务权限 403 是 JSON，
- *   而宝塔「停用站点」/Nginx 维护页返回 HTML 字符串，只有后者才跳维护页
+ * - 拿到错误页：502/503/504 判定为维护；500 需甄别——本地 dev 代理连不上
+ *   下游时返回 500 + text/plain + 空响应体，Nginx/Tomcat 错误页是 HTML，
+ *   而后端业务异常是若依 JSON（{code,msg}），只有 JSON 才按普通错误处理
+ * - 403 同样需甄别：业务权限 403 是 JSON，Nginx 维护页是 HTML 字符串
  * 跳转与时段判断统一放在 utils/maintenance.js，这里只负责识别。
  */
+const isJsonPayload = (data) => {
+    if (data && typeof data === 'object') return true
+    if (typeof data !== 'string') return false
+    const text = data.trim()
+    if (!text.startsWith('{') && !text.startsWith('[')) return false
+    try {
+        JSON.parse(text)
+        return true
+    } catch (e) {
+        return false
+    }
+}
+
 const isMaintenanceResponse = (response) => {
     if (!response) return false
     const { status, data } = response
     if ([502, 503, 504].includes(status)) return true
+    // 500 且不是后端业务 JSON：代理/网关没拿到下游响应，按维护处理
+    if (status === 500 && !isJsonPayload(data)) return true
     // Nginx 错误页是 HTML 字符串；后端业务 403 是 JSON 对象，不会误伤
     if (status === 403 && typeof data === 'string' &&
         (data.includes('系统正在升级维护') || data.includes('<html'))) return true
@@ -186,8 +203,9 @@ service.interceptors.response.use(
         }
 
         // 后端维护/宕机：拿不到响应（服务器关机、网络不可达、超时）或返回维护错误页，
-        // 统一跳维护页，不再弹错误消息（维护页本身就是提示）
+        // 统一静默跳维护页：不再逐条弹错误提示，先清掉已弹出的提示
         if (!err.response || isMaintenanceResponse(err.response)) {
+            ElMessage.closeAll()
             redirectToMaintenance()
             return Promise.reject(new Error('服务暂时不可用，请稍后重试'))
         }

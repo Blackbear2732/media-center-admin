@@ -53,6 +53,8 @@ export async function redirectToMaintenance() {
     redirecting = true
     try {
         const { default: router } = await import('@/router')
+        // 首屏导航尚未完成时 replace 会被丢弃，等 router 就绪后再跳
+        await router.isReady()
         if (router.currentRoute.value.path === MAINTENANCE_PATH) return
         await router.replace({
             path: MAINTENANCE_PATH,
