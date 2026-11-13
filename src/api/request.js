@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { userStore } from '@/store/user'
+import { redirectToMaintenance } from '@/utils/maintenance'
 
 // 后端地址：由 VITE_API_BASE_URL 注入（构建口径见 .env.workers / .env.server / .env.production，
 // 分别对应 npm run build、build:server 与直接 vite build 的兜底），
@@ -53,12 +54,11 @@ const redirectToLogin = () => {
 }
 
 /* ===================== 后端维护拦截 =====================
- * 后端在宝塔停用/宕机时，Nginx 网关层会返回错误页：
- * - 502/503/504：后端服务不可达，直接判定为维护
- * - 403：需甄别——业务权限 403 返回的是 JSON（{code,msg}），
- *   而宝塔「停用站点」/Nginx 维护页返回的是 HTML 字符串，只有后者才跳维护页
- * 注意：本模块被 router 引用（abortPendingRequests），不能反向 import router，
- * 因此与 redirectToLogin 一样用 location.replace 跳转
+ * 后端定时关机（23:00 - 次日 07:00）或宝塔停用站点时，存在两种表现：
+ * - 拿不到任何响应：error.response 为空（网络层错误/超时），直接判定为维护
+ * - 拿到错误页：502/503/504 判定为维护；403 需甄别——业务权限 403 是 JSON，
+ *   而宝塔「停用站点」/Nginx 维护页返回 HTML 字符串，只有后者才跳维护页
+ * 跳转与时段判断统一放在 utils/maintenance.js，这里只负责识别。
  */
 const isMaintenanceResponse = (response) => {
     if (!response) return false
@@ -68,10 +68,6 @@ const isMaintenanceResponse = (response) => {
     if (status === 403 && typeof data === 'string' &&
         (data.includes('系统正在升级维护') || data.includes('<html'))) return true
     return false
-}
-
-const redirectToMaintenance = () => {
-    if (window.location.pathname !== '/maintenance') window.location.replace('/maintenance')
 }
 
 // 请求是否携带了登录令牌：带令牌的请求 401 = 登录过期（跳登录）；
@@ -189,23 +185,11 @@ service.interceptors.response.use(
             return cancelledMethod === 'get' ? Promise.resolve(null) : Promise.reject(err)
         }
 
-        // 后端维护/宕机：整页跳维护页，不再弹错误消息（维护页本身就是提示）
-        if (isMaintenanceResponse(err.response)) {
+        // 后端维护/宕机：拿不到响应（服务器关机、网络不可达、超时）或返回维护错误页，
+        // 统一跳维护页，不再弹错误消息（维护页本身就是提示）
+        if (!err.response || isMaintenanceResponse(err.response)) {
             redirectToMaintenance()
-            return Promise.reject(new Error('系统维护中'))
-        }
-
-        // 网络抖动/超时自动重试：仅对 GET 且没有拿到任何响应的请求重试 1 次，
-        // 写请求重试可能造成重复提交，因此不重试
-        const cfg = err.config || {}
-        const method = (cfg.method || 'get').toLowerCase()
-        const retried = cfg._retryCount || 0
-        // 超时不重试：30s 超时后再重放一次，等于让后端慢接口被连续压 30s×2，
-        // 而且素材轮询/全量成员查询这类慢 GET 会被放大成连续请求
-        const timedOut = err.code === 'ECONNABORTED' || /timeout/i.test(err.message || '')
-        if (method === 'get' && !err.response && !timedOut && cfg.retry !== false && retried < 1) {
-            cfg._retryCount = retried + 1
-            return new Promise(resolve => setTimeout(resolve, 600)).then(() => service(cfg))
+            return Promise.reject(new Error('服务暂时不可用，请稍后重试'))
         }
 
         // 统一转换错误文案：后端技术错误替换为可读提示，业务中文 msg 原样展示，
