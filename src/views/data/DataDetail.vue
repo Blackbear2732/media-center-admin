@@ -138,8 +138,12 @@
       <template v-if="hotRow">
         <div class="hot-title">{{ cleanTitle(hotRow.title) }}</div>
         <el-descriptions :column="1" border size="small">
-          <el-descriptions-item label="综合热度分">
+          <el-descriptions-item label="综合热度分（展示分）">
             <strong>{{ formatHot(hotRow.hotScore) }}</strong>
+            <span class="hot-hint">0～50 量级，log10 缩放后展示</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="原始分（未缩放，排序依据）">
+            {{ formatDecimal(hotRow.rawScore, 2) }}
           </el-descriptions-item>
           <el-descriptions-item label="速度项（播放量 / (发布小时数 + c)）">
             {{ formatDecimal(hotRow.velocity, 2) }}
@@ -150,6 +154,12 @@
           <el-descriptions-item label="平滑完播率">
             {{ formatPercent(hotRow.completionSmooth) }}
           </el-descriptions-item>
+          <el-descriptions-item label="平滑分享率">
+            {{ formatPercent(hotRow.shareRateSmooth) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平滑评论率">
+            {{ formatPercent(hotRow.commentRateSmooth, 3) }}
+          </el-descriptions-item>
           <el-descriptions-item label="发布至今">
             {{ formatDecimal(hotRow.ageHours, 1) }} 小时
           </el-descriptions-item>
@@ -158,8 +168,9 @@
           </el-descriptions-item>
         </el-descriptions>
         <div class="hot-tip">
-          热度分在服务端按统一参数计算（时间衰减 + 平滑点赞率 + 平滑完播率），前端仅展示；
-          完播率缺失时按 35% 基准参与计算。
+          热度分由服务端统一计算：时间衰减 + 平滑点赞率/完播率/分享率/评论率加权，原始分再经
+          log10(rawScore + 1) × 10 缩放为展示分，排序仍按原始分。完播率缺失按 15% 基准、
+          分享率按 1.5% 基准、评论率按 0.05% 基准兜底参与计算。
         </div>
       </template>
     </el-dialog>
@@ -262,11 +273,11 @@ const formatDecimal = (value, digits = 2) => {
   return num.toFixed(digits)
 }
 
-// 平滑点赞率/平滑完播率按百分比展示
-const formatPercent = (rate) => {
+// 平滑率按百分比展示；评论率量级很小（约 0.05%），需要更多小数位
+const formatPercent = (rate, digits = 1) => {
   const num = Number(rate)
   if (!Number.isFinite(num)) return '-'
-  return (num * 100).toFixed(1) + '%'
+  return (num * 100).toFixed(digits) + '%'
 }
 
 function openHotDetail(row) {
@@ -448,6 +459,12 @@ onMounted(async () => {
   margin-top: 12px;
   font-size: 12px;
   line-height: 1.6;
+  color: var(--text-secondary, #909399);
+}
+
+.hot-hint {
+  margin-left: 8px;
+  font-size: 12px;
   color: var(--text-secondary, #909399);
 }
 </style>

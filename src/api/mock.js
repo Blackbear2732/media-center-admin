@@ -1211,13 +1211,21 @@ function buildMockMediaList(type) {
         const day = String(((i * 13) % 28) + 1).padStart(2, '0')
         const views = Math.floor(Math.random() * 50000) + 500
         const likes = Math.floor(Math.random() * 2000) + 20
+        const comments = Math.floor(likes * 0.02)
+        const shares = Math.floor(likes * 0.15)
         const completionRate = Math.round((0.1 + Math.random() * 0.6) * 10000) / 10000
         const ageHours = 24 + i * 6
+        // 与后端 MediaHotScoreProperties 默认参数保持一致（含分享率/评论率两项）
         const velocity = views / (ageHours + 3)
-        const likeRateSmooth = (likes + 1000 * 0.04) / (views + 1000)
-        const completionSmooth = (views * completionRate + 800 * 0.35) / (views + 800)
-        const hotScore = views < 50 ? 0 : views / Math.pow(ageHours + 3, 1.3)
-            * Math.pow(likeRateSmooth / 0.04, 0.5) * Math.pow(completionSmooth / 0.35, 1.0)
+        const likeRateSmooth = (likes + 500 * 0.02) / (views + 500)
+        const completionSmooth = (views * completionRate + 500 * 0.15) / (views + 500)
+        const shareRateSmooth = (shares + 500 * 0.015) / (views + 500)
+        const commentRateSmooth = (comments + 500 * 0.0005) / (views + 500)
+        const rawScore = views < 50 ? 0 : views / Math.pow(ageHours + 3, 1.1)
+            * Math.pow(likeRateSmooth / 0.02, 0.5) * Math.pow(completionSmooth / 0.15, 1.0)
+            * Math.pow(shareRateSmooth / 0.015, 0.6) * Math.pow(commentRateSmooth / 0.0005, 0.3)
+        // 展示分：log10(rawScore + 1) * 10，保留 1 位小数
+        const hotScore = rawScore <= 0 ? 0 : Math.round(Math.log10(rawScore + 1) * 10 * 10) / 10
         items.push({
             id: i + 1,
             title: titles[i % titles.length] + (i >= titles.length ? ` #${Math.floor(i / titles.length) + 1}` : ''),
@@ -1225,15 +1233,18 @@ function buildMockMediaList(type) {
             date: `${year}-${month}-${day}`,
             views,
             likes,
-            comments: Math.floor(likes * 0.05),
-            shares: Math.floor(likes * 0.1),
+            comments,
+            shares,
             favorites: Math.floor(likes * 0.03),
             recommends: Math.floor(likes * 0.2),
             completionRate,
             hotScore,
+            rawScore,
             velocity,
             likeRateSmooth,
             completionSmooth,
+            shareRateSmooth,
+            commentRateSmooth,
             ageHours,
             hotEligible: views >= 50,
             url: `https://${type === 'yy' ? 'channels.weixin.qq.com' : 'mp.weixin.qq.com'}/xxx${i}`
@@ -1250,8 +1261,9 @@ export function mediaListData(params) {
     const allList = type === 'yy' ? mockYyList : mockWxList
     let filtered = year ? allList.filter(d => d.date.startsWith(year)) : allList
     // 与后端一致：views/likes/hot 由服务端排序，取消排序回退发布时间倒序
+    // hot 按原始分 rawScore 排序（展示分经过对数缩放，不能用于排序）
     if (sortBy === 'views' || sortBy === 'likes' || sortBy === 'hot') {
-        const prop = sortBy === 'hot' ? 'hotScore' : sortBy
+        const prop = sortBy === 'hot' ? 'rawScore' : sortBy
         const dir = sortOrder === 'asc' ? 1 : -1
         filtered = [...filtered].sort((a, b) => ((Number(a[prop]) || 0) - (Number(b[prop]) || 0)) * dir)
     }
