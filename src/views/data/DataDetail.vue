@@ -105,6 +105,11 @@
             <span style="color: var(--accent);">{{ formatNumber(row.likes) }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="recommends" label="推荐" width="120" sortable="custom" :sort-orders="SORT_ORDERS">
+          <template #default="{ row }">
+            <span style="color: var(--brand);">{{ formatNumber(row.recommends) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="hotScore" label="热度分" width="150" sortable="custom" :sort-orders="SORT_ORDERS">
           <template #default="{ row }">
             <el-link type="warning" :underline="false" style="font-weight: 600;" @click="openHotDetail(row)">
@@ -359,7 +364,7 @@ async function loadData() {
 
 /** 表头排序变化：排序字段与方向直接交给后端（取消排序回退发布时间倒序） */
 function handleSortChange({ prop, order }) {
-  const valid = Boolean(order) && ['views', 'likes', 'hotScore'].includes(prop)
+  const valid = Boolean(order) && ['views', 'likes', 'recommends', 'hotScore'].includes(prop)
   sortBy.value = valid ? (prop === 'hotScore' ? 'hot' : prop) : ''
   sortOrder.value = valid ? (order === 'ascending' ? 'asc' : 'desc') : ''
   page.value = 1
